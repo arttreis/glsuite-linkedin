@@ -1,4 +1,5 @@
 import { enviarAlertasPendentes, type EnviadorDeEmail } from "@/server/alertas/alertas";
+import { alertarSlasEstourados } from "@/server/conversas/alertas";
 import type { Db } from "@/server/db/tipos";
 import { despachar, type ResultadoDoPerfil } from "@/server/despachante/despachante";
 import { carregarFeriados } from "@/server/despachante/perfis";
@@ -61,6 +62,7 @@ export async function executarTick(deps: DependenciasDoTick): Promise<RelatorioD
       (await etapa("despacho", () =>
         despachar({ ...contexto, aleatorio: deps.aleatorio, verificarResposta: criarVerificadorDeResposta(contexto) }),
       )) ?? [];
+    await etapa("sla", () => alertarSlasEstourados(deps.db, deps.agora));
     if (deps.enviador) {
       const enviador = deps.enviador;
       await etapa("alertas", () => enviarAlertasPendentes(deps.db, enviador, deps.agora));

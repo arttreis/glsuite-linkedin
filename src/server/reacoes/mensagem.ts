@@ -1,4 +1,5 @@
 import { ESTADOS_QUE_RESPONDEM, type EstadoDoLead } from "@/domain/estados";
+import { alertarNovaMensagem } from "@/server/conversas/alertas";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import { transicionarLead } from "@/server/leads/transicoes";
@@ -138,6 +139,7 @@ export async function registrarMensagem(db: Db, m: MensagemRecebida, agora: Date
       ator: "unipile",
       em: agora,
     });
+    await alertarNovaMensagem(tx, { leadId: lead.id, perfilId: perfil.id, mensagemId: nova.id, texto: m.texto });
 
     if (!ESTADOS_QUE_RESPONDEM.includes(lead.estado)) return { tipo: "conversa", leadId: lead.id, perfilId: perfil.id };
 

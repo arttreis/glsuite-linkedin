@@ -13,6 +13,8 @@ export type NovoAlerta = {
   perfilId: string | null;
   assunto: string;
   texto: string;
+  /** O Arthur (alerta_admin_email) também recebe. Padrão: sim. */
+  incluirAdmin?: boolean;
 };
 
 /**
@@ -31,8 +33,10 @@ export async function enfileirarAlerta(db: Db, alerta: NovoAlerta): Promise<void
     );
     if (dono?.email) destinatarios.add(dono.email);
   }
-  const admin = await lerConfiguracao(db, "alerta_admin_email");
-  if (admin) destinatarios.add(admin);
+  if (alerta.incluirAdmin !== false) {
+    const admin = await lerConfiguracao(db, "alerta_admin_email");
+    if (admin) destinatarios.add(admin);
+  }
 
   await db.query(
     `insert into public.alertas (chave, tipo, perfil_id, destinatarios, assunto, texto, erro)

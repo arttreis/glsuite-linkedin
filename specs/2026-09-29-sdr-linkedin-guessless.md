@@ -270,3 +270,33 @@ Anotadas durante a execução, por ticket.
 - Painel de saúde na página inicial: saldo do dia e da semana, aceite em 3 dias
   úteis, erros de limite em 24 h, fila e revisão. Perfil que o operador não
   opera mostra só o status e o botão de pausar.
+
+### SDR-09 · Inbox
+- SLA (§4.6): o relógio começa na última mensagem da pessoa sem retorno e para
+  quando alguém da casa responde, pelo painel ou direto no LinkedIn. Rascunho
+  esperando aprovação não conta como resposta. As 4 horas úteis contam só
+  dentro da janela 9h–18h, em dia útil, no fuso do perfil.
+- Alertas:
+  - "respondeu": vai **só para o dono do perfil**, na virada de turno (a
+    primeira mensagem da pessoa depois de uma nossa), para uma conversa ativa não
+    virar enxurrada;
+  - "SLA estourado": vai para o dono e para o Arthur, uma vez por mensagem sem
+    retorno.
+- A resposta manual passa pelo validador como texto humano. Continuam valendo:
+  - travessão e palavras proibidas;
+  - descadastro, nas DMs do Canadá.
+
+  Não se aplicam: URL (é conversa) e "escrita à mão" (é humano de verdade).
+- A resposta manual sai na hora, conta no saldo de DMs e não é barrada pelo teto
+  (é decisão humana). Perfil pausado não responde pelo painel.
+- A chave de idempotência vem do formulário (`manual:<uuid>`): clique duplo não
+  manda duas mensagens.
+- Responder pelo painel um lead que ainda estava na régua para a régua e passa
+  o lead para `escalado_humano`. O operador vira `dono_conversa_id`.
+- Opt-out global (`registrarOptout`): grava o pedido, marca a pessoa, cancela
+  tudo e leva todos os leads dela para `optout`. Serve ao botão da inbox e ao
+  agente (SDR-10). "Sai da base" = sai de toda fila, campanha e importação
+  futura; a eliminação dos dados pessoais a pedido (LGPD) fica como fluxo
+  separado, fora do escopo.
+- Desfechos marcados pelo humano: qualificado (04), reunião marcada (05, com
+  data) e disse não. Disse não encerra sem recuperação e cancela o que houver.
