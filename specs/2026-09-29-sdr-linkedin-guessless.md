@@ -42,3 +42,19 @@ remoto e sem deploy até o usuário autorizar.
 
 ## Decisões de implementação
 Anotadas durante a execução, por ticket.
+
+### SDR-01 · Repositório e esteira
+- Stack: Next.js 16.3 (App Router, Turbopack, `proxy.ts` no lugar de
+  middleware), React 19.2, TypeScript 5.9, Tailwind 4, pnpm 11, Vitest 5, Node 24.
+- Login por magic link do Supabase Auth com cadastro desligado
+  (`shouldCreateUser: false` e `enable_signup = false`): só entra operador
+  convidado. Sessão verificada com `getClaims()` no proxy (checagem otimista) e
+  no layout do painel.
+- A URL de retorno do magic link sai de `APP_URL` (ou `VERCEL_BRANCH_URL` em
+  preview), nunca de cabeçalho da requisição.
+- Variáveis de ambiente lidas com `lerEnv` (zod, validação preguiçosa): o build
+  não depende de segredo que só o runtime usa.
+- CI no GitHub Actions: lint, typecheck (`next typegen` + `tsc`), testes, build e
+  gitleaks no histórico inteiro. Localmente, hook de pre-commit com gitleaks.
+- Pendente do aceite: "deploy de preview funcionando" depende de ligar o repo a
+  um projeto na Vercel (sem CLI e sem credencial da Vercel nesta sessão).
