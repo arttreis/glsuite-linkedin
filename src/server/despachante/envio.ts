@@ -1,15 +1,8 @@
-import {
-  aberturaDoProximoDiaUtil,
-  dataLocal,
-  instanteLocal,
-  somarDias,
-  somarDiasUteis,
-  sortearIntervalo,
-  type Feriados,
-} from "@/domain/calendario";
+import { aberturaDoProximoDiaUtil, dataLocal, somarDias, sortearIntervalo, type Feriados } from "@/domain/calendario";
 import { proximoToque, sequencia } from "@/domain/sequencia";
 import { agendarAcao, chaveDoToque } from "@/server/acoes/agendar";
 import { lerConfiguracao } from "@/server/configuracoes";
+import { agendarToque } from "@/server/sequencia/agendar-toque";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import { transicionarLead } from "@/server/leads/transicoes";
@@ -170,16 +163,7 @@ async function agendarProximoToque(
   const passos = sequencia.safeParse(lead.sequencia);
   const proximo = passos.success && reserva.toque ? proximoToque(passos.data, reserva.toque) : undefined;
   if (proximo) {
-    const data = somarDiasUteis(dataLocal(agora, perfil.fuso), proximo.offset_dias_uteis, p.feriados);
-    await agendarAcao(tx, {
-      leadId: reserva.lead_id,
-      perfilId: perfil.id,
-      tipo: "dm",
-      toque: proximo.toque,
-      origem: "template",
-      agendadaPara: instanteLocal(data, perfil.janela.inicio, perfil.fuso),
-      chave: chaveDoToque(reserva.lead_id, proximo.toque),
-    });
+    await agendarToque(tx, { perfil, leadId: reserva.lead_id, passo: proximo, base: agora, feriados: p.feriados });
     return;
   }
 
@@ -287,12 +271,12 @@ export async function executarReserva(
   if (!lead || !(estadosPermitidos(reserva) as string[]).includes(lead.estado)) {
     return cancelar(`lead saiu da régua antes do envio (${lead?.estado ?? "removido"})`);
   }
-  if (reserva.tipo === "dm" && reserva.toque && deps.verificarResposta && (await deps.verificarResposta(perfil, reserva))) {
-    return cancelar("a pessoa respondeu antes do envio");
-  }
 
   let resultado: ResultadoUnipile;
   try {
+    if (reserva.tipo === "dm" && reserva.toque && deps.verificarResposta && (await deps.verificarResposta(perfil, reserva))) {
+      return cancelar("a pessoa respondeu antes do envio");
+    }
     resultado = await chamarUnipile(deps.unipile, perfil, reserva);
   } catch (erro) {
     return registrarFalha(deps, perfil, reserva, erro);

@@ -45,6 +45,11 @@ export async function carregarFeriados(db: Db): Promise<Map<Praca, Set<string>>>
   return porPraca;
 }
 
+export async function feriadosDaPraca(db: Db, praca: Praca): Promise<Set<string>> {
+  const linhas = await db.query<{ data: string }>("select data from public.feriados where praca = $1", [praca]);
+  return new Set(linhas.map((linha) => linha.data));
+}
+
 /**
  * O que o perfil já fez: convites e DMs de hoje (no fuso do perfil) e convites
  * dos últimos 7 dias. Ações em voo (`enviando`) contam como enviadas.

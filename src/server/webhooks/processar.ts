@@ -1,6 +1,6 @@
 import type { Db } from "@/server/db/tipos";
-import { aplicarStatusDaConta } from "@/server/perfis/status-conta";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
+import { manipuladoresPadrao } from "./manipuladores";
 import {
   interpretarWebhookUnipile,
   type MensagemRecebida,
@@ -14,16 +14,6 @@ export type Manipuladores = {
   mensagem(ctx: ContextoWebhook, dados: MensagemRecebida): Promise<void>;
   novaRelacao(ctx: ContextoWebhook, dados: NovaRelacao): Promise<void>;
   statusDaConta(ctx: ContextoWebhook, dados: StatusDaConta): Promise<void>;
-};
-
-const semEfeito = async () => undefined;
-
-export const manipuladoresPadrao: Manipuladores = {
-  mensagem: semEfeito,
-  novaRelacao: semEfeito,
-  statusDaConta: async (ctx, dados) => {
-    await aplicarStatusDaConta(ctx.db, { ...dados, origem: "webhook", agora: ctx.agora });
-  },
 };
 
 export type ResultadoProcessamento = "processado" | "ja_processado" | "erro";

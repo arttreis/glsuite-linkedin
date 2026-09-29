@@ -3,6 +3,7 @@ import { despachar, type ResultadoDoPerfil } from "@/server/despachante/despacha
 import { carregarFeriados } from "@/server/despachante/perfis";
 import { reconciliarAcoesEmVoo } from "@/server/despachante/reconciliar";
 import { sincronizarStatusDasContas } from "@/server/perfis/status-conta";
+import { criarVerificadorDeResposta } from "@/server/reacoes/verificar-resposta";
 import { pegarTrava } from "@/server/travas";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
 import { reprocessarWebhooksPendentes } from "@/server/webhooks/processar";
@@ -45,7 +46,10 @@ export async function executarTick(deps: DependenciasDoTick): Promise<RelatorioD
     await etapa("em_voo", async () =>
       reconciliarAcoesEmVoo({ ...contexto, feriadosPorPraca: await carregarFeriados(deps.db) }),
     );
-    const despacho = (await etapa("despacho", () => despachar({ ...contexto, aleatorio: deps.aleatorio }))) ?? [];
+    const despacho =
+      (await etapa("despacho", () =>
+        despachar({ ...contexto, aleatorio: deps.aleatorio, verificarResposta: criarVerificadorDeResposta(contexto) }),
+      )) ?? [];
     return { executado: true, etapas, despacho };
   } finally {
     await soltar();

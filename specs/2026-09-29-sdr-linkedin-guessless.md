@@ -214,3 +214,33 @@ Anotadas durante a execução, por ticket.
   chave de idempotência.
 - Depois do T4: `sem_resposta` na hora e, nas praças com pausa, `retorno_apos` =
   hoje + 60 dias.
+
+### SDR-07 · Reações a eventos
+- O aceite chega por dois caminhos:
+  - `new_relation`, que tem até 8 h de atraso;
+  - em tempo real, quando a nota do convite aparece como mensagem da própria
+    conta numa conversa nova. A nota é comparada com o `texto_final` do T1.
+
+  O aceite agenda o T2 a partir do momento em que foi processado e cancela a
+  retirada do convite.
+- Mensagem da pessoa: grava, cancela **todas** as ações pendentes (inclusive a
+  retirada) e passa a `em_conversa`, tudo na transação do processamento do
+  webhook. Lead já em conversa só grava a mensagem.
+- Mensagem da própria conta que não é eco do SDR nem a nota do convite
+  significa que o dono do perfil escreveu direto no LinkedIn. A régua para
+  (pendentes canceladas) e o lead vai para `escalado_humano`. É um caso que o
+  épico não previa; a transição foi somada à máquina de estados.
+- Eco de DM que voltou da API sem `message_id`: casado pelo texto na mesma
+  conversa (última hora).
+- Conversa com quem não é lead do SDR não é gravada (privacidade).
+- **Rede de segurança do erro mais caro:** antes de cada DM da régua, o
+  despachante lê a conversa na Unipile. Mensagem da pessoa posterior ao convite
+  que o webhook não trouxe é registrada na hora, e a DM não sai. Se a Unipile
+  falhar nessa leitura, o envio é tratado como erro transitório (sai depois,
+  nunca às cegas).
+- Corrida coberta de três jeitos:
+  - revalidação na reserva, com o lead travado;
+  - checagem de estado colada ao envio;
+  - leitura da conversa na Unipile.
+- Retirada do convite [verificado]: `DELETE /users/invite/sent/{invitation_id}`,
+  agendada no envio do T1 para +21 dias.
