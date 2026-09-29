@@ -1,0 +1,3 @@
+-- Seed só do ambiente local (supabase db reset).
+-- Perfis, ângulos, feriados e parâmetros ficam nas migrations porque produção
+-- também precisa deles. Aqui entram apenas dados de desenvolvimento.

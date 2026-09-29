@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { Navegacao } from "@/components/navegacao";
-import { exigirSessao } from "@/server/supabase/servidor";
+import { exigirOperador } from "@/server/supabase/servidor";
 
 export default async function PainelLayout({ children }: { children: ReactNode }) {
-  const sessao = await exigirSessao();
+  const operador = await exigirOperador();
 
   return (
     <div className="flex min-h-screen">
@@ -11,7 +11,8 @@ export default async function PainelLayout({ children }: { children: ReactNode }
         <p className="px-2 text-sm font-semibold">SDR · GuessLess</p>
         <Navegacao />
         <div className="mt-auto flex flex-col gap-2 px-2 text-xs text-neutral-500">
-          <span className="truncate">{sessao.email}</span>
+          <span className="truncate font-medium text-neutral-700">{operador.nome}</span>
+          <span className="truncate">{operador.email}</span>
           <form action="/auth/sair" method="post">
             <button type="submit" className="text-neutral-700 underline-offset-2 hover:underline">
               Sair

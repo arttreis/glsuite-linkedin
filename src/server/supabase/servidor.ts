@@ -3,6 +3,8 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { envPublico } from "@/lib/env";
+import { obterDb } from "@/server/db";
+import { buscarOperadorAtivo, type Operador } from "@/server/db/operador";
 
 /** Cliente do Supabase ligado aos cookies da requisição. Um por requisição. */
 export async function criarClienteSupabase() {
@@ -32,4 +34,12 @@ export async function exigirSessao(): Promise<Sessao> {
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims?.sub) redirect("/login");
   return { userId: data.claims.sub, email: typeof data.claims.email === "string" ? data.claims.email : null };
+}
+
+/** Sessão de um operador ativo. Usuário logado que não é operador volta ao login. */
+export async function exigirOperador(): Promise<Operador> {
+  const sessao = await exigirSessao();
+  const operador = await buscarOperadorAtivo(obterDb(), sessao.userId);
+  if (!operador) redirect("/login?erro=acesso");
+  return operador;
 }

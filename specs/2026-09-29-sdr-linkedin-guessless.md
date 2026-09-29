@@ -58,3 +58,32 @@ Anotadas durante a execução, por ticket.
   gitleaks no histórico inteiro. Localmente, hook de pre-commit com gitleaks.
 - Pendente do aceite: "deploy de preview funcionando" depende de ligar o repo a
   um projeto na Vercel (sem CLI e sem credencial da Vercel nesta sessão).
+
+### SDR-02 · Modelo de dados e seed
+- Acesso ao banco pelo `pg` (pooler do Supabase em modo transação) atrás de uma
+  porta `Db` mínima (`query` + `transacao`). Regra de negócio fica em TypeScript;
+  o SQL garante as invariantes (unicidade, checks, índice parcial).
+- Testes rodam as migrations reais no PGlite (Postgres 18 em WASM, sem Docker),
+  com um bootstrap que imita o Supabase (roles, `auth.users`, `auth.uid()`).
+- RLS por operador: o painel consulta dentro de `comOperador` (role
+  `authenticated` + claims do JWT, igual ao PostgREST). Os jobs do sistema usam a
+  conexão dona das tabelas. Admin vê tudo; operador vê os perfis de
+  `operador_perfis`; todo operador vê a lista de perfis (qualquer um pode pausar,
+  §4.4). Auditoria (`eventos`) não aceita update nem delete.
+- Seed de perfis, ângulos, feriados e parâmetros em migration (produção também
+  precisa), com `on conflict do nothing` para não sobrescrever ajuste do operador.
+  `seed.sql` fica só para dados de desenvolvimento.
+- "DMs/dia proporcional" do Luiz: mesma razão DM/convite do Brasil em cada
+  semana, arredondada para baixo: 11 · 13 · 16.
+- JP: `dms_dia = 0` e `modo_resposta = manual` (DM é manual na Espanha).
+- Feriados de 2026 e 2027 (o sistema roda em 2027 daqui a 3 meses). Critério e
+  fontes em `docs/pesquisa/feriados.md`.
+- Estados e colunas além da §6, todos aditivos:
+  - status de ação `enviando` (ação reservada pelo despachante, em voo);
+  - autor de mensagem `sistema` (DM de template, que não é IA nem humano);
+  - `tipo_conta` e `limite_nota_convite` no perfil (a nota do convite é de 200
+    caracteres na conta gratuita e 300 na paga);
+  - campos operacionais no lead (`chat_id`, `convite_id`, `bloqueio_motivo`,
+    `revisao_motivo`, `retorno_apos`…).
+- Uma pessoa só fica em uma régua ativa por vez (índice único parcial em
+  `leads`).

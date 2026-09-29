@@ -30,6 +30,35 @@ pnpm dev
   `https://*-<time>.vercel.app/auth/callback` (previews) e
   `http://localhost:3000/auth/callback`.
 
+### Banco
+
+As migrations ficam em `supabase/migrations/` e são idempotentes. Elas criam o
+modelo de dados (§6), o RLS por operador e o seed dos 4 perfis (pausados),
+ângulos, feriados e parâmetros. Para aplicar no projeto remoto:
+
+```bash
+supabase link --project-ref <ref>
+supabase db push
+```
+
+### Operadores
+
+Depois de convidar a pessoa pelo Supabase Auth, cadastre-a como operador no SQL
+Editor. O admin enxerga todos os perfis; o operador, só os que receber em
+`operador_perfis`.
+
+```sql
+insert into public.operadores (id, nome, email, papel)
+select id, 'Arthur', email, 'admin' from auth.users where email = 'arthur@exemplo.com';
+
+-- Dono do perfil (recebe os alertas) e acesso de um operador a um perfil:
+update public.perfis set operador_id = (select id from public.operadores where email = 'arthur@exemplo.com')
+ where slug = 'arthur';
+insert into public.operador_perfis (operador_id, perfil_id)
+select o.id, p.id from public.operadores o, public.perfis p
+ where o.email = 'luiz@exemplo.com' and p.slug = 'luiz';
+```
+
 ## Deploy (Vercel)
 
 Importe o repositório na Vercel (framework Next.js, detectado sozinho) e
