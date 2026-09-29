@@ -1,5 +1,5 @@
 import { obterDb } from "@/server/db";
-import { obterUnipile, segredoDoCron } from "@/server/dependencias";
+import { obterEnviadorDeEmail, obterUnipile, segredoDoCron } from "@/server/dependencias";
 import { executarTick } from "@/server/tick";
 import { segredoConfere } from "@/server/unipile/webhooks";
 
@@ -13,7 +13,12 @@ async function tick(request: Request) {
   if (!segredoConfere(token, segredoDoCron())) {
     return Response.json({ erro: "não autorizado" }, { status: 401 });
   }
-  const relatorio = await executarTick({ db: obterDb(), unipile: obterUnipile(), agora: new Date() });
+  const relatorio = await executarTick({
+    db: obterDb(),
+    unipile: obterUnipile(),
+    agora: new Date(),
+    enviador: obterEnviadorDeEmail(),
+  });
   return Response.json(relatorio);
 }
 

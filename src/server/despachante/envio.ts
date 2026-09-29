@@ -5,6 +5,7 @@ import { lerConfiguracao } from "@/server/configuracoes";
 import { agendarToque } from "@/server/sequencia/agendar-toque";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
+import { avaliarErrosDeLimite } from "@/server/guardas/guardas";
 import { transicionarLead } from "@/server/leads/transicoes";
 import { pausarPerfil } from "@/server/perfis/pausa";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
@@ -222,6 +223,8 @@ export async function registrarFalha(
         payload: { acao_id: reserva.id, erro: motivo },
         em: agora,
       });
+      // Repetiu? Pausa já, sem esperar o próximo tick (§4.4).
+      await avaliarErrosDeLimite(tx, perfil.id, agora);
     } else if (classe === "conta") {
       await tx.query(
         `update public.acoes set status = 'pendente', erro = $2, tentativas = tentativas - 1,

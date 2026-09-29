@@ -1,6 +1,8 @@
+import { enviarAlertasPendentes, type EnviadorDeEmail } from "@/server/alertas/alertas";
 import type { Db } from "@/server/db/tipos";
 import { despachar, type ResultadoDoPerfil } from "@/server/despachante/despachante";
 import { carregarFeriados } from "@/server/despachante/perfis";
+import { avaliarGuardasDeTodos } from "@/server/guardas/guardas";
 import { reconciliarAcoesEmVoo } from "@/server/despachante/reconciliar";
 import { sincronizarStatusDasContas } from "@/server/perfis/status-conta";
 import { criarVerificadorDeResposta } from "@/server/reacoes/verificar-resposta";
@@ -8,7 +10,14 @@ import { pegarTrava } from "@/server/travas";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
 import { reprocessarWebhooksPendentes } from "@/server/webhooks/processar";
 
-export type DependenciasDoTick = { db: Db; unipile: ClienteUnipile; agora: Date; aleatorio?: () => number };
+export type DependenciasDoTick = {
+  db: Db;
+  unipile: ClienteUnipile;
+  agora: Date;
+  aleatorio?: () => number;
+  /** Sem enviador (Resend não configurado), os alertas ficam na fila. */
+  enviador?: EnviadorDeEmail | null;
+};
 
 export type RelatorioDoTick =
   | { executado: false; motivo: string }
@@ -20,8 +29,9 @@ export type RelatorioDoTick =
 
 /**
  * O tick do cron (a cada 5 min). Uma etapa que falha não derruba as outras.
- * Ordem: contas → webhooks atrasados → ações presas → despacho. O despacho vem
- * por último para enxergar respostas e pausas que acabaram de chegar.
+ * Ordem: contas → webhooks atrasados → ações presas → guardas → despacho →
+ * alertas. O despacho vem depois de tudo o que pode pausar um perfil ou tirar
+ * um lead da régua.
  */
 export async function executarTick(deps: DependenciasDoTick): Promise<RelatorioDoTick> {
   const soltar = await pegarTrava(deps.db, "tick", deps.agora, 4 * 60_000);
@@ -46,10 +56,15 @@ export async function executarTick(deps: DependenciasDoTick): Promise<RelatorioD
     await etapa("em_voo", async () =>
       reconciliarAcoesEmVoo({ ...contexto, feriadosPorPraca: await carregarFeriados(deps.db) }),
     );
+    await etapa("guardas", () => avaliarGuardasDeTodos(deps.db, deps.agora));
     const despacho =
       (await etapa("despacho", () =>
         despachar({ ...contexto, aleatorio: deps.aleatorio, verificarResposta: criarVerificadorDeResposta(contexto) }),
       )) ?? [];
+    if (deps.enviador) {
+      const enviador = deps.enviador;
+      await etapa("alertas", () => enviarAlertasPendentes(deps.db, enviador, deps.agora));
+    }
     return { executado: true, etapas, despacho };
   } finally {
     await soltar();

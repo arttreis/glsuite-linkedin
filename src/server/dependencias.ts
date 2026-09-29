@@ -1,6 +1,8 @@
 import "server-only";
 import { z } from "zod";
 import { lerEnv } from "@/lib/env";
+import type { EnviadorDeEmail } from "@/server/alertas/alertas";
+import { criarEnviadorResend } from "@/server/alertas/resend";
 import { criarClienteUnipile, type ClienteUnipile } from "@/server/unipile/cliente";
 
 const envUnipile = lerEnv(
@@ -24,6 +26,27 @@ export function obterUnipile(): ClienteUnipile {
 /** Segredo que a Unipile manda no header `Unipile-Auth` e no callback do hosted auth. */
 export function segredoDaUnipile(): string {
   return envUnipile().UNIPILE_WEBHOOK_SECRET;
+}
+
+const envAlertas = lerEnv(
+  z.object({
+    RESEND_API_KEY: z.string().min(1).optional(),
+    ALERTA_REMETENTE: z.string().min(3).optional(),
+  }),
+);
+
+let enviador: EnviadorDeEmail | null | undefined;
+
+/** Enviador de alertas por e-mail, ou null se o Resend não estiver configurado. */
+export function obterEnviadorDeEmail(): EnviadorDeEmail | null {
+  if (enviador === undefined) {
+    const env = envAlertas();
+    enviador =
+      env.RESEND_API_KEY && env.ALERTA_REMETENTE
+        ? criarEnviadorResend({ apiKey: env.RESEND_API_KEY, remetente: env.ALERTA_REMETENTE })
+        : null;
+  }
+  return enviador;
 }
 
 const envCron = lerEnv(z.object({ CRON_SECRET: z.string().min(16) }));

@@ -41,6 +41,17 @@ export function somarDiasUteis(data: string, dias: number, feriados: Feriados): 
   return atual.toString();
 }
 
+/** `dias` dias úteis antes de `data`, sem contar o próprio dia. */
+export function subtrairDiasUteis(data: string, dias: number, feriados: Feriados): string {
+  let atual = Temporal.PlainDate.from(data);
+  let restantes = dias;
+  while (restantes > 0) {
+    atual = atual.subtract({ days: 1 });
+    if (ehDiaUtil(atual.toString(), feriados)) restantes -= 1;
+  }
+  return atual.toString();
+}
+
 export function somarDias(data: string, dias: number): string {
   return Temporal.PlainDate.from(data).add({ days: dias }).toString();
 }

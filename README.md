@@ -83,6 +83,25 @@ reconcilia ações presas e envia no máximo uma ação por perfil ativo. Ele ex
 - Vercel Cron só serve no plano Pro: no Hobby, cron de 5 min quebra o deploy.
   Detalhes em [`docs/pesquisa/cron.md`](docs/pesquisa/cron.md).
 
+## Guardas e alertas
+
+- O perfil pausa sozinho nestes casos (§4.4):
+  - a conta cai na Unipile ou dá checkpoint;
+  - o erro de limite do LinkedIn se repete;
+  - a taxa de aceite em 3 dias úteis fica abaixo de 15% (com amostra mínima);
+  - o aceite cai de forma brusca.
+
+  Os parâmetros ficam na configuração `guardas`.
+- A pausa gera alerta por e-mail (Resend) para o dono do perfil
+  (`perfis.email_alerta` ou o e-mail do operador dono) e para
+  `alerta_admin_email`. Preencha a configuração:
+  ```sql
+  update public.configuracoes set valor = '"arthur@exemplo.com"' where chave = 'alerta_admin_email';
+  ```
+- Na página inicial, qualquer operador pausa qualquer perfil. Despausar (e a
+  primeira ativação, que inicia a semana 1 da rampa) é manual e fica em `eventos`
+  com o operador.
+
 ## Deploy (Vercel)
 
 Importe o repositório na Vercel (framework Next.js, detectado sozinho) e

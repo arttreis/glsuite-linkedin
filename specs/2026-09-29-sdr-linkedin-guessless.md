@@ -244,3 +244,29 @@ Anotadas durante a execução, por ticket.
   - leitura da conversa na Unipile.
 - Retirada do convite [verificado]: `DELETE /users/invite/sent/{invitation_id}`,
   agendada no envio do T1 para +21 dias.
+
+### SDR-08 · Guardas de conta
+- **"Taxa de aceite < 15% em 3 dias úteis" foi interpretada como aceite
+  dentro de 3 dias úteis:** só contam os convites cujo prazo de 3 dias úteis já
+  passou (maduros), na janela dos últimos 10 dias úteis, com amostra mínima de
+  20. Contar convite de hoje derrubaria a taxa e pausaria o perfil à toa.
+- Queda brusca (configurável, ligada por padrão): taxa dos últimos 20 convites
+  maduros menor que metade da taxa dos 40 anteriores.
+- Erro de limite repetido: 2 eventos `erro_limite` em 24 h. É avaliado na hora
+  do erro e de novo em cada tick.
+- Todas as contagens das guardas recomeçam no último despausar: quem despausou
+  já viu o que aconteceu antes. Sem isso, o perfil pausaria de novo no tick
+  seguinte.
+- Despausar exige conta conectada e saudável e fica em `eventos` com o
+  operador. A primeira ativação exige confirmar as travas da §8 e marca
+  `ativado_em` (início da semana 1).
+- Pausar: qualquer operador, qualquer perfil, com motivo. Despausar: quem opera
+  o perfil (`pode_ver_perfil`).
+- Alertas (decisão D5: e-mail no M1) numa fila transacional (`alertas`): o
+  alerta nasce na mesma transação da pausa e o tick envia pelo Resend, com chave
+  de idempotência `sdr-alerta/<chave>`. Sem Resend configurado, a fila guarda.
+  Os destinatários são o dono do perfil (`email_alerta` ou o e-mail do operador
+  dono) e `alerta_admin_email`.
+- Painel de saúde na página inicial: saldo do dia e da semana, aceite em 3 dias
+  úteis, erros de limite em 24 h, fila e revisão. Perfil que o operador não
+  opera mostra só o status e o botão de pausar.
