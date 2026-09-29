@@ -1,0 +1,20 @@
+#!/bin/sh
+# Bloqueia commit com segredo. Ativado por `git config core.hooksPath .githooks`
+# (o script "prepare" do package.json faz isso no `pnpm install`).
+GITLEAKS="$(command -v gitleaks 2>/dev/null)"
+if [ -z "$GITLEAKS" ]; then
+  # No Windows o git às vezes roda o hook sem o PATH do usuário (scoop/winget).
+  LOCAL_APPDATA=""
+  if [ -n "$LOCALAPPDATA" ] && command -v cygpath >/dev/null 2>&1; then
+    LOCAL_APPDATA="$(cygpath -u "$LOCALAPPDATA")"
+  fi
+  for c in "$HOME/scoop/shims/gitleaks.exe" "$LOCAL_APPDATA/Microsoft/WinGet/Links/gitleaks.exe" \
+           /opt/homebrew/bin/gitleaks /usr/local/bin/gitleaks; do
+    if [ -x "$c" ]; then GITLEAKS="$c"; break; fi
+  done
+fi
+if [ -z "$GITLEAKS" ]; then
+  echo "pre-commit: gitleaks não encontrado. Instale (winget install gitleaks | scoop install gitleaks | brew install gitleaks)." >&2
+  exit 1
+fi
+exec "$GITLEAKS" git --pre-commit --staged --redact --no-banner
