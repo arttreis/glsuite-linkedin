@@ -1,6 +1,7 @@
 import type {
   ClienteUnipile,
   ContaUnipile,
+  ConviteEnviado,
   ConversaUnipile,
   DonoDaConta,
   LinkDeConexao,
@@ -27,6 +28,7 @@ export class UnipileFalso implements ClienteUnipile {
   mensagensPorChat = new Map<string, MensagemDaConversa[]>();
   conversasPorPessoa = new Map<string, ConversaUnipile[]>();
   resultadosDeBusca: ResultadoDeBusca[] = [];
+  convitesPendentes: ConviteEnviado[] = [];
   webhooks: WebhookUnipile[] = [];
   private falhas = new Map<Metodo, unknown[]>();
   private sequencia = 0;
@@ -81,7 +83,7 @@ export class UnipileFalso implements ClienteUnipile {
 
   async listarConvitesEnviados(accountId: string) {
     this.registrar("listarConvitesEnviados", { accountId });
-    return { itens: [], cursor: null };
+    return { itens: this.convitesPendentes, cursor: null };
   }
 
   async cancelarConvite(accountId: string, invitationId: string) {

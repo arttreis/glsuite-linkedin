@@ -47,9 +47,16 @@ export async function aplicarStatusDaConta(
     if (!perfil) return { perfilId: null, pausou: false };
 
     if (perfil.unipile_status !== p.status) {
+      // unipile_status_em marca só a troca entre saudável e não saudável: é dela
+      // que o despachante conta o tempo de estabilidade antes de voltar a enviar.
+      const trocouDeClasse =
+        perfil.unipile_status === null || STATUS_SAUDAVEIS.has(perfil.unipile_status) !== STATUS_SAUDAVEIS.has(p.status);
       await tx.query(
-        "update public.perfis set unipile_status = $2, unipile_status_em = $3 where id = $1::uuid",
-        [perfil.id, p.status, p.agora],
+        `update public.perfis
+            set unipile_status = $2,
+                unipile_status_em = case when $4::boolean then $3::timestamptz else unipile_status_em end
+          where id = $1::uuid`,
+        [perfil.id, p.status, p.agora, trocouDeClasse],
       );
       await registrarEvento(tx, {
         tipo: "conta_status",

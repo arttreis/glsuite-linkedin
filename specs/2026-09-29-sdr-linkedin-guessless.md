@@ -168,3 +168,49 @@ Anotadas durante a execução, por ticket.
   `personalizada`, a origem é `ia` e o texto vem do SDR-15.
 - O pós-T4 vem da praça na criação da campanha. Encerrar a campanha cancela as
   ações que não saíram.
+
+### SDR-06 · Despachante
+- Agendamento [verificado]: Vercel Cron no Hobby só roda 1×/dia e o cron de
+  5 min quebra o deploy. **Padrão = pg_cron + pg_net** do Supabase
+  (`supabase/snippets/tick-pg-cron.sql`). Vercel Cron fica como opção do plano
+  Pro. O endpoint aceita GET e POST com `Authorization: Bearer <CRON_SECRET>`.
+- Calendário com Temporal (polyfill): fuso do perfil, horário de verão, feriado
+  por praça. "+N dias úteis" não conta o próprio dia (aceite na segunda +2 =
+  quarta). O toque seguinte é agendado para a abertura da janela (9h local) do
+  dia útil calculado.
+- **Teto semanal = janela móvel de 7 dias**, mais conservadora que a semana do
+  calendário. "Semana N" da rampa conta em datas locais desde `ativado_em`; a
+  última etapa vale para 3+.
+- Garantia do teto: a reserva roda numa transação com a linha do perfil
+  travada (`for update`). A contagem inclui as ações `enviando`, então dois ticks
+  concorrentes nunca gastam o mesmo saldo. Além disso, uma trava com prazo
+  (tabela `travas`) evita ticks sobrepostos: o pooler em modo transação não
+  segura advisory lock de sessão.
+- Ordem da fila: respostas de conversa, depois DMs da régua, convites e, por
+  último, retiradas de convite. Uma ação por perfil por tick, com intervalo
+  aleatório (`proxima_acao_apos`).
+- A retirada de convite não gasta saldo, mas respeita janela e intervalo:
+  também é ação da conta.
+- O que a revalidação faz:
+  - cancela: lead fora da régua, opt-out, DM automática na Espanha;
+  - reagenda para o próximo dia útil: pessoa que já recebeu um toque hoje;
+  - reagenda para o fim do cooldown: empresa tocada por outro perfil;
+  - manda para revisão: copy que falha no validador.
+- A campanha pausada segura só os toques da régua. Resposta de conversa sai
+  mesmo assim.
+- Conta instável: status não saudável segura os envios, e ao voltar a ficar
+  saudável espera 30 min (`conta_estavel_minutos`), porque as mensagens do
+  período desconectado chegam primeiro. `unipile_status_em` só muda quando o
+  status troca de saudável para não saudável ou vice-versa.
+- Erros:
+  - transitório: backoff de 15 · 30 min e falha na 3ª tentativa, com o lead
+    para revisão;
+  - limite: volta à fila no próximo dia útil e grava o evento `erro_limite`, que
+    conta para a parada (a regra que pausa vem no SDR-08);
+  - conta (checkpoint, restrição, desconexão): pausa na hora;
+  - permanente: a ação falha e o lead vai para revisão.
+- Ação presa em `enviando` por mais de 10 min é **reconciliada** na Unipile
+  antes de reenviar (convite pendente? mensagem na conversa?). A Unipile não tem
+  chave de idempotência.
+- Depois do T4: `sem_resposta` na hora e, nas praças com pausa, `retorno_apos` =
+  hoje + 60 dias.

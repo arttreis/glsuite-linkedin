@@ -21,6 +21,7 @@ export const ESQUEMAS_DE_CONFIGURACAO = {
   template_exemplo: z.object({ first_name: z.string(), company: z.string() }),
   leitura_minima_toques: z.number().int().positive(),
   gate_automatico: z.object({ limiar_edicao: z.number().min(0).max(1), dias_em_aprovacao: z.number().int().positive() }),
+  conta_estavel_minutos: z.number().int().min(0),
 } as const;
 
 export type ChaveDeConfiguracao = keyof typeof ESQUEMAS_DE_CONFIGURACAO;

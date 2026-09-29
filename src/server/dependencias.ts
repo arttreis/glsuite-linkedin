@@ -25,3 +25,10 @@ export function obterUnipile(): ClienteUnipile {
 export function segredoDaUnipile(): string {
   return envUnipile().UNIPILE_WEBHOOK_SECRET;
 }
+
+const envCron = lerEnv(z.object({ CRON_SECRET: z.string().min(16) }));
+
+/** Segredo do tick: a Vercel Cron manda em `Authorization: Bearer`; o pg_cron também. */
+export function segredoDoCron(): string {
+  return envCron().CRON_SECRET;
+}

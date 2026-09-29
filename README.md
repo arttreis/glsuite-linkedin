@@ -72,6 +72,17 @@ select o.id, p.id from public.operadores o, public.perfis p
 
 Detalhes da API e dos webhooks: [`docs/pesquisa/unipile.md`](docs/pesquisa/unipile.md).
 
+## Despachante (tick a cada 5 min)
+
+O `/api/cron/tick` sincroniza o status das contas, retenta webhooks atrasados,
+reconcilia ações presas e envia no máximo uma ação por perfil ativo. Ele exige
+`Authorization: Bearer <CRON_SECRET>`.
+
+- **Padrão:** pg_cron do Supabase. Rode `supabase/snippets/tick-pg-cron.sql` uma
+  vez por ambiente.
+- Vercel Cron só serve no plano Pro: no Hobby, cron de 5 min quebra o deploy.
+  Detalhes em [`docs/pesquisa/cron.md`](docs/pesquisa/cron.md).
+
 ## Deploy (Vercel)
 
 Importe o repositório na Vercel (framework Next.js, detectado sozinho) e
