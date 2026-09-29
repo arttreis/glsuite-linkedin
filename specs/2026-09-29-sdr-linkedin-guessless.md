@@ -135,3 +135,36 @@ Anotadas durante a execução, por ticket.
 - Escritas do painel: a server action autoriza pelo RLS
   (`exigirCampanhaDoOperador`, `leadsVisiveis`) e o serviço roda com a conexão
   do sistema, porque as regras cruzam perfis.
+
+### SDR-05 · Campanhas, sequência e validador de copy
+- O validador (`src/domain/validador.ts`) é puro: roda no navegador (prévia ao
+  vivo no editor) e no servidor (bloqueio no salvar e no enviar).
+- Interpretações das regras da §4.2:
+  - "travessão e meia-risca" inclui os parentes visuais (‒ ― ⸺ ⸻ e variantes);
+    hífen passa.
+  - Palavra proibida é comparada sem acento e sem caixa, a partir do começo da
+    palavra, e pega plural ("agências"). "marketplace" não conta como
+    "marketing".
+  - URL inclui domínio solto (`guessless.com.br`), encurtador e e-mail.
+  - Caracteres contados em unidades UTF-16 (`String.length`, como o LinkedIn
+    web). Emoji conta 2, o que é conservador.
+  - "Nunca afirmar que foi escrita à mão" vale para IA **e template** (os dois
+    saem automáticos). Só texto humano pode.
+  - Descadastro do Canadá: toda DM, de qualquer origem, inclusive humana. A nota
+    do convite não, porque é "sem oferta" e tem 250 caracteres.
+- Duas regras a mais, só para texto da IA, que mandam para revisão em vez de
+  enviar:
+  - `escalada_canal`: WhatsApp, e-mail ou telefone (§4.6);
+  - `link_nao_permitido`: na conversa, só o link de agenda configurado.
+- Convite sem nota é permitido (T1 vazio). Na conta gratuita, com poucas notas
+  por mês, é o caminho.
+- Salvar valida cada toque renderizado com valores de exemplo longos
+  (configuração `template_exemplo`). O envio valida de novo com o lead real: o
+  nome da empresa pode estourar o teto.
+- O texto do template é renderizado **no envio** (`prepararTexto`): corrigir a
+  campanha vale para as ações que ainda não saíram. Falha no validador leva a
+  ação para `aguardando_aprovacao` com `motivo_revisao` (`enviarParaRevisao`).
+- Aprovar na triagem agenda o T1 com chave `lead:<id>:T1`. Na campanha
+  `personalizada`, a origem é `ia` e o texto vem do SDR-15.
+- O pós-T4 vem da praça na criação da campanha. Encerrar a campanha cancela as
+  ações que não saíram.

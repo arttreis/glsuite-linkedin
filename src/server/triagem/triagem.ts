@@ -1,3 +1,4 @@
+import { agendarAcao, chaveDoToque } from "@/server/acoes/agendar";
 import type { Db } from "@/server/db/tipos";
 import { transicionarLead } from "@/server/leads/transicoes";
 import { motivoDeBloqueio, temOptout } from "./regras";
@@ -11,6 +12,7 @@ type LeadEmTriagem = {
   perfil_id: string;
   campanha_id: string;
   angulo: string;
+  modo_copy: "template" | "personalizada";
   max_leads: number | null;
   pessoa_id: string;
   provider_id: string;
@@ -32,7 +34,7 @@ export async function aprovarLeads(
   for (const leadId of p.leadIds) {
     const motivo = await db.transacao(async (tx): Promise<string | null> => {
       const [lead] = await tx.query<LeadEmTriagem>(
-        `select l.id, l.estado, l.bloqueio_motivo, l.perfil_id, l.campanha_id, c.angulo, c.max_leads,
+        `select l.id, l.estado, l.bloqueio_motivo, l.perfil_id, l.campanha_id, c.angulo, c.modo_copy, c.max_leads,
                 pe.id as pessoa_id, pe.provider_id, pe.dono_perfil_id
            from public.leads l
            join public.campanhas c on c.id = l.campanha_id
@@ -77,7 +79,18 @@ export async function aprovarLeads(
         [lead.id, lead.angulo],
       );
       const mudou = await transicionarLead(tx, { leadId: lead.id, para: "na_fila", ator: p.operadorId, agora: p.agora });
-      return mudou ? null : "Transição recusada";
+      if (!mudou) return "Transição recusada";
+      // T1 no dia 0 (§4.1). O despachante é quem respeita janela, teto e cooldown.
+      await agendarAcao(tx, {
+        leadId: lead.id,
+        perfilId: lead.perfil_id,
+        tipo: "convite",
+        toque: "T1",
+        origem: lead.modo_copy === "personalizada" ? "ia" : "template",
+        agendadaPara: p.agora,
+        chave: chaveDoToque(lead.id, "T1"),
+      });
+      return null;
     });
 
     if (motivo) resultado.recusados.push({ leadId, motivo });
