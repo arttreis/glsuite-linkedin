@@ -1,0 +1,33 @@
+import { z } from "zod";
+import type { Db } from "@/server/db/tipos";
+
+/** Parâmetros globais (tabela `configuracoes`), validados na leitura. */
+export const ESQUEMAS_DE_CONFIGURACAO = {
+  cooldown_empresa_dias: z.number().int().min(0),
+  sla_horas_uteis: z.number().positive(),
+  convite_expira_dias: z.number().int().positive(),
+  pausa_pos_t4_dias: z.number().int().positive(),
+  reenvio: z.object({ max_tentativas: z.number().int().positive(), backoff_minutos: z.number().positive() }),
+  guardas: z.object({
+    aceite_minimo: z.number().min(0).max(1),
+    aceite_prazo_dias_uteis: z.number().int().positive(),
+    aceite_amostra_minima: z.number().int().positive(),
+    aceite_janela_dias_uteis: z.number().int().positive(),
+    queda_brusca: z.object({ ativa: z.boolean(), fator: z.number().min(0).max(1), amostra_minima: z.number().int().positive() }),
+    erros_limite: z.object({ quantidade: z.number().int().positive(), janela_horas: z.number().positive() }),
+  }),
+  responsavel_discovery: z.string(),
+  alerta_admin_email: z.email().nullable(),
+  template_exemplo: z.object({ first_name: z.string(), company: z.string() }),
+  leitura_minima_toques: z.number().int().positive(),
+  gate_automatico: z.object({ limiar_edicao: z.number().min(0).max(1), dias_em_aprovacao: z.number().int().positive() }),
+} as const;
+
+export type ChaveDeConfiguracao = keyof typeof ESQUEMAS_DE_CONFIGURACAO;
+export type Configuracao<K extends ChaveDeConfiguracao> = z.infer<(typeof ESQUEMAS_DE_CONFIGURACAO)[K]>;
+
+export async function lerConfiguracao<K extends ChaveDeConfiguracao>(db: Db, chave: K): Promise<Configuracao<K>> {
+  const [linha] = await db.query<{ valor: unknown }>("select valor from public.configuracoes where chave = $1", [chave]);
+  if (!linha) throw new Error(`Configuração ausente: ${chave}`);
+  return ESQUEMAS_DE_CONFIGURACAO[chave].parse(linha.valor) as Configuracao<K>;
+}

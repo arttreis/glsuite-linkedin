@@ -12,5 +12,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts", "tests/**/*.test.ts"],
+    // Cada arquivo sobe um Postgres em WASM (PGlite); em paralelo isso leva segundos.
+    testTimeout: 30_000,
+    hookTimeout: 60_000,
   },
 });

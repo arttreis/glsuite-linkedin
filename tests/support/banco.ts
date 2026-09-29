@@ -23,16 +23,20 @@ export async function aplicarMigrations(pg: PGliteInterface): Promise<void> {
   }
 }
 
+// date como 'AAAA-MM-DD', igual ao driver de produção. Vai em cada consulta
+// porque o clone() do PGlite não herda os parsers da instância.
+const OPCOES = { parsers: { 1082: (valor: string) => valor } };
+
 /** Adapta o PGlite à porta `Db` usada pelo código de produção. */
 export function criarDbPglite(pg: PGliteInterface): Db {
   const db: Db = {
     query: async <T>(sql: string, params?: readonly unknown[]) =>
-      (await pg.query<T>(sql, params as unknown[])).rows,
+      (await pg.query<T>(sql, params as unknown[], OPCOES)).rows,
     transacao: <T>(fn: (tx: Db) => Promise<T>) =>
       pg.transaction(async (transacao) => {
         const tx: Db = {
           query: async <R>(sql: string, params?: readonly unknown[]) =>
-            (await transacao.query<R>(sql, params as unknown[])).rows,
+            (await transacao.query<R>(sql, params as unknown[], OPCOES)).rows,
           transacao: (fnInterna) => fnInterna(tx),
         };
         return fn(tx);
@@ -44,8 +48,7 @@ export function criarDbPglite(pg: PGliteInterface): Db {
 let modelo: Promise<PGliteInterface> | undefined;
 
 async function criarModelo(): Promise<PGliteInterface> {
-  // date como 'AAAA-MM-DD', igual ao driver de produção.
-  const pg = await PGlite.create({ parsers: { 1082: (valor: string) => valor } });
+  const pg = await PGlite.create();
   await pg.exec(readFileSync(path.join(RAIZ, "tests/sql/supabase-bootstrap.sql"), "utf8"));
   await aplicarMigrations(pg);
   return pg;

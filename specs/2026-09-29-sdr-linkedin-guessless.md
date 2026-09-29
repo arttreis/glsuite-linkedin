@@ -109,3 +109,29 @@ Anotadas durante a execução, por ticket.
 - Ao conectar, o tipo da conta (gratuita, premium ou Sales Navigator) vem de
   `GET /users/me` e define o limite da nota do convite (200 ou 300).
 - O perfil segue pausado depois de conectar a conta.
+
+### SDR-04 · Importação e triagem
+- O arquivo é lido e normalizado **no navegador** (CSV com `,` `;` ou tab, ou o
+  JSON do Apify). O servidor recebe só as colunas canônicas e revalida com zod:
+  arquivo grande do Apify não esbarra no limite de corpo das server actions.
+- Colunas reconhecidas por apelido (CSV canônico do SDR e campos comuns dos
+  actors de LinkedIn do Apify, inclusive aninhados). O provider_id sai de URN
+  (`urn:li:fsd_profile:ACo…`) ou de campo solto.
+- Quem vem só com URL tem o provider_id buscado na Unipile (1 visita de perfil
+  por pessoa, até 100 por importação). Quem não resolve entra no resumo como
+  "sem provider_id" e fica fora da base.
+- O lead nasce direto em `triagem`: `importado` é o próprio ato de importar.
+- Opt-out não cria nem a pessoa. Bloqueado (outro dono, régua ativa, disse não,
+  sem resposta com `conexao`, pausa de 60 dias, mesmo ângulo da régua anterior)
+  entra em `triagem` com `bloqueio_motivo`, visível e sem como aprovar. Entrada
+  bloqueada não conta como lead vivo para outras campanhas.
+- Um alvo, um dono: se o dono anterior só rejeitou a pessoa, a posse passa na
+  aprovação.
+- Cooldown de empresa na importação é **alerta** (`alerta_triagem`). Quem segura
+  o convite até o fim do cooldown é o despachante (SDR-06). A chave da empresa é
+  o domínio, ou o nome sem acento, pontuação e sufixo societário.
+- A aprovação revalida tudo (opt-out, bloqueios, `max_leads`), porque a situação
+  pode ter mudado desde a importação.
+- Escritas do painel: a server action autoriza pelo RLS
+  (`exigirCampanhaDoOperador`, `leadsVisiveis`) e o serviço roda com a conexão
+  do sistema, porque as regras cruzam perfis.
