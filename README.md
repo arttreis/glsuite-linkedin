@@ -59,6 +59,19 @@ select o.id, p.id from public.operadores o, public.perfis p
  where o.email = 'luiz@exemplo.com' and p.slug = 'luiz';
 ```
 
+## Unipile (LinkedIn)
+
+1. Preencha `UNIPILE_DSN`, `UNIPILE_API_KEY` e `UNIPILE_WEBHOOK_SECRET`
+   (gere um aleatório, ex.: `openssl rand -hex 24`).
+2. Em **Perfis**, o admin clica em "Registrar webhooks na Unipile" uma vez por
+   ambiente. Isso cria os webhooks de mensagem, convite aceito e status da conta,
+   com o header secreto.
+3. Cada operador clica em "Conectar LinkedIn" no próprio perfil e faz o login no
+   assistente da Unipile. O perfil continua **pausado** depois de conectar:
+   ativar é sempre um ato humano.
+
+Detalhes da API e dos webhooks: [`docs/pesquisa/unipile.md`](docs/pesquisa/unipile.md).
+
 ## Deploy (Vercel)
 
 Importe o repositório na Vercel (framework Next.js, detectado sozinho) e

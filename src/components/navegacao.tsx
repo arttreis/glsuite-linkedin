@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const ITENS = [{ href: "/", rotulo: "Início" }] as const;
+const ITENS = [
+  { href: "/", rotulo: "Início" },
+  { href: "/perfis", rotulo: "Perfis" },
+] as const;
 
 export function Navegacao() {
   const caminho = usePathname();
