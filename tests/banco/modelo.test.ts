@@ -30,7 +30,7 @@ describe("migrations", () => {
         (select count(*) from public.angulos)::int as angulos,
         (select count(*) from public.configuracoes)::int as configuracoes,
         (select count(*) from pg_policies where schemaname = 'public')::int as politicas`);
-    expect(contagem).toMatchObject({ perfis: 4, angulos: 6, configuracoes: 15 });
+    expect(contagem).toMatchObject({ perfis: 4, angulos: 6, configuracoes: 16 });
     expect(contagem!.politicas).toBeGreaterThan(20);
     await pg.close();
   });

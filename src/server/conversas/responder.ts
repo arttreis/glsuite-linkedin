@@ -5,6 +5,7 @@ import { contextoDoPerfil } from "@/server/campanhas/perfil";
 import type { Db } from "@/server/db/tipos";
 import { cancelarPendentes } from "@/server/acoes/cancelar";
 import { transicionarLead } from "@/server/leads/transicoes";
+import { concluirTarefaManual } from "@/server/tarefas/tarefas";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
 import { enviarDmDeConversa } from "./enviar";
 
@@ -98,7 +99,8 @@ export async function responderManualmente(
   if (!envio.ok) return envio;
 
   await db.transacao(async (tx) => {
-    if (lead.estado === "aceito" || lead.estado === "em_sequencia") {
+    const tarefaFeita = await concluirTarefaManual(tx, { leadId: p.leadId, texto, agora, ator: p.operadorId, como: "painel" });
+    if (!tarefaFeita && (lead.estado === "aceito" || lead.estado === "em_sequencia")) {
       await cancelarPendentes(tx, p.leadId, "conversa assumida pelo operador");
       await transicionarLead(tx, { leadId: p.leadId, para: "escalado_humano", ator: p.operadorId, agora, motivo: "respondido pelo painel" });
     }

@@ -7,13 +7,14 @@ import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import { transicionarLead } from "@/server/leads/transicoes";
 import { enfileirarEventoRd } from "@/server/rd/sincronizar";
+import { concluirTarefaManual } from "@/server/tarefas/tarefas";
 import type { MensagemRecebida } from "@/server/unipile/webhooks";
 import { registrarAceite } from "./aceite";
 
 export type ResultadoDaMensagem =
   | { tipo: "ignorada" | "duplicada" | "nossa" }
   | {
-      tipo: "aceite_pela_nota" | "humano_no_linkedin" | "resposta" | "conversa" | "optout";
+      tipo: "aceite_pela_nota" | "humano_no_linkedin" | "tarefa_concluida" | "resposta" | "conversa" | "optout";
       leadId: string;
       perfilId: string;
     };
@@ -109,6 +110,12 @@ export async function registrarMensagem(db: Db, m: MensagemRecebida, agora: Date
           await registrarAceite(tx, { accountId: m.accountId, providerId: contraparte ?? "", agora, origem: "nota_do_convite", chatId: m.chatId });
           return { tipo: "aceite_pela_nota", leadId: lead.id, perfilId: perfil.id };
         }
+      }
+
+      // Espanha: o JP escreve à mão no LinkedIn e o eco conclui a tarefa do toque.
+      if (await concluirTarefaManual(tx, { leadId: lead.id, texto: m.texto, agora, ator: "unipile", como: "linkedin" })) {
+        await gravar("saida", "humano");
+        return { tipo: "tarefa_concluida", leadId: lead.id, perfilId: perfil.id };
       }
 
       await gravar("saida", "humano");

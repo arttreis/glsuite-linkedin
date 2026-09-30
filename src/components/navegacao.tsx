@@ -7,6 +7,7 @@ const ITENS = [
   { href: "/", rotulo: "Início" },
   { href: "/inbox", rotulo: "Inbox" },
   { href: "/aprovacao", rotulo: "Aprovação" },
+  { href: "/tarefas", rotulo: "Tarefas" },
   { href: "/campanhas", rotulo: "Campanhas" },
   { href: "/triagem", rotulo: "Triagem" },
   { href: "/importar", rotulo: "Importar" },

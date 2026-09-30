@@ -399,3 +399,28 @@ Anotadas durante a execução, por ticket.
   - 02: ângulo, mais tarefa "próximo passo" em +5 dias úteis;
   - 03: dono da conversa, mais tarefa "responder (SLA)";
   - 05: data da reunião (`DD/MM/AAAA`).
+
+### SDR-13 · Regras por praça
+- **Espanha:** `agendarToque` gera `tarefa_manual` (nunca DM) com o template
+  do toque renderizado como roteiro de apoio. O despachante não pega tarefa
+  manual. A tarefa se conclui por três caminhos, e todos seguem a régua (próxima
+  tarefa em dias úteis ou fim com pausa de 60 dias):
+  - o JP escreve pelo painel (texto humano, validado);
+  - o eco da mensagem que ele mandou direto no LinkedIn;
+  - o botão "já enviei".
+- Por isso, mensagem da própria conta que conclui uma tarefa manual **não**
+  escala o lead. Regra registrada no §6.1 do épico.
+- Lógica "próximo toque ou fim da régua" compartilhada (`avancarRegua`) entre
+  DM enviada e tarefa concluída.
+- **Trava T-4 imposta pelo sistema:** importar para campanha de perfil da
+  Espanha falha com mensagem clara enquanto `travas.dpa_espanha` for `false`.
+  Nenhum dado de pessoa europeia é gravado antes do DPA.
+- Canadá: o descadastro já valia no validador para toda DM, de qualquer origem
+  (SDR-05). Os testes cobrem salvar, enviar e responder.
+- Planilha-espelho (`/api/exportar/planilha?praca=`): CSV com `;` e BOM (Excel
+  em português), com as colunas da §9. Roda com o RLS do operador. Ficam de fora
+  a triagem, os rejeitados e quem pediu opt-out ("sai da base"). O próximo passo
+  é a próxima ação pendente, ou o `proximo_passo` do lead.
+- Idioma por perfil: o agente responde no idioma da pessoa, e a voz padrão sai
+  da praça do perfil (SDR-10). Os templates são escritos por campanha, no idioma
+  do perfil.

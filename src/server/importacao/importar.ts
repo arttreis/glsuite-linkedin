@@ -21,7 +21,7 @@ export type ResumoDaImportacao = {
 
 type Resultado = "novo" | "bloqueado" | "duplicado" | "optout";
 
-type Campanha = CampanhaAlvo & { accountId: string | null; perfilNome: string };
+type Campanha = CampanhaAlvo & { accountId: string | null; perfilNome: string; praca: string };
 
 /** Busca na Unipile o provider_id de quem veio só com URL. Cada busca é uma visita de perfil: tem teto. */
 async function resolverProviderIds(
@@ -160,12 +160,15 @@ export async function importarPessoas(
 ): Promise<{ importacaoId: string; resumo: ResumoDaImportacao }> {
   const { db } = deps;
   const [campanha] = await db.query<Campanha>(
-    `select c.id, c.perfil_id as "perfilId", c.angulo, p.unipile_account_id as "accountId", p.nome as "perfilNome"
+    `select c.id, c.perfil_id as "perfilId", c.angulo, p.unipile_account_id as "accountId", p.nome as "perfilNome", p.praca
        from public.campanhas c join public.perfis p on p.id = c.perfil_id
       where c.id = $1::uuid`,
     [p.campanhaId],
   );
   if (!campanha) throw new Error("Campanha não encontrada");
+  if (campanha.praca === "espanha" && !(await lerConfiguracao(db, "travas")).dpa_espanha) {
+    throw new Error("Trava T-4: o DPA ainda não foi assinado. Nenhum dado de pessoa na Espanha pode ser gravado.");
+  }
 
   const { resolvidas, semProviderId } = await resolverProviderIds(
     p.pessoas,

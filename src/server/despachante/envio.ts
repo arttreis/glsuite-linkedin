@@ -1,8 +1,7 @@
-import { aberturaDoProximoDiaUtil, dataLocal, somarDias, somarDiasUteis, sortearIntervalo, type Feriados } from "@/domain/calendario";
-import { proximoToque, sequencia } from "@/domain/sequencia";
+import { aberturaDoProximoDiaUtil, dataLocal, somarDiasUteis, sortearIntervalo, type Feriados } from "@/domain/calendario";
 import { agendarAcao, chaveDoToque } from "@/server/acoes/agendar";
 import { lerConfiguracao } from "@/server/configuracoes";
-import { agendarToque } from "@/server/sequencia/agendar-toque";
+import { avancarRegua } from "@/server/sequencia/agendar-toque";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import { avaliarErrosDeLimite } from "@/server/guardas/guardas";
@@ -142,7 +141,9 @@ export async function registrarSucesso(
           where id = $1::uuid`,
         [reserva.lead_id, resultado.chatId ?? null, reserva.toque, agora],
       );
-      if (reserva.toque) await agendarProximoToque(tx, { perfil, reserva, agora, feriados: p.feriados });
+      if (reserva.toque) {
+        await avancarRegua(tx, { perfil, leadId: reserva.lead_id, toque: reserva.toque, agora, feriados: p.feriados, ator: "despachante" });
+      }
     }
 
     await registrarEvento(tx, {
@@ -155,40 +156,6 @@ export async function registrarSucesso(
       em: agora,
     });
   });
-}
-
-async function agendarProximoToque(
-  tx: Db,
-  p: { perfil: PerfilDoDespachante; reserva: Reserva; agora: Date; feriados: Feriados },
-) {
-  const { perfil, reserva, agora } = p;
-  const [lead] = await tx.query<{ estado: string; sequencia: unknown; pos_t4: string }>(
-    `select l.estado, c.sequencia, c.pos_t4
-       from public.leads l join public.campanhas c on c.id = l.campanha_id
-      where l.id = $1::uuid`,
-    [reserva.lead_id],
-  );
-  if (!lead) return;
-  if (lead.estado === "aceito") {
-    await transicionarLead(tx, { leadId: reserva.lead_id, para: "em_sequencia", ator: "despachante", agora });
-  }
-
-  const passos = sequencia.safeParse(lead.sequencia);
-  const proximo = passos.success && reserva.toque ? proximoToque(passos.data, reserva.toque) : undefined;
-  if (proximo) {
-    await agendarToque(tx, { perfil, leadId: reserva.lead_id, passo: proximo, base: agora, feriados: p.feriados });
-    return;
-  }
-
-  // Fim da régua sem resposta (§4.5).
-  await transicionarLead(tx, { leadId: reserva.lead_id, para: "sem_resposta", ator: "despachante", agora });
-  if (lead.pos_t4 === "pausa_60_novo_angulo") {
-    const dias = await lerConfiguracao(tx, "pausa_pos_t4_dias");
-    await tx.query("update public.leads set retorno_apos = $2::date where id = $1::uuid", [
-      reserva.lead_id,
-      somarDias(dataLocal(agora, perfil.fuso), dias),
-    ]);
-  }
 }
 
 /**

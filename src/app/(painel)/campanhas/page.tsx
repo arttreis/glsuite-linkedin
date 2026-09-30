@@ -37,6 +37,12 @@ export default async function CampanhasPage() {
           Nova campanha
         </Link>
       </div>
+      <p className="mt-2 text-xs text-neutral-500">
+        Planilha-espelho (CSV):{" "}
+        <a href="/api/exportar/planilha?praca=domestico" className="underline underline-offset-2">Brasil</a> ·{" "}
+        <a href="/api/exportar/planilha?praca=canada" className="underline underline-offset-2">Canadá</a> ·{" "}
+        <a href="/api/exportar/planilha?praca=espanha" className="underline underline-offset-2">Espanha</a>
+      </p>
       {campanhas.length === 0 ? (
         <p className="mt-6 text-sm text-neutral-500">Nenhuma campanha ainda.</p>
       ) : (

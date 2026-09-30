@@ -281,8 +281,14 @@ em_conversa ─┬─► qualificado ─► reuniao_marcada
              ├─► encerrado_nao
              ├─► optout
              └─► escalado_humano
+régua automática ──(dono do perfil escreveu direto no LinkedIn)──► escalado_humano
 perfil pausado ⇒ ações congeladas, estado preservado
 ```
+
+Regra somada na implementação (SDR-07 e SDR-13): se o dono do perfil escreve
+direto no LinkedIn para quem ainda está na régua, a régua para (pendentes
+canceladas) e o lead vai para `escalado_humano`. Na Espanha, onde T2–T4 são
+tarefas manuais, a mensagem do JP conclui a tarefa do toque e a régua segue.
 
 Toda transição grava um evento. Todo `em_conversa` cancela as ações pendentes
 na mesma transação.
