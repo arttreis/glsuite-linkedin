@@ -29,6 +29,10 @@ export const ESQUEMAS_DE_CONFIGURACAO = {
     atraso_minutos: z.tuple([z.number().min(0), z.number().min(0)]),
   }),
   travas: z.object({ dpa_espanha: z.boolean() }),
+  pesquisa: z.object({
+    max_por_dia: z.number().int().min(0),
+    proporcao_personalizada: z.number().min(0).max(1),
+  }),
   rd_station: z.object({
     ativo: z.boolean(),
     pipeline_id: z.string().nullable(),

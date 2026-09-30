@@ -56,7 +56,11 @@ export default async function AprovacaoPage({ searchParams }: PageProps<"/aprova
                   </span>
                 </div>
                 <span className="text-xs text-neutral-500">
-                  {item.toque ? `${item.toque} da régua (${item.origem})` : "resposta da IA"}
+                  {item.toque
+                    ? item.toque === "T1" && item.origem === "ia"
+                      ? "T1 personalizado"
+                      : `${item.toque} da régua (${item.origem})`
+                    : "resposta da IA"}
                   {item.acaoSugerida && ` · ${SUGESTOES[item.acaoSugerida] ?? item.acaoSugerida}`}
                   {item.confianca !== null && ` · confiança ${Math.round(item.confianca * 100)}%`}
                 </span>
@@ -70,6 +74,7 @@ export default async function AprovacaoPage({ searchParams }: PageProps<"/aprova
               )}
               {item.motivoRevisao && <p className="mt-2 text-sm text-red-700">Atenção: {item.motivoRevisao}</p>}
               {item.motivoDoAgente && <p className="mt-1 text-xs text-neutral-500">Motivo do agente: {item.motivoDoAgente}</p>}
+              {item.gancho && <p className="mt-1 text-xs text-neutral-500">Gancho da pesquisa: {item.gancho}</p>}
 
               <form className="mt-3 flex flex-col gap-2">
                 <input type="hidden" name="acaoId" value={item.acaoId} />

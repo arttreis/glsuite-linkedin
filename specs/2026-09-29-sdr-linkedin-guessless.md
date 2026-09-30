@@ -446,3 +446,42 @@ Anotadas durante a execução, por ticket.
 - A referência de trabalho aparece como faixa. Abaixo dela o número fica em
   âmbar, acima em verde: é referência, não meta. O sistema cria a primeira linha
   de base da casa.
+
+### SDR-15 · Pesquisa do prospect e T1 personalizado
+- A/B por lead, sorteado na aprovação da triagem (`sortearVariante`): o
+  sha256 do id do lead contra `pesquisa.proporcao_personalizada` (padrão 0,5).
+  É estável e não guarda estado. Subir a proporção só move leads do template
+  para o personalizado. O braço fica em `leads.variante_copy`; a campanha de
+  template grava `template`.
+- O braço de controle usa o T1 da campanha, e T1 vazio é convite sem nota. O
+  mesmo T1 entra no prompt como referência de tom e tamanho.
+- O braço personalizado cria o T1 com origem `ia` e sem texto. O despachante
+  não pega ação da IA sem `texto_final`, então nada sai antes da aprovação.
+- O tick (etapa `pesquisa`, só com o Claude configurado) faz três passos:
+  - pesquisa o perfil completo (`linkedin_sections=*`) e os 5 posts
+    recentes, e guarda em `leads.pesquisa`;
+  - numa chamada ao `IA_MODELO_RASCUNHO`, gera de 1 a 3 ganchos e escolhe um
+    (a ideia dos prompts 3 e 4 da Kakiyo, que não estavam disponíveis, adaptada
+    às regras da casa);
+  - escreve a nota, valida e manda para a fila.
+- A pesquisa é visita de perfil: só na janela do perfil, em dia útil, e até
+  `pesquisa.max_por_dia` por perfil (padrão 20, contado em
+  `eventos.pesquisa_feita`). A visita é reaproveitada em nova tentativa.
+- A nota barrada pelo validador ganha uma reescrita com os problemas
+  apontados. Se falhar de novo, vai para a fila com `motivo_revisao`, e só sai
+  corrigida: a aprovação valida de novo. O texto não é corrigido
+  automaticamente.
+- Tratamento de falhas:
+  - falha de conta ou de limite do LinkedIn não gasta tentativa e para o perfil
+    naquele tick;
+  - qualquer outra falha, de pesquisa ou do modelo, conta tentativa;
+  - na terceira, o T1 volta para o template e `variante_copy` também. O A/B
+    compara o que de fato saiu (as-treated).
+- A fila mostra o gancho da pesquisa (evento `t1_personalizado`, que guarda
+  os ganchos, o motivo, a confiança, as reescritas, o modelo e o uso de tokens).
+  Confiança abaixo de 0,6 vira aviso.
+- A taxa de edição do gate do automático (§7.1) passa a contar só rascunhos de
+  conversa (`toque is null`). O modo automático automatiza a conversa, e o T1
+  personalizado sempre passa por aprovação.
+- A comparação de aceite template × personalizado é a visão "por variante" do
+  SDR-14, por campanha.

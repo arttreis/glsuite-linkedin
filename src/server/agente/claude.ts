@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
-import { classificacao, decisao, ErroDoModelo, type ModeloDeLinguagem, type Resposta, type Uso } from "./modelo";
+import { classificacao, conviteT1, decisao, ErroDoModelo, type ModeloDeLinguagem, type Resposta, type Uso } from "./modelo";
 
 export type ConfigDoClaude = {
   /** Sem chave, o SDK resolve pelo ambiente (ANTHROPIC_API_KEY). */
@@ -56,5 +56,6 @@ export function criarModeloClaude(config: ConfigDoClaude): ModeloDeLinguagem {
     classificar: (p) =>
       pedir(classificacao, p, { modelo: config.modeloClassificacao, maxTokens: 1024, comPensamento: false }),
     rascunhar: (p) => pedir(decisao, p, { modelo: config.modeloRascunho, maxTokens: 16000, comPensamento: true }),
+    escreverConvite: (p) => pedir(conviteT1, p, { modelo: config.modeloRascunho, maxTokens: 16000, comPensamento: true }),
   };
 }

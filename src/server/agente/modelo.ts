@@ -22,6 +22,19 @@ export const decisao = z.object({
 });
 export type Decisao = z.infer<typeof decisao>;
 
+/**
+ * T1 personalizado (SDR-15): ângulos tirados da pesquisa do prospect e a nota
+ * do convite escrita sobre o melhor deles.
+ */
+export const conviteT1 = z.object({
+  ganchos: z.array(z.string()),
+  gancho: z.string(),
+  nota: z.string(),
+  motivo: z.string(),
+  confianca: z.number().min(0).max(1),
+});
+export type ConviteT1 = z.infer<typeof conviteT1>;
+
 export type Uso = {
   entrada: number;
   saida: number;
@@ -38,6 +51,7 @@ export type Resposta<T> = { saida: T; uso: Uso; modelo: string };
 export interface ModeloDeLinguagem {
   classificar(p: { sistema: string; entrada: string }): Promise<Resposta<Classificacao>>;
   rascunhar(p: { sistema: string; entrada: string }): Promise<Resposta<Decisao>>;
+  escreverConvite(p: { sistema: string; entrada: string }): Promise<Resposta<ConviteT1>>;
 }
 
 /** O modelo recusou ou não devolveu o formato: a conversa vai para um humano. */

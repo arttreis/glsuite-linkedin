@@ -191,7 +191,7 @@ export function EditorDeCampanha({
               placeholder={
                 passo.tipo === "convite"
                   ? campanha.modoCopy === "personalizada"
-                    ? "A IA escreve o T1 de cada lead (opcional: base de estilo)."
+                    ? "Braço de controle do A/B: parte dos leads recebe este texto (vazio = convite sem nota); a outra recebe o T1 escrito pela IA. Também serve de base de estilo."
                     : "Nota curta, sem oferta, sem link. Vazio = convite sem nota."
                   : ""
               }

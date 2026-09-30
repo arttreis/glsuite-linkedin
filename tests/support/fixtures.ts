@@ -69,11 +69,12 @@ export async function criarCampanha(
     sequencia?: unknown;
     posT4?: "conexao" | "pausa_60_novo_angulo";
     status?: "rascunho" | "ativa" | "pausada" | "encerrada";
+    modoCopy?: "template" | "personalizada";
   } = {},
 ): Promise<string> {
   const [campanha] = await db.query<{ id: string }>(
-    `insert into public.campanhas (perfil_id, nome, angulo, sequencia, pos_t4, status)
-     values ($1::uuid, $2, $3, $4::jsonb, $5, $6)
+    `insert into public.campanhas (perfil_id, nome, angulo, sequencia, pos_t4, status, modo_copy)
+     values ($1::uuid, $2, $3, $4::jsonb, $5, $6, $7)
      returning id`,
     [
       await idDoPerfil(db, opcoes.perfil ?? "arthur"),
@@ -82,6 +83,7 @@ export async function criarCampanha(
       JSON.stringify(opcoes.sequencia ?? SEQUENCIA_PADRAO),
       opcoes.posT4 ?? "conexao",
       opcoes.status ?? "ativa",
+      opcoes.modoCopy ?? "template",
     ],
   );
   return campanha!.id;

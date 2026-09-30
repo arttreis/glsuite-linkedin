@@ -122,6 +122,17 @@ Os prompts ficam em `src/server/agente/prompts.ts`, com versão gravada em cada
 rascunho. Voz e regras de cada perfil ficam em `perfis.voz_md` e
 `perfis.regras_md`. A oferta fica na configuração `oferta_vigente`.
 
+### T1 personalizado (campanha `personalizada`)
+
+Na aprovação da triagem, cada lead é sorteado para um braço do A/B: o T1 da
+campanha (template) ou uma nota escrita pela IA. A fração do braço
+personalizado fica em `pesquisa.proporcao_personalizada` (padrão 0,5). Para o
+braço personalizado, o tick pesquisa o perfil e os posts recentes na Unipile,
+dentro da janela do perfil e até `pesquisa.max_por_dia` visitas por perfil
+(padrão 20). Depois gera os ganchos e escreve a nota, que passa pelo validador
+e vai para a fila de aprovação. Nada sai sem humano. A comparação de aceite
+fica em Métricas, na tabela "Template × personalizado".
+
 ## RD Station (funil Comercial · Serviço)
 
 Só leads da praça Doméstico vão para o RD (§4.9): triagem aprovada → 01 · Alvo,

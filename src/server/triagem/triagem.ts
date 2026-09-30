@@ -1,6 +1,8 @@
 import { agendarAcao, chaveDoToque } from "@/server/acoes/agendar";
+import { lerConfiguracao } from "@/server/configuracoes";
 import type { Db } from "@/server/db/tipos";
 import { transicionarLead } from "@/server/leads/transicoes";
+import { sortearVariante } from "@/server/pesquisa/variante";
 import { enfileirarEventoRd } from "@/server/rd/sincronizar";
 import { motivoDeBloqueio, temOptout } from "./regras";
 
@@ -24,6 +26,8 @@ type LeadEmTriagem = {
  * Aprova leads da triagem: revalida os bloqueios (a situação pode ter mudado
  * desde a importação), respeita o máximo de leads da campanha, passa a posse da
  * pessoa quando o dono anterior só a rejeitou e manda o lead para a fila.
+ * Na campanha personalizada, o lead é sorteado para o braço do A/B do T1
+ * (SDR-15): template da campanha ou nota escrita pela IA sobre a pesquisa.
  */
 export async function aprovarLeads(
   db: Db,
@@ -31,6 +35,7 @@ export async function aprovarLeads(
 ): Promise<ResultadoDaTriagem> {
   const resultado: ResultadoDaTriagem = { aprovados: [], recusados: [] };
   const hoje = p.agora.toISOString().slice(0, 10);
+  const { proporcao_personalizada } = await lerConfiguracao(db, "pesquisa");
 
   for (const leadId of p.leadIds) {
     const motivo = await db.transacao(async (tx): Promise<string | null> => {
@@ -75,19 +80,21 @@ export async function aprovarLeads(
           lead.perfil_id,
         ]);
       }
+      const variante = lead.modo_copy === "personalizada" ? sortearVariante(lead.id, proporcao_personalizada) : "template";
       await tx.query(
-        "update public.leads set bloqueio_motivo = null, angulo = coalesce(angulo, $2) where id = $1::uuid",
-        [lead.id, lead.angulo],
+        "update public.leads set bloqueio_motivo = null, angulo = coalesce(angulo, $2), variante_copy = $3 where id = $1::uuid",
+        [lead.id, lead.angulo, variante],
       );
       const mudou = await transicionarLead(tx, { leadId: lead.id, para: "na_fila", ator: p.operadorId, agora: p.agora });
       if (!mudou) return "Transição recusada";
       // T1 no dia 0 (§4.1). O despachante é quem respeita janela, teto e cooldown.
+      // No braço personalizado o texto vem da pesquisa, e só sai depois de aprovado.
       await agendarAcao(tx, {
         leadId: lead.id,
         perfilId: lead.perfil_id,
         tipo: "convite",
         toque: "T1",
-        origem: lead.modo_copy === "personalizada" ? "ia" : "template",
+        origem: variante === "personalizada" ? "ia" : "template",
         agendadaPara: p.agora,
         chave: chaveDoToque(lead.id, "T1"),
       });

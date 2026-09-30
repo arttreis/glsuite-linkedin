@@ -9,7 +9,7 @@ import type { Classificacao } from "./modelo";
  * lead: é estável e vai para o cache. Lead e conversa vão na mensagem do
  * usuário.
  */
-export const VERSAO_DOS_PROMPTS = "2026-09-29.1";
+export const VERSAO_DOS_PROMPTS = "2026-09-29.2";
 
 export type PerfilDoAgente = {
   nome: string;
@@ -142,4 +142,79 @@ Histórico completo, do mais antigo para o mais novo:
 ${renderizarHistorico(p.mensagens, p.nomeDoPerfil)}
 
 Decida o próximo passo e, se couber, escreva a resposta.`;
+}
+
+/**
+ * T1 personalizado (SDR-15). Adapta à casa a ideia de pesquisar e gerar
+ * ângulos antes de escrever a nota. Estável por perfil e campanha (vai para o
+ * cache): pesquisa e lead vão na mensagem do usuário.
+ */
+export function promptDoConvite(p: {
+  perfil: PerfilDoAgente;
+  angulo: string;
+  tetoCaracteres: number;
+  limiteDoLinkedIn: number;
+  /** T1 da campanha: o braço de controle do A/B e a base de estilo. */
+  referencia: string | null;
+}): string {
+  const { perfil } = p;
+  const proibidas = perfil.palavrasProibidas.length > 0 ? perfil.palavrasProibidas.join(", ") : "(nenhuma)";
+  const referencia = p.referencia?.trim()
+    ? `\nNota de referência da campanha (tom e tamanho; não copie, e troque os tokens pelo dado real):\n${p.referencia.trim()}\n`
+    : "";
+  return `Você escreve a nota do convite de conexão (T1) no LinkedIn, em nome de ${perfil.nome}, para a GuessLess. Um humano aprova antes de sair.
+
+Voz de ${perfil.nome}:
+${perfil.voz?.trim() || VOZ_PADRAO[perfil.praca]}
+
+Objetivo do T1: a pessoa aceitar a conexão. Nada além disso.
+
+Como fazer:
+1. Leia a pesquisa (perfil e posts recentes) e liste em "ganchos" de 1 a 3 fatos específicos e verdadeiros que dariam uma abertura: um post recente, um cargo novo, uma mudança na empresa, um tema que a pessoa defende. Só o que está na pesquisa.
+2. Escolha o gancho que mais conversa com o ângulo da campanha, "${p.angulo}", e copie-o em "gancho".
+3. Escreva a nota sobre esse gancho.
+
+Regras (valem sempre):
+- No máximo ${p.tetoCaracteres} caracteres (o LinkedIn aceita ${p.limiteDoLinkedIn} nesta conta). Curta é melhor.
+- Sem oferta, sem link, sem pedido de reunião, sem pergunta de venda. O gancho conversa com o ângulo sem vender nada.
+- Nunca invente fato. Se a pesquisa não trouxer nada útil, use cargo e empresa com naturalidade e baixe a confiança.
+- Nunca use travessão (—) nem meia-risca (–).
+- Nunca use estas palavras: ${proibidas}.
+- Nunca diga que escreveu à mão, que não é automático ou que não é um robô.
+- Nunca puxe para WhatsApp, e-mail ou telefone.
+- Idioma: ${perfil.idioma === "pt" ? "português do Brasil" : perfil.idioma === "es" ? "espanhol da Espanha" : "inglês"}.
+${perfil.regras?.trim() ? `\nRegras específicas de ${perfil.nome}:\n${perfil.regras.trim()}\n` : ""}${referencia}
+"motivo": uma linha explicando a escolha do gancho. "confianca": de 0 a 1, o quanto a nota está certa e apoiada em fato.`;
+}
+
+export type ProspectDoConvite = {
+  nome: string;
+  primeiroNome: string | null;
+  cargo: string | null;
+  empresa: string | null;
+  localizacao: string | null;
+};
+
+export function entradaDoConvite(p: {
+  prospect: ProspectDoConvite;
+  pesquisa: unknown;
+  /** A nota anterior barrada pelo validador, para uma nova tentativa. */
+  barrada?: { nota: string; problemas: readonly string[] };
+}): string {
+  const { prospect } = p;
+  const barrada = p.barrada
+    ? `\n\nSua nota anterior foi barrada pelo validador:\n"${p.barrada.nota}"\nProblemas:\n${p.barrada.problemas
+        .map((problema) => `- ${problema}`)
+        .join("\n")}\nReescreva corrigindo todos.`
+    : "";
+  return `Prospect:
+- Nome: ${prospect.nome}${prospect.primeiroNome ? ` (primeiro nome: ${prospect.primeiroNome})` : ""}
+- Cargo: ${prospect.cargo ?? "não informado"}
+- Empresa: ${prospect.empresa ?? "não informada"}
+- Localização: ${prospect.localizacao ?? "não informada"}
+
+Pesquisa (perfil e posts recentes):
+${JSON.stringify(p.pesquisa ?? {}, null, 2)}
+
+Escreva a nota do convite.${barrada}`;
 }
