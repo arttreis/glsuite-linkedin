@@ -7,7 +7,7 @@ import { registrarSucesso } from "@/server/despachante/envio";
 import { carregarPerfil } from "@/server/despachante/perfis";
 import { transicionarLead } from "@/server/leads/transicoes";
 import { pausarPerfil } from "@/server/perfis/pausa";
-import { cancelarPendentes } from "@/server/reacoes/mensagem";
+import { cancelarPendentes } from "@/server/acoes/cancelar";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
 import { classificarErro, ErroUnipile } from "@/server/unipile/erros";
 

@@ -1,6 +1,6 @@
 import type { Db } from "@/server/db/tipos";
 import { transicionarLead } from "@/server/leads/transicoes";
-import { cancelarPendentes } from "@/server/reacoes/mensagem";
+import { cancelarPendentes } from "@/server/acoes/cancelar";
 
 export type Desfecho = "qualificado" | "reuniao_marcada" | "encerrado_nao" | "escalado_humano" | "em_conversa";
 

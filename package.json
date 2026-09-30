@@ -16,6 +16,7 @@
     "prepare": "git config core.hooksPath .githooks || exit 0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.129.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "next": "16.3.7",

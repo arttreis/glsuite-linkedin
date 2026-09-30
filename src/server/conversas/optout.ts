@@ -1,7 +1,7 @@
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import { transicionarLead } from "@/server/leads/transicoes";
-import { cancelarPendentes } from "@/server/reacoes/mensagem";
+import { cancelarPendentes } from "@/server/acoes/cancelar";
 
 /**
  * Opt-out global (§4.6): vale para os 4 perfis, cancela tudo o que estava para

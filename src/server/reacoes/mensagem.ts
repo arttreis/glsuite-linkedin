@@ -1,5 +1,8 @@
 import { ESTADOS_QUE_RESPONDEM, type EstadoDoLead } from "@/domain/estados";
+import { detectarOptout } from "@/domain/optout";
+import { cancelarPendentes } from "@/server/acoes/cancelar";
 import { alertarNovaMensagem } from "@/server/conversas/alertas";
+import { registrarOptout } from "@/server/conversas/optout";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import { transicionarLead } from "@/server/leads/transicoes";
@@ -8,23 +11,16 @@ import { registrarAceite } from "./aceite";
 
 export type ResultadoDaMensagem =
   | { tipo: "ignorada" | "duplicada" | "nossa" }
-  | { tipo: "aceite_pela_nota" | "humano_no_linkedin" | "resposta" | "conversa"; leadId: string; perfilId: string };
+  | {
+      tipo: "aceite_pela_nota" | "humano_no_linkedin" | "resposta" | "conversa" | "optout";
+      leadId: string;
+      perfilId: string;
+    };
 
 /** Estados em que a régua ainda está rodando sozinha. */
 const ESTADOS_AUTOMATICOS: readonly EstadoDoLead[] = ["na_fila", "convite_enviado", "aceito", "em_sequencia"];
 
 type Lead = { id: string; estado: EstadoDoLead; perfil_id: string; pessoa_id: string };
-
-/** Cancela tudo o que ainda não saiu para o lead. */
-export async function cancelarPendentes(db: Db, leadId: string, motivo: string): Promise<number> {
-  const canceladas = await db.query(
-    `update public.acoes set status = 'cancelada', erro = $2
-      where lead_id = $1::uuid and status in ('pendente', 'aguardando_aprovacao')
-      returning id`,
-    [leadId, motivo],
-  );
-  return canceladas.length;
-}
 
 async function acharLead(tx: Db, perfilId: string, m: MensagemRecebida, contraparte: string | null): Promise<Lead | null> {
   const [porChat] = await tx.query<Lead>(
@@ -139,6 +135,24 @@ export async function registrarMensagem(db: Db, m: MensagemRecebida, agora: Date
       ator: "unipile",
       em: agora,
     });
+
+    // Pedido claro para parar vira opt-out global antes de qualquer outra coisa (§7).
+    if (detectarOptout(m.texto).claro) {
+      const [pessoa] = await tx.query<{ provider_id: string }>(
+        "select provider_id from public.pessoas where id = $1::uuid",
+        [lead.pessoa_id],
+      );
+      await tx.query("update public.mensagens set categoria = 'optout' where id = $1::uuid", [nova.id]);
+      await registrarOptout(tx, {
+        providerId: pessoa!.provider_id,
+        perfilOrigem: perfil.id,
+        textoPedido: m.texto,
+        ator: "unipile",
+        agora,
+      });
+      return { tipo: "optout", leadId: lead.id, perfilId: perfil.id };
+    }
+
     await alertarNovaMensagem(tx, { leadId: lead.id, perfilId: perfil.id, mensagemId: nova.id, texto: m.texto });
 
     if (!ESTADOS_QUE_RESPONDEM.includes(lead.estado)) return { tipo: "conversa", leadId: lead.id, perfilId: perfil.id };

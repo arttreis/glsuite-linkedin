@@ -1,3 +1,5 @@
+import { processarMensagensPendentes } from "@/server/agente/agente";
+import type { ModeloDeLinguagem } from "@/server/agente/modelo";
 import { enviarAlertasPendentes, type EnviadorDeEmail } from "@/server/alertas/alertas";
 import { alertarSlasEstourados } from "@/server/conversas/alertas";
 import type { Db } from "@/server/db/tipos";
@@ -18,6 +20,8 @@ export type DependenciasDoTick = {
   aleatorio?: () => number;
   /** Sem enviador (Resend não configurado), os alertas ficam na fila. */
   enviador?: EnviadorDeEmail | null;
+  /** Sem modelo (Claude não configurado), as mensagens esperam o agente na fila. */
+  modelo?: ModeloDeLinguagem | null;
 };
 
 export type RelatorioDoTick =
@@ -31,7 +35,7 @@ export type RelatorioDoTick =
 /**
  * O tick do cron (a cada 5 min). Uma etapa que falha não derruba as outras.
  * Ordem: contas → webhooks atrasados → ações presas → guardas → despacho →
- * alertas. O despacho vem depois de tudo o que pode pausar um perfil ou tirar
+ * agente → SLA → alertas. O despacho vem depois de tudo o que pode pausar um perfil ou tirar
  * um lead da régua.
  */
 export async function executarTick(deps: DependenciasDoTick): Promise<RelatorioDoTick> {
@@ -62,6 +66,10 @@ export async function executarTick(deps: DependenciasDoTick): Promise<RelatorioD
       (await etapa("despacho", () =>
         despachar({ ...contexto, aleatorio: deps.aleatorio, verificarResposta: criarVerificadorDeResposta(contexto) }),
       )) ?? [];
+    if (deps.modelo) {
+      const modelo = deps.modelo;
+      await etapa("agente", () => processarMensagensPendentes({ db: deps.db, modelo, agora: deps.agora, aleatorio: deps.aleatorio }));
+    }
     await etapa("sla", () => alertarSlasEstourados(deps.db, deps.agora));
     if (deps.enviador) {
       const enviador = deps.enviador;

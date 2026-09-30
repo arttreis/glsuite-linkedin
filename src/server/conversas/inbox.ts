@@ -41,7 +41,8 @@ export async function listarConversas(
     `select l.id as "leadId", pe.nome as pessoa, pe.cargo, pe.empresa, pf.nome as perfil, pf.id as "perfilId",
             l.estado, pf.fuso, pf.janela, pf.praca,
             ultima.texto as "ultimoTexto", ultima.direcao as "ultimaDirecao", ultima.em as "ultimaEm",
-            (select max(em) from public.mensagens m where m.lead_id = l.id and m.direcao = 'entrada') as "ultimaEntrada",
+            (select max(em) from public.mensagens m
+              where m.lead_id = l.id and m.direcao = 'entrada' and coalesce(m.categoria, '') <> 'fora_do_escritorio') as "ultimaEntrada",
             (select max(em) from public.mensagens m where m.lead_id = l.id and m.direcao = 'saida') as ultima_saida,
             (select count(*)::int from public.acoes a where a.lead_id = l.id and a.status = 'aguardando_aprovacao') as "aguardandoAprovacao"
        from public.leads l

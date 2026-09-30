@@ -1,6 +1,8 @@
 import "server-only";
 import { z } from "zod";
 import { lerEnv } from "@/lib/env";
+import { criarModeloClaude } from "@/server/agente/claude";
+import type { ModeloDeLinguagem } from "@/server/agente/modelo";
 import type { EnviadorDeEmail } from "@/server/alertas/alertas";
 import { criarEnviadorResend } from "@/server/alertas/resend";
 import { criarClienteUnipile, type ClienteUnipile } from "@/server/unipile/cliente";
@@ -47,6 +49,34 @@ export function obterEnviadorDeEmail(): EnviadorDeEmail | null {
         : null;
   }
   return enviador;
+}
+
+const envIa = lerEnv(
+  z.object({
+    ANTHROPIC_API_KEY: z.string().min(1).optional(),
+    // Os modelos ficam em variável de ambiente; a troca é decidida pelo eval (§5).
+    IA_MODELO_CLASSIFICACAO: z.string().min(1).default("claude-haiku-4-5"),
+    IA_MODELO_RASCUNHO: z.string().min(1).default("claude-sonnet-5"),
+    IA_ESFORCO_RASCUNHO: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
+  }),
+);
+
+let modelo: ModeloDeLinguagem | null | undefined;
+
+/** Agente de conversa no Claude, ou null sem ANTHROPIC_API_KEY (as mensagens esperam na fila). */
+export function obterModeloDeLinguagem(): ModeloDeLinguagem | null {
+  if (modelo === undefined) {
+    const env = envIa();
+    modelo = env.ANTHROPIC_API_KEY
+      ? criarModeloClaude({
+          apiKey: env.ANTHROPIC_API_KEY,
+          modeloClassificacao: env.IA_MODELO_CLASSIFICACAO,
+          modeloRascunho: env.IA_MODELO_RASCUNHO,
+          esforcoRascunho: env.IA_ESFORCO_RASCUNHO,
+        })
+      : null;
+  }
+  return modelo;
 }
 
 const envCron = lerEnv(z.object({ CRON_SECRET: z.string().min(16) }));

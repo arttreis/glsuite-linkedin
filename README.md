@@ -102,6 +102,26 @@ reconcilia ações presas e envia no máximo uma ação por perfil ativo. Ele ex
   primeira ativação, que inicia a semana 1 da rampa) é manual e fica em `eventos`
   com o operador.
 
+## Agente de conversa (Claude)
+
+Quando a pessoa responde, o agente (§7) segue estes passos:
+
+1. Pedido claro para parar ("pare de me mandar mensagem", "stop messaging me",
+   "deja de enviarme") vira opt-out global no próprio processamento do webhook,
+   antes de qualquer IA.
+2. O `IA_MODELO_CLASSIFICACAO` (padrão `claude-haiku-4-5`) classifica a
+   mensagem.
+3. O `IA_MODELO_RASCUNHO` (padrão `claude-sonnet-5`) decide e rascunha.
+4. O texto passa pelo validador e segue o modo do perfil:
+   - manual: vira sugestão na inbox;
+   - aprovação: vai para a fila;
+   - automático: é agendado. Preço, reclamação, opt-out ambíguo, baixa confiança
+     e violação do validador vão para a fila.
+
+Os prompts ficam em `src/server/agente/prompts.ts`, com versão gravada em cada
+rascunho. Voz e regras de cada perfil ficam em `perfis.voz_md` e
+`perfis.regras_md`. A oferta fica na configuração `oferta_vigente`.
+
 ## Deploy (Vercel)
 
 Importe o repositório na Vercel (framework Next.js, detectado sozinho) e

@@ -300,3 +300,47 @@ Anotadas durante a execução, por ticket.
   separado, fora do escopo.
 - Desfechos marcados pelo humano: qualificado (04), reunião marcada (05, com
   data) e disse não. Disse não encerra sem recuperação e cancela o que houver.
+
+### SDR-10 · Agente de conversa
+- SDK oficial `@anthropic-ai/sdk`. Saída estruturada com
+  `messages.parse` + `zodOutputFormat`: formato errado ou `stop_reason: refusal`
+  viram erro, nunca texto solto. Classificação no `claude-haiku-4-5` (sem
+  thinking). Rascunho no `claude-sonnet-5` com thinking adaptativo e esforço
+  `medium`. Tudo em variável de ambiente.
+- Prompt de sistema estável por perfil (sem dado de lead) com `cache_control`.
+  Lead e conversa vão na mensagem do usuário. Versão dos prompts
+  (`VERSAO_DOS_PROMPTS`) gravada em cada rascunho.
+- Os prompts 5 a 8 da Kakiyo não estavam disponíveis. Os prompts foram escritos
+  a partir das regras da §7, §4.2 e §4.6 e devem ser calibrados no eval
+  (SDR-16).
+- **Opt-out determinístico antes de tudo:** frases claras em PT, EN e ES são
+  registradas no processamento do webhook (`detectarOptout`), sem esperar IA.
+  "Não tenho interesse" é **não**, não opt-out. Opt-out pela IA só com
+  confiança ≥ 0,8; abaixo disso é "opt-out ambíguo" e vai para um humano.
+  Opt-out não recebe mensagem de confirmação (o despachante bloqueia qualquer
+  envio para quem pediu para parar).
+- Execuções do agente ficam em `rascunhos`, uma por mensagem da pessoa (única
+  por `mensagem_id`). Guardam classificação, decisão, validação, exceção, modelos
+  e uso de tokens: é o dado do eval e da taxa de edição. Erro do modelo é
+  retentado até 3 vezes, e execução presa em `processando` é retomada depois de
+  10 min.
+- O agente roda só para lead em `em_conversa` e só sobre a última mensagem da
+  pessoa sem resposta. Com humano, qualificado ou reunião, a conversa é do
+  humano. Rascunho novo cancela o anterior que ainda estava na fila.
+- Resposta automática de ausência ("fora do escritório"): sem rascunho e sem SLA
+  (`mensagens.categoria`).
+- Exceções que vão para a fila no modo automático:
+  - preço e reclamação (sinais da classificação);
+  - opt-out ambíguo;
+  - confiança da decisão < 0,7;
+  - violação do validador;
+  - proposta de reunião sem link configurado.
+
+  Violação do validador vai para a fila marcada em qualquer modo.
+- O envio automático sai com atraso humano (3 a 10 min, configurável) pelo
+  despachante, com prioridade sobre a régua.
+- Link de agenda: o do perfil em `responsavel_discovery` (decisão D1, padrão
+  Juliano) e, na falta dele, o do próprio perfil. Link diferente escrito pela IA
+  é barrado pelo validador.
+- Disparo: logo depois do webhook (`after()` do Next) e, garantido, no tick do
+  cron (até 5 mensagens por tick).
