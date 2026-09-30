@@ -48,12 +48,21 @@ as $$
   );
 $$;
 
+-- Permissões só nas tabelas do SDR, nunca no schema inteiro: o banco pode ser
+-- dividido com outro produto (o GL Suite), e um grant ou revoke em "all tables"
+-- mexeria nas tabelas dele. Tabela nova do SDR declara o próprio grant.
 grant usage on schema public to authenticated;
-grant select, insert, update, delete on all tables in schema public to authenticated;
-grant usage, select on all sequences in schema public to authenticated;
-alter default privileges in schema public grant select, insert, update, delete on tables to authenticated;
-alter default privileges in schema public grant usage, select on sequences to authenticated;
-revoke all on all tables in schema public from anon;
+grant select, insert, update, delete on
+  public.operadores, public.perfis, public.operador_perfis, public.angulos, public.campanhas,
+  public.pessoas, public.importacoes, public.leads, public.acoes, public.mensagens,
+  public.optouts, public.eventos, public.webhooks_recebidos, public.feriados, public.configuracoes
+  to authenticated;
+grant usage, select on sequence public.eventos_id_seq to authenticated;
+revoke all on
+  public.operadores, public.perfis, public.operador_perfis, public.angulos, public.campanhas,
+  public.pessoas, public.importacoes, public.leads, public.acoes, public.mensagens,
+  public.optouts, public.eventos, public.webhooks_recebidos, public.feriados, public.configuracoes
+  from anon;
 
 alter table public.operadores enable row level security;
 alter table public.operador_perfis enable row level security;
