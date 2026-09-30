@@ -122,6 +122,23 @@ Os prompts ficam em `src/server/agente/prompts.ts`, com versão gravada em cada
 rascunho. Voz e regras de cada perfil ficam em `perfis.voz_md` e
 `perfis.regras_md`. A oferta fica na configuração `oferta_vigente`.
 
+## RD Station (funil Comercial · Serviço)
+
+Só leads da praça Doméstico vão para o RD (§4.9): triagem aprovada → 01 · Alvo,
+convite → 02 · Tocado, resposta → 03 · Conversa, qualificado → 04, reunião →
+05 · Discovery.
+
+1. Preencha `RD_STATION_TOKEN`, com o token de um usuário de visibilidade Geral.
+2. Em **Integrações** (admin), clique em "Descobrir ids no RD". Copie para o
+   mapeamento os ids do funil, das etapas 01 a 05, dos campos personalizados
+   (Nicho, Fonte, Praça, Originador, Ângulo de abertura, Dono da conversa, Data
+   da reunião) e dos usuários (por slug do perfil). Marque `"ativo": true`.
+3. Os eventos acumulados desde a triagem sincronizam no próximo tick.
+
+A negociação é da empresa: um segundo decisor da mesma empresa entra como
+anotação na mesma negociação, e a etapa nunca volta. Detalhes da API em
+[`docs/pesquisa/rd-station.md`](docs/pesquisa/rd-station.md).
+
 ## Deploy (Vercel)
 
 Importe o repositório na Vercel (framework Next.js, detectado sozinho) e

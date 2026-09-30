@@ -5,6 +5,7 @@ import { criarModeloClaude } from "@/server/agente/claude";
 import type { ModeloDeLinguagem } from "@/server/agente/modelo";
 import type { EnviadorDeEmail } from "@/server/alertas/alertas";
 import { criarEnviadorResend } from "@/server/alertas/resend";
+import { criarClienteRd, type ClienteRd } from "@/server/rd/cliente";
 import { criarClienteUnipile, type ClienteUnipile } from "@/server/unipile/cliente";
 
 const envUnipile = lerEnv(
@@ -77,6 +78,19 @@ export function obterModeloDeLinguagem(): ModeloDeLinguagem | null {
       : null;
   }
   return modelo;
+}
+
+const envRd = lerEnv(z.object({ RD_STATION_TOKEN: z.string().min(1).optional() }));
+
+let rd: ClienteRd | null | undefined;
+
+/** Cliente do RD Station CRM, ou null sem token (trava T-6). */
+export function obterClienteRd(): ClienteRd | null {
+  if (rd === undefined) {
+    const token = envRd().RD_STATION_TOKEN;
+    rd = token ? criarClienteRd({ token }) : null;
+  }
+  return rd;
 }
 
 const envCron = lerEnv(z.object({ CRON_SECRET: z.string().min(16) }));

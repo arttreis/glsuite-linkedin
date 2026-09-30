@@ -365,3 +365,37 @@ Anotadas durante a execução, por ticket.
 - Resposta com o perfil pausado não é aprovada. Clique duplo não duplica: a
   aprovação muda o status com a linha travada.
 - O alerta de SLA estourado (SDR-09) cita os rascunhos esperando na fila.
+
+### SDR-12 · RD Station
+- API v1 com token [verificado]: é a única com token fixo. O `deal_stage_id` do
+  update vai na raiz (dentro de `deal`, a v1 responde 200 e não move). A empresa
+  (organização) é criada antes da negociação. Referência:
+  `docs/pesquisa/rd-station.md`.
+- Fila transacional `rd_eventos` (única por lead e etapa). O evento nasce na
+  mesma transação do fato:
+  - aprovação → 01;
+  - convite enviado → 02;
+  - resposta → 03;
+  - qualificado → 04;
+  - reunião → 05.
+
+  O tick sincroniza em ordem por lead (se a 01 falhar, a 02 espera) e retenta
+  até 10 vezes.
+- Só praça Doméstico: o evento nem nasce para Canadá e Espanha, e o processador
+  ainda ignora qualquer lead de outra praça (defesa dupla).
+- Idempotência sem ajuda da API: `rd_deal_id` no lead, evento único e busca por
+  nome exato antes de criar.
+- **A negociação é da empresa** ("nome da negociação = `<Empresa>` e nada
+  mais"): um segundo decisor da mesma empresa entra como anotação na negociação
+  existente. A etapa nunca volta (outro decisor pode estar mais à frente). Lead
+  sem empresa não vira negociação: fica em erro para o humano corrigir.
+- Os ids (funil, etapas, campos, usuários, fonte) ficam na configuração
+  `rd_station`, desligada até alguém preencher (trava T-6). A página
+  **Integrações** descobre os ids no RD e valida o JSON antes de salvar. Com o
+  RD desligado, a fila acumula e sincroniza quando ligar.
+- Campos por etapa (§4.9):
+  - 01: nicho, fonte = LinkedIn, praça = Doméstico e originador = nome do
+    perfil; responsável = usuário do RD do dono;
+  - 02: ângulo, mais tarefa "próximo passo" em +5 dias úteis;
+  - 03: dono da conversa, mais tarefa "responder (SLA)";
+  - 05: data da reunião (`DD/MM/AAAA`).

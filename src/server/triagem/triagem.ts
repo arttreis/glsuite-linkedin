@@ -1,6 +1,7 @@
 import { agendarAcao, chaveDoToque } from "@/server/acoes/agendar";
 import type { Db } from "@/server/db/tipos";
 import { transicionarLead } from "@/server/leads/transicoes";
+import { enfileirarEventoRd } from "@/server/rd/sincronizar";
 import { motivoDeBloqueio, temOptout } from "./regras";
 
 export type ResultadoDaTriagem = { aprovados: string[]; recusados: { leadId: string; motivo: string }[] };
@@ -90,6 +91,7 @@ export async function aprovarLeads(
         agendadaPara: p.agora,
         chave: chaveDoToque(lead.id, "T1"),
       });
+      await enfileirarEventoRd(tx, { leadId: lead.id, etapa: "01" });
       return null;
     });
 

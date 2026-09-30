@@ -6,6 +6,7 @@ import { registrarOptout } from "@/server/conversas/optout";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import { transicionarLead } from "@/server/leads/transicoes";
+import { enfileirarEventoRd } from "@/server/rd/sincronizar";
 import type { MensagemRecebida } from "@/server/unipile/webhooks";
 import { registrarAceite } from "./aceite";
 
@@ -161,6 +162,11 @@ export async function registrarMensagem(db: Db, m: MensagemRecebida, agora: Date
     await cancelarPendentes(tx, lead.id, "a pessoa respondeu");
     await tx.query("update public.leads set respondeu_em = $2 where id = $1::uuid", [lead.id, agora]);
     await transicionarLead(tx, { leadId: lead.id, para: "em_conversa", ator: "unipile", agora, motivo: "respondeu" });
+    await enfileirarEventoRd(tx, {
+      leadId: lead.id,
+      etapa: "03",
+      dados: { proximo_passo: "Responder a mensagem (SLA de 4 horas úteis)", proximo_passo_em: agora.toISOString().slice(0, 10) },
+    });
     return { tipo: "resposta", leadId: lead.id, perfilId: perfil.id };
   });
 }

@@ -1,4 +1,4 @@
-import { aberturaDoProximoDiaUtil, dataLocal, somarDias, sortearIntervalo, type Feriados } from "@/domain/calendario";
+import { aberturaDoProximoDiaUtil, dataLocal, somarDias, somarDiasUteis, sortearIntervalo, type Feriados } from "@/domain/calendario";
 import { proximoToque, sequencia } from "@/domain/sequencia";
 import { agendarAcao, chaveDoToque } from "@/server/acoes/agendar";
 import { lerConfiguracao } from "@/server/configuracoes";
@@ -8,6 +8,7 @@ import { registrarEvento } from "@/server/eventos";
 import { avaliarErrosDeLimite } from "@/server/guardas/guardas";
 import { transicionarLead } from "@/server/leads/transicoes";
 import { pausarPerfil } from "@/server/perfis/pausa";
+import { enfileirarEventoRd } from "@/server/rd/sincronizar";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
 import { classificarErro, ErroUnipile } from "@/server/unipile/erros";
 import type { PerfilDoDespachante } from "./perfis";
@@ -96,6 +97,17 @@ export async function registrarSucesso(
         [reserva.lead_id, agora, resultado.providerMessageId],
       );
       await transicionarLead(tx, { leadId: reserva.lead_id, para: "convite_enviado", ator: "despachante", agora });
+      const proximoPasso = { texto: "Acompanhar o aceite do convite", data: somarDiasUteis(dataLocal(agora, perfil.fuso), 5, p.feriados) };
+      await tx.query("update public.leads set proximo_passo = $2, proximo_passo_em = $3::date where id = $1::uuid", [
+        reserva.lead_id,
+        proximoPasso.texto,
+        proximoPasso.data,
+      ]);
+      await enfileirarEventoRd(tx, {
+        leadId: reserva.lead_id,
+        etapa: "02",
+        dados: { proximo_passo: proximoPasso.texto, proximo_passo_em: proximoPasso.data },
+      });
       const expira = await lerConfiguracao(tx, "convite_expira_dias");
       await agendarAcao(tx, {
         leadId: reserva.lead_id,

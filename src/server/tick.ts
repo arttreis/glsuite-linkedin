@@ -6,6 +6,8 @@ import type { Db } from "@/server/db/tipos";
 import { despachar, type ResultadoDoPerfil } from "@/server/despachante/despachante";
 import { carregarFeriados } from "@/server/despachante/perfis";
 import { avaliarGuardasDeTodos } from "@/server/guardas/guardas";
+import type { ClienteRd } from "@/server/rd/cliente";
+import { processarEventosRd } from "@/server/rd/sincronizar";
 import { reconciliarAcoesEmVoo } from "@/server/despachante/reconciliar";
 import { sincronizarStatusDasContas } from "@/server/perfis/status-conta";
 import { criarVerificadorDeResposta } from "@/server/reacoes/verificar-resposta";
@@ -22,6 +24,8 @@ export type DependenciasDoTick = {
   enviador?: EnviadorDeEmail | null;
   /** Sem modelo (Claude não configurado), as mensagens esperam o agente na fila. */
   modelo?: ModeloDeLinguagem | null;
+  /** Sem cliente (token do RD ausente), os eventos esperam na fila. */
+  rd?: ClienteRd | null;
 };
 
 export type RelatorioDoTick =
@@ -69,6 +73,10 @@ export async function executarTick(deps: DependenciasDoTick): Promise<RelatorioD
     if (deps.modelo) {
       const modelo = deps.modelo;
       await etapa("agente", () => processarMensagensPendentes({ db: deps.db, modelo, agora: deps.agora, aleatorio: deps.aleatorio }));
+    }
+    if (deps.rd) {
+      const rd = deps.rd;
+      await etapa("rd", () => processarEventosRd({ db: deps.db, rd, agora: deps.agora }));
     }
     await etapa("sla", () => alertarSlasEstourados(deps.db, deps.agora));
     if (deps.enviador) {

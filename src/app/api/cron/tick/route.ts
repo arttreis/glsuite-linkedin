@@ -1,5 +1,5 @@
 import { obterDb } from "@/server/db";
-import { obterEnviadorDeEmail, obterModeloDeLinguagem, obterUnipile, segredoDoCron } from "@/server/dependencias";
+import { obterClienteRd, obterEnviadorDeEmail, obterModeloDeLinguagem, obterUnipile, segredoDoCron } from "@/server/dependencias";
 import { executarTick } from "@/server/tick";
 import { segredoConfere } from "@/server/unipile/webhooks";
 
@@ -19,6 +19,7 @@ async function tick(request: Request) {
     agora: new Date(),
     enviador: obterEnviadorDeEmail(),
     modelo: obterModeloDeLinguagem(),
+    rd: obterClienteRd(),
   });
   return Response.json(relatorio);
 }

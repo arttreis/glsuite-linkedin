@@ -94,11 +94,16 @@ export default async function PerfisPage({ searchParams }: PageProps<"/perfis">)
       </ul>
 
       {operador.papel === "admin" && (
-        <form action={registrarWebhooksNaUnipile} className="mt-6">
-          <button type="submit" className="text-sm text-neutral-700 underline underline-offset-2">
-            Registrar webhooks na Unipile
-          </button>
-        </form>
+        <div className="mt-6 flex items-center gap-4 text-sm">
+          <form action={registrarWebhooksNaUnipile}>
+            <button type="submit" className="text-neutral-700 underline underline-offset-2">
+              Registrar webhooks na Unipile
+            </button>
+          </form>
+          <a href="/integracoes" className="text-neutral-700 underline underline-offset-2">
+            Integrações (RD Station)
+          </a>
+        </div>
       )}
     </section>
   );
