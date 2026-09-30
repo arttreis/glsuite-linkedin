@@ -548,3 +548,31 @@ Anotadas durante a execução, por ticket.
   (`workflow_dispatch`). O relatório vai para o resumo do job e para um
   artefato. Sem o secret `ANTHROPIC_API_KEY`, o job só deixa um aviso e
   passa.
+
+### Ambiente de teste (30/09/2026)
+- Painel na Vercel: projeto `guessless-sdr` (time GuessLess), em
+  https://guessless-sdr.vercel.app. O `vercel.json` declara o framework, porque
+  o projeto foi criado pela CLI sem detecção. Variáveis só no ambiente de
+  produção.
+- Banco: sem cota para um projeto gratuito novo no Supabase, o SDR divide o
+  projeto **GL Suite** (`bfxytlaffkkcugqjsgtk`, us-west-2), por decisão do
+  Arthur. Nenhum nome de tabela ou função colide. As regras do
+  compartilhamento:
+  - grants e revoke só nas tabelas do SDR, nunca no schema inteiro (a
+    migration de RLS foi corrigida para isso);
+  - o app conecta como `sdr_servidor`, pelo pooler
+    `aws-1-us-west-2.pooler.supabase.com:6543`. Esse papel tem BYPASSRLS e
+    direitos só nas 19 tabelas do SDR;
+  - o `sdr_servidor` é membro de `authenticated` com `inherit false, set
+    true`: troca para `authenticated` no painel, mas não herda o acesso desse
+    papel às tabelas do GL Suite (verificado: não lê nenhuma);
+  - as migrations até `20260929230000` foram aplicadas por SQL, fora do
+    histórico `supabase_migrations`, que é do GL Suite. Migration nova do SDR
+    também vai à mão;
+  - o login usa o Auth do GL Suite, com `shouldCreateUser: false`. Operador
+    novo precisa existir em `auth.users` e ganha as triggers de boas-vindas
+    do GL Suite ao ser criado lá;
+  - admin inicial: midia@guessless.com.br.
+- Sem cron (pg_cron) por enquanto: nada sai sozinho.
+- Na saída do GL Suite, o caminho é um projeto próprio em São Paulo (§5):
+  aplicar as migrations e trocar as variáveis na Vercel.
