@@ -3,13 +3,10 @@ import type { EstadoDoLead } from "@/domain/estados";
 import { validarMensagem, type Violacao } from "@/domain/validador";
 import { contextoDoPerfil } from "@/server/campanhas/perfil";
 import type { Db } from "@/server/db/tipos";
-import { registrarSucesso } from "@/server/despachante/envio";
-import { carregarPerfil } from "@/server/despachante/perfis";
-import { transicionarLead } from "@/server/leads/transicoes";
-import { pausarPerfil } from "@/server/perfis/pausa";
 import { cancelarPendentes } from "@/server/acoes/cancelar";
+import { transicionarLead } from "@/server/leads/transicoes";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
-import { classificarErro, ErroUnipile } from "@/server/unipile/erros";
+import { enviarDmDeConversa } from "./enviar";
 
 export type ResultadoDaResposta =
   | { ok: true; acaoId: string }
@@ -87,48 +84,18 @@ export async function responderManualmente(
   if ("erro" in preparo) return { ok: false, motivo: preparo.erro ?? "Erro", violacoes: preparo.violacoes };
 
   const { acaoId, lead } = preparo;
-  const perfil = (await carregarPerfil(db, lead.perfil_id))!;
-  let resultado: { providerMessageId: string | null; chatId: string | null };
-  try {
-    if (lead.chat_id) {
-      const enviada = await deps.unipile.enviarMensagem({ accountId: perfil.unipile_account_id, chatId: lead.chat_id, texto });
-      resultado = { providerMessageId: enviada.messageId, chatId: lead.chat_id };
-    } else {
-      const iniciada = await deps.unipile.iniciarConversa({ accountId: perfil.unipile_account_id, providerId: lead.provider_id, texto });
-      resultado = { providerMessageId: iniciada.messageId, chatId: iniciada.chatId };
-    }
-  } catch (erro) {
-    const motivo = erro instanceof ErroUnipile ? `${erro.status} ${erro.tipo}` : (erro as Error).message;
-    await db.query("update public.acoes set status = 'falhou', erro = $2 where id = $1::uuid", [acaoId, motivo]);
-    if (classificarErro(erro) === "conta") {
-      await pausarPerfil(db, {
-        perfilId: perfil.id,
-        motivo: `A Unipile recusou por problema na conta (${motivo}). Confira a conexão, checkpoint ou captcha.`,
-        ator: p.operadorId,
-        agora,
-      });
-    }
-    return { ok: false, motivo: `A Unipile não enviou a mensagem (${motivo}). Tente de novo.` };
-  }
-
-  await registrarSucesso(db, {
-    perfil,
-    reserva: {
-      id: acaoId,
-      lead_id: p.leadId,
-      tipo: "dm",
-      toque: null,
-      origem: "humano",
-      tentativas: 1,
-      texto,
-      provider_id: lead.provider_id,
-      chat_id: lead.chat_id,
-      convite_id: lead.convite_id,
-    },
-    resultado,
-    agora,
-    feriados: new Set(),
+  const envio = await enviarDmDeConversa(deps, {
+    acaoId,
+    leadId: p.leadId,
+    perfilId: lead.perfil_id,
+    texto,
+    chatId: lead.chat_id,
+    providerId: lead.provider_id,
+    conviteId: lead.convite_id,
+    autor: "humano",
+    operadorId: p.operadorId,
   });
+  if (!envio.ok) return envio;
 
   await db.transacao(async (tx) => {
     if (lead.estado === "aceito" || lead.estado === "em_sequencia") {

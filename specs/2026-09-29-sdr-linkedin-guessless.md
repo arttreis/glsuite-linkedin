@@ -344,3 +344,24 @@ Anotadas durante a execução, por ticket.
   é barrado pelo validador.
 - Disparo: logo depois do webhook (`after()` do Next) e, garantido, no tick do
   cron (até 5 mensagens por tick).
+
+### SDR-11 · Fila de aprovação
+- A fila mostra tudo o que espera decisão humana:
+  - rascunhos da IA (modo aprovação e exceções do automático);
+  - toques da régua que o validador barrou. Para esses, o texto que falhou fica
+    em `texto_gerado` e aparece para correção.
+- Aprovar resposta de conversa manda na hora (o SLA corre). Aprovar toque da
+  régua devolve a ação ao despachante com o texto corrigido: janela, teto e "um
+  toque por dia" continuam valendo.
+- A edição guarda o original em `texto_gerado` e o que saiu em `texto_final`. O
+  texto editado é validado como humano. A mensagem sai assinada `ia` quando
+  aprovada como está e `humano` quando editada.
+- `decisao_humana` (`aprovada`, `editada`, `rejeitada`), `decidida_por` e
+  `decidida_em` em `acoes`. Taxa de edição por perfil = (editadas + rejeitadas)
+  / decididas nos últimos 14 dias, só com rascunhos da IA. É a métrica do gate
+  D6 (SDR-17).
+- Aprovar um "encerrar" do agente fecha a conversa (`encerrado_nao`) depois do
+  envio. Toque rejeitado deixa o lead marcado para revisão (`revisao_motivo`).
+- Resposta com o perfil pausado não é aprovada. Clique duplo não duplica: a
+  aprovação muda o status com a linha travada.
+- O alerta de SLA estourado (SDR-09) cita os rascunhos esperando na fila.

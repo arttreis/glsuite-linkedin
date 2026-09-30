@@ -188,7 +188,7 @@ export async function reservarProximaAcao(
       if (acao.tipo === "convite" || acao.tipo === "dm") {
         const preparado = await prepararTexto(tx, acao.id);
         if (!preparado.ok) {
-          await enviarParaRevisao(tx, acao.id, preparado.violacoes);
+          await enviarParaRevisao(tx, acao.id, preparado.violacoes, preparado.texto);
           await registrarEvento(tx, {
             tipo: "acao_em_revisao",
             entidade: "acao",

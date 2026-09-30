@@ -7,7 +7,8 @@ import { contextoDoPerfil } from "@/server/campanhas/perfil";
 
 export type TextoPreparado =
   | { ok: true; texto: string; origem: "template" | "ia" | "humano" }
-  | { ok: false; violacoes: Violacao[] };
+  /** `texto`: o que falhou, quando deu para montar (a fila mostra para correção). */
+  | { ok: false; violacoes: Violacao[]; texto?: string };
 
 type AcaoParaTexto = {
   tipo: "convite" | "dm";
@@ -53,18 +54,19 @@ export async function prepararTexto(db: Db, acaoId: string): Promise<TextoPrepar
   const perfil = await contextoDoPerfil(db, acao.perfil_id);
   const contexto = { ...contextoDeValidacao(perfil, passo, acao.origem), tipo: acao.tipo };
   const { ok, violacoes } = validarMensagem(texto, contexto);
-  return ok ? { ok: true, texto, origem: acao.origem } : { ok: false, violacoes };
+  return ok ? { ok: true, texto, origem: acao.origem } : { ok: false, violacoes, texto };
 }
 
 /**
  * Falha no validador: a ação vai para a fila de revisão humana com o motivo
  * (§4.2). O texto não é corrigido automaticamente.
  */
-export async function enviarParaRevisao(db: Db, acaoId: string, violacoes: Violacao[]): Promise<void> {
+export async function enviarParaRevisao(db: Db, acaoId: string, violacoes: Violacao[], texto?: string): Promise<void> {
   await db.query(
     `update public.acoes
-        set status = 'aguardando_aprovacao', motivo_revisao = $2, validacao = $3::jsonb
+        set status = 'aguardando_aprovacao', motivo_revisao = $2, validacao = $3::jsonb,
+            texto_gerado = coalesce(texto_gerado, $4)
       where id = $1::uuid`,
-    [acaoId, violacoes.map((v) => v.mensagem).join(" "), JSON.stringify({ ok: false, violacoes })],
+    [acaoId, violacoes.map((v) => v.mensagem).join(" "), JSON.stringify({ ok: false, violacoes }), texto ?? null],
   );
 }
