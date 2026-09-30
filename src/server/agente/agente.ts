@@ -1,7 +1,5 @@
-import { contextoDeValidacao } from "@/domain/campanha";
 import type { EstadoDoLead } from "@/domain/estados";
-import { detectarOptout } from "@/domain/optout";
-import { validarMensagem, type Praca, type ResultadoDaValidacao } from "@/domain/validador";
+import type { Praca, ResultadoDaValidacao } from "@/domain/validador";
 import { agendarAcao } from "@/server/acoes/agendar";
 import { enfileirarAlerta } from "@/server/alertas/alertas";
 import { lerConfiguracao } from "@/server/configuracoes";
@@ -9,15 +7,9 @@ import { registrarOptout } from "@/server/conversas/optout";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import { transicionarLead } from "@/server/leads/transicoes";
+import { decidirResposta, type Consumo, type EntradaDoAgente } from "./decidir";
 import type { Classificacao, Decisao, ModeloDeLinguagem, Uso } from "./modelo";
-import {
-  entradaDaClassificacao,
-  entradaDoRascunho,
-  promptDeClassificacao,
-  promptDeRascunho,
-  VERSAO_DOS_PROMPTS,
-  type MensagemDoHistorico,
-} from "./prompts";
+import { VERSAO_DOS_PROMPTS, type MensagemDoHistorico } from "./prompts";
 
 export type DependenciasDoAgente = { db: Db; modelo: ModeloDeLinguagem; agora: Date; aleatorio?: () => number };
 
@@ -32,36 +24,12 @@ export type ResultadoDoAgente =
   | "descartado"
   | "erro";
 
-type Contexto = {
+type Contexto = EntradaDoAgente & {
   leadId: string;
   estado: EstadoDoLead;
   providerId: string;
   modo: "manual" | "aprovacao" | "automatico";
-  perfil: {
-    id: string;
-    nome: string;
-    praca: Praca;
-    idioma: string;
-    voz: string | null;
-    regras: string | null;
-    palavrasProibidas: string[];
-    rodape: string | null;
-    limiteNotaConvite: number;
-  };
-  linkDeAgenda: string | null;
-  responsavelDiscovery: string;
-  oferta: string;
-  lead: {
-    nome: string;
-    cargo: string | null;
-    empresa: string | null;
-    localizacao: string | null;
-    campanha: string;
-    angulo: string | null;
-    nicho: string | null;
-    pesquisa: unknown;
-  };
-  mensagens: MensagemDoHistorico[];
+  perfil: EntradaDoAgente["perfil"] & { id: string };
 };
 
 async function carregarContexto(db: Db, mensagemId: string): Promise<Contexto | null> {
@@ -164,13 +132,6 @@ async function reservar(db: Db, mensagemId: string, agora: Date): Promise<string
   return reserva?.id ?? null;
 }
 
-const somaDeUso = (a: Uso, b: Uso): Uso => ({
-  entrada: a.entrada + b.entrada,
-  saida: a.saida + b.saida,
-  cacheLeitura: a.cacheLeitura + b.cacheLeitura,
-  cacheEscrita: a.cacheEscrita + b.cacheEscrita,
-});
-
 type Registro = {
   resultado: Exclude<ResultadoDoAgente, "ja_processado">;
   classificacao?: Classificacao;
@@ -223,22 +184,18 @@ async function escalar(db: Db, ctx: Contexto, p: { rascunhoId: string; motivo: s
 }
 
 /**
- * Agente de conversa (§7) para uma mensagem da pessoa.
- *
- * Passo 1: classifica (Haiku). Passo 2: decide e rascunha (Sonnet). Depois,
- * regras duras que não dependem do prompt:
- * - opt-out claro é registrado antes de qualquer outra coisa;
- * - todo texto passa pelo validador (§4.2); violação vai para a fila, marcada;
- * - o modo do perfil manda (§4.8): manual → só sugestão; aprovação → fila;
- *   automático → envio agendado, e as exceções vão para a fila.
+ * Agente de conversa (§7) para uma mensagem da pessoa. A decisão é de
+ * `decidirResposta`; aqui ficam os efeitos, e o modo do perfil manda (§4.8):
+ * manual → só sugestão; aprovação → fila; automático → envio agendado, e as
+ * exceções vão para a fila.
  */
 export async function processarComAgente(deps: DependenciasDoAgente, mensagemId: string): Promise<ResultadoDoAgente> {
   const { db, modelo, agora } = deps;
   const rascunhoId = await reservar(db, mensagemId, agora);
   if (!rascunhoId) return "ja_processado";
 
-  const modelos: Record<string, string> = {};
-  const uso: Record<string, Uso> = {};
+  const consumo: Consumo = { modelos: {}, uso: {} };
+  const { modelos, uso } = consumo;
   try {
     const ctx = await carregarContexto(db, mensagemId);
     if (!ctx || ctx.estado !== "em_conversa") {
@@ -246,96 +203,35 @@ export async function processarComAgente(deps: DependenciasDoAgente, mensagemId:
       return "descartado";
     }
     const configuracao = await lerConfiguracao(db, "agente");
-    const ultima = ctx.mensagens.filter((m) => m.direcao === "entrada").at(-1);
-    const registrarOptoutDoLead = async (texto: string) => {
-      await registrarOptout(db, { providerId: ctx.providerId, perfilOrigem: ctx.perfil.id, textoPedido: texto, ator: "agente", agora });
-    };
-
-    if (ultima && detectarOptout(ultima.texto).claro) {
-      await registrarOptoutDoLead(ultima.texto);
-      await concluir(db, rascunhoId, { resultado: "optout_registrado", excecao: "pedido claro de opt-out" });
-      return "optout_registrado";
-    }
-
-    // Passo 1: classificação.
-    const classificada = await modelo.classificar({
-      sistema: promptDeClassificacao(),
-      entrada: entradaDaClassificacao(ctx.mensagens, ctx.perfil.nome),
+    const desfecho = await decidirResposta({
+      entrada: ctx,
+      modelo,
+      configuracao,
+      consumo,
+      aoClassificar: async (classificacao) => {
+        await db.query("update public.mensagens set categoria = $2 where id = $1::uuid", [mensagemId, classificacao.categoria]);
+      },
     });
-    const classificacao = classificada.saida;
-    modelos.classificacao = classificada.modelo;
-    uso.classificacao = classificada.uso;
-    await db.query("update public.mensagens set categoria = $2 where id = $1::uuid", [mensagemId, classificacao.categoria]);
 
-    if (classificacao.categoria === "optout" && classificacao.confianca >= configuracao.limiar_optout) {
-      await registrarOptoutDoLead(ultima?.texto ?? "");
-      await concluir(db, rascunhoId, { resultado: "optout_registrado", classificacao, modelos, uso });
+    if (desfecho.tipo === "optout") {
+      const ultima = ctx.mensagens.filter((m) => m.direcao === "entrada").at(-1);
+      await registrarOptout(db, { providerId: ctx.providerId, perfilOrigem: ctx.perfil.id, textoPedido: ultima?.texto ?? "", ator: "agente", agora });
+      const { classificacao, decisao, excecao } = desfecho;
+      await concluir(db, rascunhoId, { resultado: "optout_registrado", classificacao, decisao, excecao, modelos, uso });
       return "optout_registrado";
     }
-    if (classificacao.categoria === "fora_do_escritorio" && classificacao.confianca >= configuracao.limiar_confianca) {
-      await concluir(db, rascunhoId, { resultado: "sem_resposta_necessaria", classificacao, modelos, uso });
+    if (desfecho.tipo === "sem_resposta") {
+      await concluir(db, rascunhoId, { resultado: "sem_resposta_necessaria", classificacao: desfecho.classificacao, modelos, uso });
       return "sem_resposta_necessaria";
     }
-
-    // Passo 2: decisão e rascunho.
-    const rascunhada = await modelo.rascunhar({
-      sistema: promptDeRascunho({
-        perfil: ctx.perfil,
-        linkDeAgenda: ctx.linkDeAgenda,
-        responsavelDiscovery: ctx.responsavelDiscovery,
-        oferta: ctx.oferta,
-      }),
-      entrada: entradaDoRascunho({ lead: ctx.lead, mensagens: ctx.mensagens, nomeDoPerfil: ctx.perfil.nome, classificacao }),
-    });
-    const decisao = rascunhada.saida;
-    modelos.rascunho = rascunhada.modelo;
-    uso.rascunho = rascunhada.uso;
-    uso.total = somaDeUso(classificada.uso, rascunhada.uso);
-
-    const excecoes: string[] = [];
-    if (classificacao.categoria === "optout") excecoes.push("opt-out ambíguo");
-
-    if (decisao.acao === "registrar_optout") {
-      if (classificacao.categoria === "optout" && decisao.confianca >= configuracao.limiar_optout) {
-        await registrarOptoutDoLead(ultima?.texto ?? "");
-        await concluir(db, rascunhoId, { resultado: "optout_registrado", classificacao, decisao, modelos, uso });
-        return "optout_registrado";
-      }
-      excecoes.push("opt-out ambíguo");
-    }
-
-    const texto = decisao.mensagem?.trim() || null;
-    const precisaDeTexto = ["responder", "propor_reuniao", "encerrar"].includes(decisao.acao);
-    if (decisao.acao === "escalar_humano" || (precisaDeTexto && !texto) || (!texto && excecoes.length > 0)) {
-      const motivo = decisao.acao === "escalar_humano" ? decisao.motivo : excecoes[0] ?? "o agente não escreveu resposta";
+    if (desfecho.tipo === "escalar") {
+      const { classificacao, decisao, motivo } = desfecho;
       await escalar(db, ctx, { rascunhoId, motivo, agora });
       await concluir(db, rascunhoId, { resultado: "escalado", classificacao, decisao, excecao: motivo, modelos, uso });
       return "escalado";
     }
 
-    const validacao = texto
-      ? validarMensagem(
-          texto,
-          contextoDeValidacao(
-            {
-              praca: ctx.perfil.praca,
-              palavrasProibidas: ctx.perfil.palavrasProibidas,
-              rodapeObrigatorio: ctx.perfil.rodape,
-              limiteNotaConvite: ctx.perfil.limiteNotaConvite,
-              linkDeAgenda: ctx.linkDeAgenda,
-            },
-            null,
-            "ia",
-          ),
-        )
-      : null;
-    if (validacao && !validacao.ok) excecoes.push(`validador: ${validacao.violacoes.map((v) => v.mensagem).join(" ")}`);
-    if (decisao.acao === "propor_reuniao" && !ctx.linkDeAgenda) excecoes.push("sem link de agenda configurado");
-    if (classificacao.sinais.preco) excecoes.push("pergunta de preço");
-    if (classificacao.sinais.reclamacao) excecoes.push("reclamação");
-    if (decisao.confianca < configuracao.limiar_confianca) excecoes.push("baixa confiança");
-
-    const excecao = excecoes.length > 0 ? excecoes.join("; ") : null;
+    const { classificacao, decisao, texto, validacao, excecao } = desfecho;
     const base = { classificacao, decisao, texto, validacao, excecao, modelos, uso };
 
     if (ctx.modo === "manual") {

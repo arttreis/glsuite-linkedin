@@ -1,0 +1,355 @@
+{
+  "praca": "espanha",
+  "perfil": "jp",
+  "campanha": "Servicio · Marcas DTC en España (eval)",
+  "nicho": "marcas de venta directa en España, de 2 a 30 millones de euros al año",
+  "casos": [
+    {
+      "id": "es-01",
+      "tema": "manda_material",
+      "lead": { "nome": "Lucía Fernández", "cargo": "Responsable de E-commerce", "empresa": "Casa Olivo", "localizacao": "Madrid", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Lucía. Veo muchas marcas que venden bien y acaban el mes con poco margen por envíos y devoluciones. ¿Os pasa en Casa Olivo?"],
+        ["prospect", "Hola JP, nos pasa, sí. ¿Tienes algún dossier que pueda mirar?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"] }
+    },
+    {
+      "id": "es-02",
+      "tema": "manda_material",
+      "lead": { "nome": "Javier Moreno", "cargo": "Fundador", "empresa": "Moreno Outdoor", "localizacao": "Bilbao", "angulo": "O número não bate" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Javier. Los números del panel de anuncios casi nunca cuadran con los de finanzas. ¿Os pasa?"],
+        ["prospect", "Mándame algo por aquí y lo leo cuando pueda."]
+      ],
+      "esperado": { "acoes": ["responder"] }
+    },
+    {
+      "id": "es-03",
+      "tema": "ja_tenho_quem_faca",
+      "lead": { "nome": "Carmen Ruiz", "cargo": "Directora Comercial", "empresa": "Ruiz Moda", "localizacao": "Valencia", "angulo": "ROAS de verdade" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Carmen. Un ROAS alto puede esconder pérdidas cuando restas envíos y devoluciones. ¿Lo miráis con esos costes?"],
+        ["prospect", "Ya trabajamos con una empresa que nos lleva todo esto. Estamos bien atendidos."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "es-04",
+      "tema": "ja_tenho_quem_faca",
+      "lead": { "nome": "Pablo Jiménez", "cargo": "E-commerce Manager", "empresa": "Jiménez Hogar", "localizacao": "Sevilla", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Pablo. Muchas marcas dependen de Amazon para la mitad de las ventas y ven poco del margen ahí. ¿Es vuestro caso?"],
+        ["prospect", "Tenemos equipo interno para eso, gracias."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "es-05",
+      "tema": "quanto_custa",
+      "lead": { "nome": "Marta Navarro", "cargo": "Cofundadora", "empresa": "Navarro Cerámica", "localizacao": "Talavera de la Reina", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Marta. La cerámica cuesta de enviar y se rompe fácil, y eso se come el margen. ¿Medís el margen por canal?"],
+        ["prospect", "Más o menos. ¿Cuánto cobráis?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"], "humano": true }
+    },
+    {
+      "id": "es-06",
+      "tema": "quanto_custa",
+      "lead": { "nome": "Sergio Torres", "cargo": "CEO", "empresa": "Torres Café", "localizacao": "Barcelona", "angulo": "Engenharia, não achismo" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Sergio. Muchas decisiones de inversión se toman a ojo, aunque sobren datos. ¿Cómo decidís dónde invertir?"],
+        ["prospect", "A ojo, la verdad. ¿Cuál es vuestra cuota mensual?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"], "humano": true }
+    },
+    {
+      "id": "es-07",
+      "tema": "nao_sou_eu",
+      "lead": { "nome": "Elena Romero", "cargo": "Coordinadora de Marca", "empresa": "Romero Kids", "localizacao": "Zaragoza", "angulo": "O número não bate" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Elena. El panel de anuncios y la caja rara vez dicen lo mismo. ¿Os pasa en Romero Kids?"],
+        ["prospect", "Hola, no soy yo quien lleva ese tema."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "es-08",
+      "tema": "nao_sou_eu",
+      "lead": { "nome": "Álvaro Díaz", "cargo": "Técnico de Marketplace", "empresa": "Díaz Deportes", "localizacao": "Málaga", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Álvaro. Amazon suele ser el canal que más vende y el que menos deja. ¿Medís el margen por canal?"],
+        ["prospect", "Eso lo deciden los jefes, yo solo lo opero."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "es-09",
+      "tema": "de_onde_tirou_contato",
+      "lead": { "nome": "Isabel Gil", "cargo": "CEO", "empresa": "Gil Cosmética", "localizacao": "Madrid", "angulo": "Cliente que é seu" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Isabel. Muchas marcas vuelven a pagar para venderle a quien ya compró. ¿Medís cuánto viene de recompra?"],
+        ["prospect", "Perdona, ¿de dónde has sacado mi contacto?"]
+      ],
+      "esperado": { "acoes": ["responder"] }
+    },
+    {
+      "id": "es-10",
+      "tema": "de_onde_tirou_contato",
+      "lead": { "nome": "Raúl Serrano", "cargo": "Director de Operaciones", "empresa": "Serrano Mascotas", "localizacao": "Murcia", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Raúl. En productos para mascotas, envíos y devoluciones se llevan buena parte del margen. ¿Lo tenéis por canal?"],
+        ["prospect", "¿Cómo habéis llegado a mí? ¿Habéis comprado una base de datos? Sabes que eso con el RGPD no se puede."]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"], "humano": false }
+    },
+    {
+      "id": "es-11",
+      "tema": "pare_de_mandar",
+      "lead": { "nome": "Nuria Molina", "cargo": "Responsable de Tienda Online", "empresa": "Molina Calzado", "localizacao": "Elche", "angulo": "ROAS de verdade" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Nuria. Un ROAS alto no siempre es beneficio. ¿Restáis envíos y devoluciones?"],
+        ["perfil", "Hola Nuria, retomo por aquí. Si quieres te cuento en dos líneas cómo hacemos esa cuenta."],
+        ["prospect", "Deja de enviarme mensajes, por favor."]
+      ],
+      "esperado": { "acoes": ["registrar_optout"] }
+    },
+    {
+      "id": "es-12",
+      "tema": "pare_de_mandar",
+      "lead": { "nome": "Andrés Castillo", "cargo": "Propietario", "empresa": "Castillo Muebles", "localizacao": "Valencia", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Andrés. Los muebles en marketplace venden, pero comisiones y portes pesan. ¿Os pesa?"],
+        ["prospect", "No me interesa y no quiero que me volváis a escribir."]
+      ],
+      "esperado": { "acoes": ["registrar_optout"] }
+    },
+    {
+      "id": "es-13",
+      "tema": "outro_idioma",
+      "lead": { "nome": "Jordi Puig", "cargo": "Director d'e-commerce", "empresa": "Puig Tèxtil", "localizacao": "Barcelona", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Jordi. Muchas marcas venden bien y pierden margen en envíos y devoluciones. ¿Medís el margen por canal?"],
+        ["prospect", "Hola JP, t'escric en català si no et fa res. Sí, les devolucions ens costen molt. Què feu exactament?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"] }
+    },
+    {
+      "id": "es-14",
+      "tema": "outro_idioma",
+      "lead": { "nome": "Oliver Hughes", "cargo": "Head of E-commerce", "empresa": "Hughes & Co. Spain", "localizacao": "Marbella", "angulo": "O número não bate" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Oliver. Los números de anuncios y finanzas rara vez cuadran. ¿Os pasa?"],
+        ["prospect", "Hi JP, my Spanish isn't great, sorry. Yes, the numbers never match. How do you fix that?"]
+      ],
+      "esperado": { "acoes": ["responder"], "idioma": "en" }
+    },
+    {
+      "id": "es-15",
+      "tema": "monossilabica",
+      "lead": { "nome": "Diego Vázquez", "cargo": "CEO", "empresa": "Vázquez Bicis", "localizacao": "Pamplona", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Diego. Las bicis cuestan de enviar y de devolver. ¿Sabéis el margen por canal?"],
+        ["prospect", "sí"]
+      ],
+      "esperado": { "acoes": ["responder"] }
+    },
+    {
+      "id": "es-16",
+      "tema": "monossilabica",
+      "lead": { "nome": "Paula Ortega", "cargo": "Marketplace Manager", "empresa": "Ortega Belleza", "localizacao": "Madrid", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Paula. La cosmética vende mucho en Amazon, pero las comisiones se comen el margen. ¿Te suena?"],
+        ["prospect", "vale"]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "es-17",
+      "tema": "monossilabica",
+      "lead": { "nome": "Rubén Delgado", "cargo": "Director", "empresa": "Delgado Regalos", "localizacao": "Granada", "angulo": "Cliente que é seu" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Rubén. Muchas marcas pagan anuncios otra vez para llegar a quien ya es cliente. ¿Medís la recompra?"],
+        ["prospect", "👍"]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "es-18",
+      "tema": "interesse",
+      "lead": { "nome": "Laura Medina", "cargo": "CEO", "empresa": "Medina Joyas", "localizacao": "Córdoba", "angulo": "ROAS de verdade" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Laura. Un ROAS alto no siempre se convierte en beneficio tras envíos y devoluciones. ¿Hacéis esa cuenta?"],
+        ["prospect", "No la hacemos y me preocupa desde hace tiempo. ¿Cómo trabajáis?"]
+      ],
+      "esperado": { "acoes": ["responder", "propor_reuniao"] }
+    },
+    {
+      "id": "es-19",
+      "tema": "interesse",
+      "lead": { "nome": "Manuel Herrero", "cargo": "Fundador", "empresa": "Herrero Aceites", "localizacao": "Jaén", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Manuel. El aceite enviado online tiene márgenes ajustados con los portes. ¿Sabéis cuánto queda por canal?"],
+        ["prospect", "Pues no, y me gustaría saberlo. Hablemos."]
+      ],
+      "esperado": { "acoes": ["propor_reuniao"] }
+    },
+    {
+      "id": "es-20",
+      "tema": "quer_marcar",
+      "lead": { "nome": "Cristina Blanco", "cargo": "Directora de E-commerce", "empresa": "Blanco Textil Hogar", "localizacao": "Valencia", "angulo": "O número não bate" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Cristina. El panel de anuncios casi nunca cuadra con finanzas. ¿Os pasa en Blanco?"],
+        ["prospect", "Todo el rato. Me apunto a una llamada, ¿qué hueco tienes la semana que viene?"]
+      ],
+      "esperado": { "acoes": ["propor_reuniao"] }
+    },
+    {
+      "id": "es-21",
+      "tema": "o_que_e",
+      "lead": { "nome": "Francisco Ramos", "cargo": "Gerente", "empresa": "Ramos Herramientas", "localizacao": "Valladolid", "angulo": "Engenharia, não achismo" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Francisco. Muchas decisiones de inversión aún se toman a ojo. ¿Cómo decidís dónde invertir?"],
+        ["prospect", "¿Pero qué hace exactamente GuessLess?"]
+      ],
+      "esperado": { "acoes": ["responder"] }
+    },
+    {
+      "id": "es-22",
+      "tema": "nao_tem_interesse",
+      "lead": { "nome": "Beatriz Cano", "cargo": "CEO", "empresa": "Cano Fitness", "localizacao": "Alicante", "angulo": "Cliente que é seu" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Beatriz. Muchas marcas de fitness vuelven a pagar para venderle a quien ya compró. ¿Medís la recompra?"],
+        ["prospect", "Gracias, pero no me interesa."]
+      ],
+      "esperado": { "acoes": ["encerrar"] }
+    },
+    {
+      "id": "es-23",
+      "tema": "fora_do_escritorio",
+      "lead": { "nome": "Alberto Prieto", "cargo": "Director Comercial", "empresa": "Prieto Juguetes", "localizacao": "Ibi", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Alberto. El juguete es muy estacional y el margen cambia mucho por canal. ¿Lo seguís?"],
+        ["prospect", "Gracias por tu mensaje. Estoy fuera de la oficina hasta el 20 de octubre con acceso limitado. Para urgencias, contacta con Ana."]
+      ],
+      "esperado": { "acoes": ["nenhuma"] }
+    },
+    {
+      "id": "es-24",
+      "tema": "irrelevante",
+      "lead": { "nome": "Silvia Méndez", "cargo": "Analista de E-commerce", "empresa": "Méndez Óptica", "localizacao": "Oviedo", "angulo": "ROAS de verdade" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Silvia. Un ROAS alto no siempre es beneficio. ¿Restáis envíos y devoluciones?"],
+        ["prospect", "¡Hola! ¿Estáis contratando? Busco trabajo en e-commerce."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar", "escalar_humano"] }
+    },
+    {
+      "id": "es-25",
+      "tema": "reclamacao",
+      "lead": { "nome": "Enrique Vidal", "cargo": "CEO", "empresa": "Vidal Recambios", "localizacao": "Vigo", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Enrique. Los recambios venden en Amazon, pero comisiones y portes pesan. ¿Os pesa?"],
+        ["perfil", "Enrique, retomo rápido. Si quieres te enseño cómo lo miden otras tiendas."],
+        ["prospect", "Cada día alguien me intenta vender algo por aquí. Ya cansa."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar", "escalar_humano"], "humano": true }
+    },
+    {
+      "id": "es-26",
+      "tema": "outro_canal",
+      "lead": { "nome": "Rocío Santos", "cargo": "Socia", "empresa": "Santos Baño", "localizacao": "Cádiz", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Rocío. El baño tiene un pico corto y el margen por canal decide el año. ¿Lo seguís?"],
+        ["prospect", "Interesante. Escríbeme por WhatsApp, que LinkedIn casi no lo miro."]
+      ],
+      "esperado": { "acoes": ["responder", "propor_reuniao", "escalar_humano"], "humano": true, "reuniao": true }
+    },
+    {
+      "id": "es-27",
+      "tema": "e_robo",
+      "lead": { "nome": "Hugo Pascual", "cargo": "CTO", "empresa": "Pascual Electrónica", "localizacao": "Madrid", "angulo": "Engenharia, não achismo" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Hugo. Las decisiones de inversión aún van a ojo aunque sobren datos. ¿Cómo lo decidís?"],
+        ["prospect", "¿Esto es automático? ¿Estoy hablando con un bot?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"] }
+    },
+    {
+      "id": "es-28",
+      "tema": "agora_nao",
+      "lead": { "nome": "Sara Lozano", "cargo": "Head of Growth", "empresa": "Lozano Nutrición", "localizacao": "Logroño", "angulo": "ROAS de verdade" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Sara. Un ROAS alto puede esconder pérdidas tras los envíos. ¿Lo miráis?"],
+        ["prospect", "Ahora no es buen momento, estamos a tope con el Black Friday. Quizás a principios de año."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "es-29",
+      "tema": "pede_resultado",
+      "lead": { "nome": "Iván Rubio", "cargo": "CEO", "empresa": "Rubio Ciclismo", "localizacao": "Girona", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Iván. Las bicis cuestan de enviar y de devolver. ¿Sabéis el margen por canal?"],
+        ["prospect", "Interesante. ¿Cuánto soléis mejorar el margen de los clientes? ¿Algún caso con números?"]
+      ],
+      "esperado": { "acoes": ["responder", "propor_reuniao", "escalar_humano"], "reuniao": true }
+    },
+    {
+      "id": "es-30",
+      "tema": "indica_outra_pessoa",
+      "lead": { "nome": "Teresa Iglesias", "cargo": "Directora Financiera", "empresa": "Iglesias Casa y Mesa", "localizacao": "Santander", "angulo": "O número não bate" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Teresa. El panel de anuncios casi nunca cuadra con finanzas. ¿Os pasa?"],
+        ["prospect", "Sí, pero eso lo lleva Pedro Iglesias, nuestro director de e-commerce. Háblalo con él."]
+      ],
+      "esperado": { "acoes": ["responder"] }
+    },
+    {
+      "id": "es-31",
+      "tema": "optout_ambiguo",
+      "lead": { "nome": "Ignacio Marín", "cargo": "Socio", "empresa": "Marín Vinos", "localizacao": "Logroño", "angulo": "Cliente que é seu" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Ignacio. El vino tiene mucha recompra, y muchas tiendas pagan anuncios otra vez para quien ya es cliente. ¿Lo medís?"],
+        ["perfil", "Ignacio, retomo. Si te encaja, te cuento cómo separamos cliente nuevo de recompra."],
+        ["prospect", "No hace falta que sigas, gracias."]
+      ],
+      "esperado": { "acoes": ["encerrar", "registrar_optout", "escalar_humano"] }
+    },
+    {
+      "id": "es-32",
+      "tema": "experiencia_ruim",
+      "lead": { "nome": "Victoria Soler", "cargo": "CEO", "empresa": "Soler Ropa de Cama", "localizacao": "Palma", "angulo": "Engenharia, não achismo" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Victoria. Muchas tiendas invierten a ojo aunque tengan datos. ¿Cómo decidís el presupuesto hoy?"],
+        ["prospect", "Ya contratamos consultoras dos veces y fue tirar el dinero. ¿Por qué con vosotros sería distinto?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"] }
+    },
+    {
+      "id": "es-33",
+      "tema": "perguntas_esgotadas",
+      "lead": { "nome": "Óscar Benítez", "cargo": "Director de E-commerce", "empresa": "Benítez Iluminación", "localizacao": "Madrid", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Óscar. La iluminación cuesta de enviar y se rompe en el transporte. ¿Sabéis cuánto os quita del margen?"],
+        ["prospect", "Más o menos. Un 8% se va en envíos y reposiciones."],
+        ["perfil", "Es bastante. ¿Cambia mucho entre vuestra web y Amazon?"],
+        ["prospect", "Sí, en Amazon es peor. Pero no lo separamos bien."]
+      ],
+      "esperado": { "acoes": ["responder", "propor_reuniao"] }
+    },
+    {
+      "id": "es-34",
+      "tema": "quer_marcar",
+      "lead": { "nome": "Alicia Peña", "cargo": "CEO", "empresa": "Peña Papelería", "localizacao": "Salamanca", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Gracias por conectar, Alicia. La papelería vende mucho en Amazon, pero el margen se va en comisiones. ¿Os pesa?"],
+        ["prospect", "Mucho. ¿Me cuentas más de ese diagnóstico de 30 minutos?"],
+        ["perfil", "Es una llamada con Juliano, que mira contigo el margen de cada canal y dónde se escapa. Sin compromiso."],
+        ["prospect", "Perfecto, me apunto. ¿Cómo reservo?"]
+      ],
+      "esperado": { "acoes": ["propor_reuniao"] }
+    }
+  ]
+}

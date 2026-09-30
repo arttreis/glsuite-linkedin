@@ -34,7 +34,7 @@ export type LeadDoAgente = {
   pesquisa: unknown;
 };
 
-const VOZ_PADRAO: Record<Praca, string> = {
+export const VOZ_PADRAO: Record<Praca, string> = {
   domestico:
     "Português do Brasil. Conversa entre profissionais: direto, cordial, sem formalidade de e-mail e sem jargão. Trate por você.",
   canada: "Canadian business English. Friendly, brief and plain. No hype, no corporate filler.",

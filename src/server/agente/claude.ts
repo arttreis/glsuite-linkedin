@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
+import { avaliacao, type Juiz } from "@/server/eval/juiz";
 import { classificacao, conviteT1, decisao, ErroDoModelo, type ModeloDeLinguagem, type Resposta, type Uso } from "./modelo";
 
 export type ConfigDoClaude = {
@@ -57,5 +59,51 @@ export function criarModeloClaude(config: ConfigDoClaude): ModeloDeLinguagem {
       pedir(classificacao, p, { modelo: config.modeloClassificacao, maxTokens: 1024, comPensamento: false }),
     rascunhar: (p) => pedir(decisao, p, { modelo: config.modeloRascunho, maxTokens: 16000, comPensamento: true }),
     escreverConvite: (p) => pedir(conviteT1, p, { modelo: config.modeloRascunho, maxTokens: 16000, comPensamento: true }),
+  };
+}
+
+export type ConfigDoJuiz = {
+  apiKey?: string;
+  modelo: string;
+  esforco: "low" | "medium" | "high" | "xhigh" | "max";
+};
+
+/**
+ * Juiz do eval (SDR-16) no Claude. Pensamento adaptativo com esforço
+ * explícito, saída estruturada e fallback do servidor: se o modelo recusar,
+ * a API refaz a chamada no modelo que ela escolher (o custo sai pelo modelo que
+ * de fato respondeu).
+ */
+export function criarJuizClaude(config: ConfigDoJuiz): Juiz {
+  const cliente = new Anthropic(config.apiKey ? { apiKey: config.apiKey } : {});
+  return {
+    async avaliar(p) {
+      const resposta = await cliente.beta.messages.parse({
+        model: config.modelo,
+        max_tokens: 16000,
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+        system: [{ type: "text", text: p.sistema, cache_control: { type: "ephemeral" } }],
+        messages: [{ role: "user", content: p.entrada }],
+        thinking: { type: "adaptive" },
+        output_config: { effort: config.esforco, format: betaZodOutputFormat(avaliacao) },
+      });
+      if (resposta.stop_reason === "refusal") {
+        throw new ErroDoModelo(`O juiz recusou (${resposta.stop_details?.category ?? "sem categoria"}).`);
+      }
+      if (resposta.parsed_output === null || resposta.parsed_output === undefined) {
+        throw new ErroDoModelo(`Resposta do juiz fora do formato (stop_reason ${resposta.stop_reason}).`);
+      }
+      return {
+        saida: resposta.parsed_output,
+        uso: {
+          entrada: resposta.usage.input_tokens,
+          saida: resposta.usage.output_tokens,
+          cacheLeitura: resposta.usage.cache_read_input_tokens ?? 0,
+          cacheEscrita: resposta.usage.cache_creation_input_tokens ?? 0,
+        },
+        modelo: resposta.model,
+      };
+    },
   };
 }

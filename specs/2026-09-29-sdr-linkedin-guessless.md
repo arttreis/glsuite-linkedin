@@ -485,3 +485,66 @@ Anotadas durante a execução, por ticket.
   personalizado sempre passa por aprovação.
 - A comparação de aceite template × personalizado é a visão "por variante" do
   SDR-14, por campanha.
+
+### SDR-16 · Eval de conversas
+- O eval roda o agente pelo mesmo caminho da produção. A decisão saiu de
+  `processarComAgente` para `decidirResposta` (`src/server/agente/decidir.ts`),
+  que não toca no banco. Ela devolve o desfecho: opt-out, sem resposta,
+  escalar ou rascunho com validação e exceções. `processarComAgente` só aplica
+  os efeitos. Prompts, validador, limiares e regras duras são os mesmos.
+- Dataset em `evals/conversas/<praça>.json`: 34 conversas por praça, cada uma
+  terminando numa mensagem do prospect. O teste do dataset exige 30 ou mais
+  por praça e as 8 objeções da §7.1 em cada uma. Cada caso diz as ações
+  aceitáveis, se precisa terminar com um humano (preço, reclamação, pedido de
+  outro canal) e se reunião é aceitável.
+- Perfis do eval: os valores do seed (Arthur no Brasil, Luiz no Canadá, JP na
+  Espanha), com a voz padrão da praça, o link de agenda do Juliano (D1) e a
+  oferta vigente. O eval não lê o banco: se um perfil ganhar voz ou regras
+  próprias no painel, o perfil do eval precisa ser atualizado junto.
+- Rubrica, com nota de 0 a 1 por critério:
+  - validador e ação certa saem por regra;
+  - promessa, reunião cedo e tom saem de um juiz (`EVAL_MODELO_JUIZ`, padrão
+    `claude-opus-5-5`, esforço `medium`, fallback do servidor em caso de
+    recusa);
+  - por cima do juiz valem duas regras: percentual no texto reprova
+    promessa, e link de agenda ou `propor_reuniao` sem interesse reprovam
+    reunião;
+  - tom passa com nota 4 ou 5 (de 5).
+- "Ação certa" olha a ação final depois das regras duras: opt-out por regra
+  conta como `registrar_optout`, e ausência automática como `nenhuma`.
+  "Terminar com humano" aceita escalada ou rascunho com exceção, que no
+  automático vai para a fila.
+- Gate por praça (a interpretação de "eval aprovado" da §7.1), com o mínimo
+  de acerto de cada critério em `LIMIARES`: validador 95%, ação 90%,
+  promessa 100%, reunião 95% e tom 80%. O veredito da praça é:
+  - reprovado: algum critério ficou abaixo do mínimo;
+  - inconclusivo: menos de 30 casos, ou erro do agente ou do juiz;
+  - aprovado: o resto.
+- O SDR-17 lê o gate da praça do perfil.
+- `pnpm eval` roda no vitest, com uma config própria
+  (`vitest.eval.config.mts`), para reaproveitar o alias `@/` sem dependência
+  nova. Fica fora do `pnpm test` porque chama a API de verdade. Sem
+  `ANTHROPIC_API_KEY`, não roda.
+- Cada rodada gera uma pasta em `evals/relatorios/` (ignorada pelo git) com
+  três arquivos:
+  - `relatorio.md`: por critério e por praça, com custo e falhas;
+  - `relatorio.json`;
+  - `revisao.json`: o modelo da revisão humana.
+- O teste da rodada falha se alguma praça for reprovada ou se houver erro de
+  execução.
+- Custo: o uso de tokens de cada chamada (agente e juiz) vezes a tabela de
+  preços em `src/server/eval/custo.ts` (25/09/2026). A escrita de cache custa
+  1,25× a entrada e a leitura, 0,1×. Modelo fora da tabela aparece no
+  relatório como "sem preço".
+- Calibração (§7.1, "a revisão humana calibra a primeira rodada"): alguém
+  preenche o `revisao.json` da rodada, com passou/não em promessa e reunião e
+  nota de 1 a 5 no tom. Depois roda `EVAL_REVISAO=<pasta> pnpm eval`, sem
+  chamar a API. A nota humana substitui a do juiz no veredito, e o relatório
+  revisado mostra a concordância juiz × humano por critério. Concordância
+  baixa pede ajuste no prompt do juiz (`VERSAO_DO_JUIZ`) antes de confiar
+  nas rodadas seguintes.
+- CI: `.github/workflows/eval.yml` roda em PR que mexe no agente, nos
+  prompts, no validador, no opt-out ou no próprio eval, e também à mão
+  (`workflow_dispatch`). O relatório vai para o resumo do job e para um
+  artefato. Sem o secret `ANTHROPIC_API_KEY`, o job só deixa um aviso e
+  passa.

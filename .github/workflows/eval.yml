@@ -1,0 +1,68 @@
+name: Eval de conversas
+
+# Roda o agente contra o dataset da §7.1 quando um prompt, o agente, o
+# validador ou o próprio eval mudam (SDR-16). Custa dinheiro: só nesses
+# caminhos, ou à mão.
+on:
+  pull_request:
+    paths:
+      - src/server/agente/**
+      - src/server/eval/**
+      - src/domain/validador.ts
+      - src/domain/optout.ts
+      - evals/**
+      - vitest.eval.config.mts
+      - .github/workflows/eval.yml
+  workflow_dispatch:
+    inputs:
+      repeticoes:
+        description: Vezes que cada caso roda (1 a 5)
+        default: "1"
+      pracas:
+        description: Praças, separadas por vírgula (vazio = todas)
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eval-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eval:
+    name: eval de conversas
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      IA_MODELO_CLASSIFICACAO: ${{ vars.IA_MODELO_CLASSIFICACAO || 'claude-haiku-4-5' }}
+      IA_MODELO_RASCUNHO: ${{ vars.IA_MODELO_RASCUNHO || 'claude-sonnet-5' }}
+      IA_ESFORCO_RASCUNHO: ${{ vars.IA_ESFORCO_RASCUNHO || 'medium' }}
+      EVAL_MODELO_JUIZ: ${{ vars.EVAL_MODELO_JUIZ || 'claude-opus-5-5' }}
+      EVAL_REPETICOES: ${{ inputs.repeticoes || '1' }}
+      EVAL_PRACAS: ${{ inputs.pracas || '' }}
+    steps:
+      - name: Sem chave da Anthropic, o eval não roda
+        if: env.ANTHROPIC_API_KEY == ''
+        run: echo "::notice::Secret ANTHROPIC_API_KEY ausente. O eval de conversas não rodou."
+      - uses: actions/checkout@v7
+        if: env.ANTHROPIC_API_KEY != ''
+      - uses: pnpm/action-setup@v6
+        if: env.ANTHROPIC_API_KEY != ''
+      - uses: actions/setup-node@v7
+        if: env.ANTHROPIC_API_KEY != ''
+        with:
+          node-version: 24
+          cache: pnpm
+      - if: env.ANTHROPIC_API_KEY != ''
+        run: pnpm install --frozen-lockfile
+      # O relatório vai para o resumo do job; o job falha se alguma praça for reprovada.
+      - if: env.ANTHROPIC_API_KEY != ''
+        run: pnpm eval
+      - uses: actions/upload-artifact@v7
+        if: always() && env.ANTHROPIC_API_KEY != ''
+        with:
+          name: eval-de-conversas
+          path: evals/relatorios/
+          if-no-files-found: ignore
