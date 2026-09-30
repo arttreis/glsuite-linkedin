@@ -424,3 +424,25 @@ Anotadas durante a execução, por ticket.
 - Idioma por perfil: o agente responde no idioma da pessoa, e a voz padrão sai
   da praça do perfil (SDR-10). Os templates são escritos por campanha, no idioma
   do perfil.
+
+### SDR-14 · Métricas e gate de leitura
+- Definições (tudo contado de `acoes`, `mensagens` e `eventos`):
+  - toques: T1 a T4 que saíram (convite, DM da régua, tarefa manual feita);
+  - convites: convites enviados;
+  - aceites: convidados com `aceito_em`;
+  - respostas: leads com ao menos uma mensagem da pessoa (inclui quem respondeu
+    só a nota do convite, sem aceitar);
+  - conversas: leads que passaram por `em_conversa` (opt-out direto pelo
+    detector não conta);
+  - qualificados e reuniões: marcados pelo humano.
+- Taxas: aceite = aceites / convites. Resposta sobre aceite = respostas /
+  aceites, como o épico pede, mesmo quando a resposta veio sem aceite.
+- Marco de leitura: taxa só com toques ≥ `leitura_minima_toques` (100). Antes
+  disso, "sem amostra". Os agregados (ângulo, perfil) usam o mesmo marco sobre a
+  soma.
+- Visões: por campanha (perfil × campanha × ângulo × variante), por ângulo, por
+  perfil e template × personalizado (a variante vem de `leads.variante_copy`,
+  que o SDR-15 preenche). Triagem e rejeitados ficam de fora.
+- A referência de trabalho aparece como faixa. Abaixo dela o número fica em
+  âmbar, acima em verde: é referência, não meta. O sistema cria a primeira linha
+  de base da casa.

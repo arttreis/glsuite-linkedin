@@ -11,6 +11,7 @@ const ITENS = [
   { href: "/campanhas", rotulo: "Campanhas" },
   { href: "/triagem", rotulo: "Triagem" },
   { href: "/importar", rotulo: "Importar" },
+  { href: "/metricas", rotulo: "Métricas" },
   { href: "/perfis", rotulo: "Perfis" },
 ] as const;
 
