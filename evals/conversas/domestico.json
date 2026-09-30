@@ -1,0 +1,356 @@
+{
+  "praca": "domestico",
+  "perfil": "arthur",
+  "campanha": "Serviço · E-commerce médio (eval)",
+  "nicho": "e-commerce de moda e casa, faturamento de 5 a 50 milhões por ano",
+  "casos": [
+    {
+      "id": "br-01",
+      "tema": "manda_material",
+      "lead": { "nome": "Mariana Costa", "cargo": "Head de E-commerce", "empresa": "Casa Lume", "localizacao": "São Paulo", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Oi Mariana, obrigado por aceitar. Tenho visto muita loja vendendo bem e ficando com pouca margem no fim do mês. Na Casa Lume isso aparece?"],
+        ["prospect", "Oi Arthur! Aparece sim. Tem algum material pra eu dar uma olhada?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"] }
+    },
+    {
+      "id": "br-02",
+      "tema": "manda_material",
+      "lead": { "nome": "Rafael Nunes", "cargo": "CEO", "empresa": "Nunes Home", "localizacao": "Curitiba", "angulo": "O número não bate" },
+      "conversa": [
+        ["perfil", "Rafael, valeu pela conexão. Uma coisa que vejo direto: o número do painel de anúncios não bate com o do financeiro. Vocês sentem isso?"],
+        ["perfil", "Passando de novo por aqui. Se fizer sentido, te conto como a gente olha isso em lojas do seu tamanho."],
+        ["prospect", "manda por aqui mesmo um resumo que eu leio depois"]
+      ],
+      "esperado": { "acoes": ["responder"] }
+    },
+    {
+      "id": "br-03",
+      "tema": "ja_tenho_quem_faca",
+      "lead": { "nome": "Juliana Prado", "cargo": "Diretora Comercial", "empresa": "Vesti Bem", "localizacao": "Belo Horizonte", "angulo": "ROAS de verdade" },
+      "conversa": [
+        ["perfil", "Juliana, obrigado por aceitar. Muita loja comemora ROAS alto e, quando tira frete e devolução, a conta fica no zero. Aí na Vesti Bem vocês olham o ROAS já com esses custos?"],
+        ["prospect", "Oi! A gente já tem uma empresa que cuida disso pra nós, estamos bem atendidos."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "br-04",
+      "tema": "ja_tenho_quem_faca",
+      "lead": { "nome": "Bruno Tavares", "cargo": "Gerente de E-commerce", "empresa": "Tavares Utilidades", "localizacao": "Campinas", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Bruno, valeu pela conexão. Vejo muita loja com metade da venda num marketplace só e pouco controle da margem ali. É o caso de vocês?"],
+        ["prospect", "Temos time interno pra isso, obrigado"]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "br-05",
+      "tema": "quanto_custa",
+      "lead": { "nome": "Carla Menezes", "cargo": "Sócia", "empresa": "Menezes Decor", "localizacao": "Florianópolis", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Carla, obrigado por aceitar. Muita loja vende bem e perde margem em frete, taxa e devolução sem perceber. Na Menezes Decor vocês acompanham a margem por canal?"],
+        ["prospect", "Mais ou menos. Quanto custa o trabalho de vocês?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"], "humano": true }
+    },
+    {
+      "id": "br-06",
+      "tema": "quanto_custa",
+      "lead": { "nome": "Diego Ramos", "cargo": "Fundador", "empresa": "Ramos Outdoor", "localizacao": "Porto Alegre", "angulo": "Engenharia, não achismo" },
+      "conversa": [
+        ["perfil", "Diego, valeu pela conexão. Decisão de verba por achismo é mais comum do que parece, até em loja grande. Como vocês decidem hoje onde colocar o investimento?"],
+        ["prospect", "Planilha e feeling kkk. Qual o valor mensal de vocês?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"], "humano": true }
+    },
+    {
+      "id": "br-07",
+      "tema": "nao_sou_eu",
+      "lead": { "nome": "Patrícia Lima", "cargo": "Coordenadora de Marca", "empresa": "Lima Kids", "localizacao": "São Paulo", "angulo": "O número não bate" },
+      "conversa": [
+        ["perfil", "Patrícia, obrigado por aceitar. Vejo muita loja onde o número do painel de anúncios não bate com o do caixa. Na Lima Kids isso acontece?"],
+        ["prospect", "Oi Arthur, não sou eu que cuido dessa parte não"]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "br-08",
+      "tema": "nao_sou_eu",
+      "lead": { "nome": "Marcos Vieira", "cargo": "Analista de Marketplace", "empresa": "Vieira Casa", "localizacao": "Goiânia", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Marcos, valeu pela conexão. Marketplace costuma ser o canal que mais vende e o que menos sobra. Aí na Vieira Casa vocês medem a margem de cada canal?"],
+        ["prospect", "Quem decide isso aqui é o diretor, eu só opero"]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "br-09",
+      "tema": "de_onde_tirou_contato",
+      "lead": { "nome": "Fernanda Rocha", "cargo": "CEO", "empresa": "Rocha Beauty", "localizacao": "Recife", "angulo": "Cliente que é seu" },
+      "conversa": [
+        ["perfil", "Fernanda, obrigado por aceitar. Muita marca paga de novo para vender para quem já é cliente. Vocês olham quanto da venda vem de recompra?"],
+        ["prospect", "Desculpa, mas de onde você tirou meu contato?"]
+      ],
+      "esperado": { "acoes": ["responder"] }
+    },
+    {
+      "id": "br-10",
+      "tema": "de_onde_tirou_contato",
+      "lead": { "nome": "Gustavo Moreira", "cargo": "Diretor de Operações", "empresa": "Moreira Pet", "localizacao": "Ribeirão Preto", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Gustavo, valeu pela conexão. Em pet, frete e devolução comem uma parte grande da margem. Vocês têm isso medido por canal?"],
+        ["prospect", "Como vocês chegaram em mim? Comprou lista?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"] }
+    },
+    {
+      "id": "br-11",
+      "tema": "pare_de_mandar",
+      "lead": { "nome": "Renata Alves", "cargo": "Gerente de Loja Online", "empresa": "Alves Calçados", "localizacao": "Franca", "angulo": "ROAS de verdade" },
+      "conversa": [
+        ["perfil", "Renata, obrigado por aceitar. ROAS alto nem sempre é lucro. Vocês olham o retorno já descontando frete e devolução?"],
+        ["perfil", "Oi Renata, só retomando. Se quiser, te conto em duas linhas como a gente faz essa conta."],
+        ["prospect", "Pare de me mandar mensagem, por favor."]
+      ],
+      "esperado": { "acoes": ["registrar_optout"] }
+    },
+    {
+      "id": "br-12",
+      "tema": "pare_de_mandar",
+      "lead": { "nome": "Thiago Souza", "cargo": "Sócio", "empresa": "Souza Móveis", "localizacao": "Bento Gonçalves", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Thiago, valeu pela conexão. Móvel no marketplace vende, mas a comissão e o frete pesam. Isso pesa aí?"],
+        ["prospect", "me tira dessa lista"]
+      ],
+      "esperado": { "acoes": ["registrar_optout"] }
+    },
+    {
+      "id": "br-13",
+      "tema": "outro_idioma",
+      "lead": { "nome": "Lucas Becker", "cargo": "Head of E-commerce", "empresa": "Becker Brands", "localizacao": "São Paulo", "angulo": "O número não bate" },
+      "conversa": [
+        ["perfil", "Lucas, obrigado por aceitar. Vejo muita loja onde o número do painel de anúncios não bate com o do financeiro. Aí na Becker isso acontece?"],
+        ["prospect", "Hi Arthur, I don't speak Portuguese very well. We do see that gap between ads data and finance. What do you do exactly?"]
+      ],
+      "esperado": { "acoes": ["responder"], "idioma": "en" }
+    },
+    {
+      "id": "br-14",
+      "tema": "outro_idioma",
+      "lead": { "nome": "Sofía Herrera", "cargo": "Directora de E-commerce", "empresa": "Herrera Moda Brasil", "localizacao": "Rio de Janeiro", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Sofía, obrigado por aceitar. Muita loja vende bem e perde margem em frete e devolução. Vocês acompanham a margem por canal?"],
+        ["prospect", "Hola Arthur, perdona que te escriba en español. Sí, la devolución nos está comiendo el margen. ¿Cómo lo trabajan ustedes?"]
+      ],
+      "esperado": { "acoes": ["responder"], "idioma": "es" }
+    },
+    {
+      "id": "br-15",
+      "tema": "monossilabica",
+      "lead": { "nome": "André Pires", "cargo": "CEO", "empresa": "Pires Esportes", "localizacao": "Londrina", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "André, valeu pela conexão. Muita loja de esporte vende bem e fica com pouca margem no fim do mês. Isso aparece aí?"],
+        ["prospect", "sim"]
+      ],
+      "esperado": { "acoes": ["responder"] }
+    },
+    {
+      "id": "br-16",
+      "tema": "monossilabica",
+      "lead": { "nome": "Camila Duarte", "cargo": "Gerente de Marketplace", "empresa": "Duarte Cosméticos", "localizacao": "São Paulo", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Camila, obrigado por aceitar. Cosmético no marketplace vende muito, mas a margem some em taxa. Faz sentido para vocês?"],
+        ["prospect", "ok"]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "br-17",
+      "tema": "monossilabica",
+      "lead": { "nome": "Rodrigo Farias", "cargo": "Diretor", "empresa": "Farias Presentes", "localizacao": "Salvador", "angulo": "Cliente que é seu" },
+      "conversa": [
+        ["perfil", "Rodrigo, valeu pela conexão. Muita loja paga anúncio de novo para quem já é cliente. Vocês medem a recompra?"],
+        ["prospect", "👍"]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "br-18",
+      "tema": "interesse",
+      "lead": { "nome": "Aline Castro", "cargo": "CEO", "empresa": "Castro Joias", "localizacao": "São Paulo", "angulo": "ROAS de verdade" },
+      "conversa": [
+        ["perfil", "Aline, obrigado por aceitar. ROAS alto nem sempre vira lucro quando entram frete e devolução. Vocês fazem essa conta?"],
+        ["prospect", "Não fazemos e isso me incomoda faz tempo. Como vocês trabalham?"]
+      ],
+      "esperado": { "acoes": ["responder", "propor_reuniao"] }
+    },
+    {
+      "id": "br-19",
+      "tema": "interesse",
+      "lead": { "nome": "Felipe Andrade", "cargo": "Fundador", "empresa": "Andrade Café", "localizacao": "Varginha", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Felipe, valeu pela conexão. Café vendido online tem margem apertada com frete. Vocês sabem quanto sobra por canal?"],
+        ["prospect", "Não sei não, e queria saber. Faz sentido a gente conversar."]
+      ],
+      "esperado": { "acoes": ["propor_reuniao"] }
+    },
+    {
+      "id": "br-20",
+      "tema": "quer_marcar",
+      "lead": { "nome": "Beatriz Martins", "cargo": "Diretora de E-commerce", "empresa": "Martins Têxtil", "localizacao": "Blumenau", "angulo": "O número não bate" },
+      "conversa": [
+        ["perfil", "Beatriz, obrigado por aceitar. O número do painel de anúncios quase nunca bate com o do financeiro. Aí na Martins isso acontece?"],
+        ["prospect", "Acontece demais. Topo uma conversa, qual horário você tem semana que vem?"]
+      ],
+      "esperado": { "acoes": ["propor_reuniao"] }
+    },
+    {
+      "id": "br-21",
+      "tema": "o_que_e",
+      "lead": { "nome": "Eduardo Silva", "cargo": "Gerente Geral", "empresa": "Silva Ferramentas", "localizacao": "Joinville", "angulo": "Engenharia, não achismo" },
+      "conversa": [
+        ["perfil", "Eduardo, valeu pela conexão. Muita decisão de investimento ainda sai no achismo. Como vocês decidem onde colocar a verba?"],
+        ["prospect", "Mas o que exatamente a GuessLess faz?"]
+      ],
+      "esperado": { "acoes": ["responder"] }
+    },
+    {
+      "id": "br-22",
+      "tema": "nao_tem_interesse",
+      "lead": { "nome": "Larissa Gomes", "cargo": "CEO", "empresa": "Gomes Fitness", "localizacao": "Brasília", "angulo": "Cliente que é seu" },
+      "conversa": [
+        ["perfil", "Larissa, obrigado por aceitar. Muita marca de fitness paga de novo para vender para quem já comprou. Vocês acompanham a recompra?"],
+        ["prospect", "Obrigada, mas não tenho interesse."]
+      ],
+      "esperado": { "acoes": ["encerrar"] }
+    },
+    {
+      "id": "br-23",
+      "tema": "fora_do_escritorio",
+      "lead": { "nome": "Paulo Ribeiro", "cargo": "Diretor Comercial", "empresa": "Ribeiro Brinquedos", "localizacao": "São Paulo", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Paulo, valeu pela conexão. Brinquedo tem sazonalidade forte e a margem muda muito por canal. Vocês acompanham isso?"],
+        ["prospect", "Olá! Estou de férias até 20/10, sem acesso às mensagens. Em caso de urgência, falar com a Ana. Obrigado!"]
+      ],
+      "esperado": { "acoes": ["nenhuma"] }
+    },
+    {
+      "id": "br-24",
+      "tema": "irrelevante",
+      "lead": { "nome": "Vanessa Cardoso", "cargo": "Analista de E-commerce", "empresa": "Cardoso Óticas", "localizacao": "Maringá", "angulo": "ROAS de verdade" },
+      "conversa": [
+        ["perfil", "Vanessa, obrigado por aceitar. ROAS alto nem sempre é lucro. Vocês descontam frete e devolução nessa conta?"],
+        ["prospect", "Oi! Vocês estão contratando? Estou procurando recolocação e tenho experiência com loja virtual."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar", "escalar_humano"] }
+    },
+    {
+      "id": "br-25",
+      "tema": "reclamacao",
+      "lead": { "nome": "Ricardo Teixeira", "cargo": "CEO", "empresa": "Teixeira Auto Peças", "localizacao": "São Paulo", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Ricardo, valeu pela conexão. Autopeça no marketplace vende, mas comissão e frete pesam. Isso pesa aí?"],
+        ["perfil", "Ricardo, retomando rapidinho. Se quiser, te mostro como outras lojas medem isso."],
+        ["prospect", "Cara, todo dia aparece alguém me vendendo alguma coisa aqui. Já tá chato isso."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar", "escalar_humano"], "humano": true }
+    },
+    {
+      "id": "br-26",
+      "tema": "outro_canal",
+      "lead": { "nome": "Daniela Freitas", "cargo": "Sócia", "empresa": "Freitas Moda Praia", "localizacao": "Fortaleza", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Daniela, obrigado por aceitar. Moda praia tem pico curto e a margem por canal decide o ano. Vocês acompanham isso?"],
+        ["prospect", "Achei interessante. Me chama no WhatsApp que fica mais fácil pra mim"]
+      ],
+      "esperado": { "acoes": ["responder", "propor_reuniao", "escalar_humano"], "humano": true, "reuniao": true }
+    },
+    {
+      "id": "br-27",
+      "tema": "e_robo",
+      "lead": { "nome": "Henrique Lopes", "cargo": "CTO", "empresa": "Lopes Eletrônicos", "localizacao": "Manaus", "angulo": "Engenharia, não achismo" },
+      "conversa": [
+        ["perfil", "Henrique, valeu pela conexão. Muita decisão de verba ainda sai no achismo, mesmo com dado sobrando. Como vocês decidem isso?"],
+        ["prospect", "Essa mensagem é automática? É um robô falando comigo?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"] }
+    },
+    {
+      "id": "br-28",
+      "tema": "agora_nao",
+      "lead": { "nome": "Tatiane Barbosa", "cargo": "Head de Growth", "empresa": "Barbosa Suplementos", "localizacao": "Uberlândia", "angulo": "ROAS de verdade" },
+      "conversa": [
+        ["perfil", "Tatiane, obrigado por aceitar. ROAS alto às vezes esconde prejuízo depois do frete. Vocês olham isso?"],
+        ["prospect", "Agora não é um bom momento, estamos no meio da Black Friday. Talvez no começo do ano."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "br-29",
+      "tema": "pede_resultado",
+      "lead": { "nome": "Leandro Cunha", "cargo": "CEO", "empresa": "Cunha Bikes", "localizacao": "Jundiaí", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Leandro, valeu pela conexão. Bike vendida online tem frete caro e devolução difícil. Vocês sabem a margem por canal?"],
+        ["prospect", "Interessante. Quanto vocês costumam aumentar de margem nos clientes? Tem algum case com número?"]
+      ],
+      "esperado": { "acoes": ["responder", "propor_reuniao", "escalar_humano"], "reuniao": true }
+    },
+    {
+      "id": "br-30",
+      "tema": "indica_outra_pessoa",
+      "lead": { "nome": "Mônica Azevedo", "cargo": "Diretora Financeira", "empresa": "Azevedo Casa & Mesa", "localizacao": "São Paulo", "angulo": "O número não bate" },
+      "conversa": [
+        ["perfil", "Mônica, obrigado por aceitar. O número do painel de anúncios quase nunca bate com o do financeiro. Aí isso acontece?"],
+        ["prospect", "Acontece sim, mas quem cuida disso é o Pedro Azevedo, nosso diretor de e-commerce. Fala com ele."]
+      ],
+      "esperado": { "acoes": ["responder"] }
+    },
+    {
+      "id": "br-31",
+      "tema": "optout_ambiguo",
+      "lead": { "nome": "Sérgio Mendes", "cargo": "Sócio", "empresa": "Mendes Vinhos", "localizacao": "Garibaldi", "angulo": "Cliente que é seu" },
+      "conversa": [
+        ["perfil", "Sérgio, valeu pela conexão. Vinho tem recompra alta, e muita loja paga anúncio de novo para quem já é cliente. Vocês medem isso?"],
+        ["perfil", "Sérgio, retomando. Se fizer sentido, te conto como a gente separa cliente novo de recompra."],
+        ["prospect", "Não precisa continuar, valeu."]
+      ],
+      "esperado": { "acoes": ["encerrar", "registrar_optout", "escalar_humano"] }
+    },
+    {
+      "id": "br-32",
+      "tema": "experiencia_ruim",
+      "lead": { "nome": "Cristina Rezende", "cargo": "CEO", "empresa": "Rezende Enxovais", "localizacao": "Brusque", "angulo": "Engenharia, não achismo" },
+      "conversa": [
+        ["perfil", "Cristina, obrigado por aceitar. Muita loja investe por achismo mesmo tendo dado. Como vocês decidem a verba hoje?"],
+        ["prospect", "Já contratei consultoria duas vezes e foi dinheiro jogado fora. Por que com vocês seria diferente?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"] }
+    },
+    {
+      "id": "br-33",
+      "tema": "perguntas_esgotadas",
+      "lead": { "nome": "Otávio Queiroz", "cargo": "Diretor de E-commerce", "empresa": "Queiroz Luminárias", "localizacao": "São Paulo", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Otávio, valeu pela conexão. Luminária tem frete caro e quebra na entrega. Vocês sabem quanto isso tira da margem?"],
+        ["prospect", "Sei mais ou menos. Uns 8% vão em frete e troca."],
+        ["perfil", "É bastante. E isso muda muito entre o site e o marketplace?"],
+        ["prospect", "Muda, no marketplace é pior. Mas a gente não separa direito."]
+      ],
+      "esperado": { "acoes": ["responder", "propor_reuniao"] }
+    },
+    {
+      "id": "br-34",
+      "tema": "quer_marcar",
+      "lead": { "nome": "Natália Brandão", "cargo": "CEO", "empresa": "Brandão Papelaria", "localizacao": "Campinas", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Natália, obrigado por aceitar. Papelaria no marketplace vende muito, mas a margem some em taxa. Isso pesa aí?"],
+        ["prospect", "Pesa muito. Me explica melhor esse diagnóstico de 30 minutos?"],
+        ["perfil", "É uma conversa com o Juliano, que olha com você a margem de cada canal e onde ela está vazando. Sem compromisso."],
+        ["prospect", "Fechado, quero fazer. Como marco?"]
+      ],
+      "esperado": { "acoes": ["propor_reuniao"] }
+    }
+  ]
+}

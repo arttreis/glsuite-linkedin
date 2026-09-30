@@ -1,0 +1,355 @@
+{
+  "praca": "canada",
+  "perfil": "luiz",
+  "campanha": "Service · Canadian DTC brands (eval)",
+  "nicho": "Canadian direct-to-consumer brands, CAD 2 to 30 million a year",
+  "casos": [
+    {
+      "id": "ca-01",
+      "tema": "manda_material",
+      "lead": { "nome": "Emily Carter", "cargo": "Head of E-commerce", "empresa": "Northleaf Home", "localizacao": "Toronto, ON", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Emily. A lot of DTC brands sell well and still end the month with thin margins once shipping and returns hit. Is that showing up at Northleaf? Or tell me to stop and I will."],
+        ["prospect", "Hi Luiz, it does. Do you have a deck or something I can look at?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"] }
+    },
+    {
+      "id": "ca-02",
+      "tema": "manda_material",
+      "lead": { "nome": "Ryan Mitchell", "cargo": "Founder", "empresa": "Mitchell Outdoor Co.", "localizacao": "Calgary, AB", "angulo": "O número não bate" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Ryan. Ad platform numbers rarely match what finance sees. Does that happen at Mitchell Outdoor? Or tell me to stop and I will."],
+        ["prospect", "Send me some info, I'll read it when I have a minute."]
+      ],
+      "esperado": { "acoes": ["responder"] }
+    },
+    {
+      "id": "ca-03",
+      "tema": "ja_tenho_quem_faca",
+      "lead": { "nome": "Sarah Thompson", "cargo": "VP Commercial", "empresa": "Maple & Pine Apparel", "localizacao": "Vancouver, BC", "angulo": "ROAS de verdade" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Sarah. High ROAS can hide a loss once shipping and returns come out. Do you look at return after those costs? Or tell me to stop and I will."],
+        ["prospect", "We already work with a firm that handles all of this for us. We're good."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "ca-04",
+      "tema": "ja_tenho_quem_faca",
+      "lead": { "nome": "Kevin Nguyen", "cargo": "E-commerce Manager", "empresa": "Lotus Wellness", "localizacao": "Montreal, QC", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Kevin. Many brands rely on Amazon for half their sales with little view of the margin there. Is that you? Or tell me to stop and I will."],
+        ["prospect", "We have an in-house team for that, thanks."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "ca-05",
+      "tema": "quanto_custa",
+      "lead": { "nome": "Jessica Wong", "cargo": "Co-founder", "empresa": "Hearth Ceramics", "localizacao": "Toronto, ON", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Jessica. Ceramics ship expensive and break easily, and that eats margin fast. Do you track margin by channel? Or tell me to stop and I will."],
+        ["prospect", "Kind of. What do you charge?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"], "humano": true }
+    },
+    {
+      "id": "ca-06",
+      "tema": "quanto_custa",
+      "lead": { "nome": "Daniel Roy", "cargo": "CEO", "empresa": "Roy Coffee Roasters", "localizacao": "Quebec City, QC", "angulo": "Engenharia, não achismo" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Daniel. Budget decisions are often gut feel, even with plenty of data around. How do you decide where to invest? Or tell me to stop and I will."],
+        ["prospect", "Mostly gut feel honestly. What's your monthly fee?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"], "humano": true }
+    },
+    {
+      "id": "ca-07",
+      "tema": "nao_sou_eu",
+      "lead": { "nome": "Olivia Martin", "cargo": "Brand Coordinator", "empresa": "Aurora Skincare", "localizacao": "Ottawa, ON", "angulo": "O número não bate" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Olivia. Ad dashboards and finance rarely agree on the numbers. Does that happen at Aurora? Or tell me to stop and I will."],
+        ["prospect", "Hi, I'm not the right person for this, sorry."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "ca-08",
+      "tema": "nao_sou_eu",
+      "lead": { "nome": "Tyler Scott", "cargo": "Marketplace Specialist", "empresa": "Summit Gear", "localizacao": "Edmonton, AB", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Tyler. Amazon often sells the most and leaves the least. Do you measure margin per channel at Summit Gear? Or tell me to stop and I will."],
+        ["prospect", "That's above my pay grade, the owners decide that stuff."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "ca-09",
+      "tema": "de_onde_tirou_contato",
+      "lead": { "nome": "Hannah Clarke", "cargo": "CEO", "empresa": "Clarke Botanicals", "localizacao": "Halifax, NS", "angulo": "Cliente que é seu" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Hannah. Many brands pay again to sell to people who already bought. Do you track how much comes from repeat customers? Or tell me to stop and I will."],
+        ["prospect", "Sorry, where did you get my contact from?"]
+      ],
+      "esperado": { "acoes": ["responder"] }
+    },
+    {
+      "id": "ca-10",
+      "tema": "de_onde_tirou_contato",
+      "lead": { "nome": "Brandon Lee", "cargo": "Director of Operations", "empresa": "Lee Pet Supply", "localizacao": "Winnipeg, MB", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Brandon. In pet supplies, shipping and returns take a big bite of margin. Do you have that by channel? Or tell me to stop and I will."],
+        ["prospect", "How did you find me? Did you buy a list?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"] }
+    },
+    {
+      "id": "ca-11",
+      "tema": "pare_de_mandar",
+      "lead": { "nome": "Megan Walsh", "cargo": "Online Store Manager", "empresa": "Walsh Footwear", "localizacao": "London, ON", "angulo": "ROAS de verdade" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Megan. High ROAS isn't always profit. Do you net out shipping and returns? Or tell me to stop and I will."],
+        ["perfil", "Hi Megan, just following up. Happy to share in two lines how we do that math. Or tell me to stop and I will."],
+        ["prospect", "Please stop messaging me."]
+      ],
+      "esperado": { "acoes": ["registrar_optout"] }
+    },
+    {
+      "id": "ca-12",
+      "tema": "pare_de_mandar",
+      "lead": { "nome": "Justin Kowalski", "cargo": "Owner", "empresa": "Kowalski Furniture", "localizacao": "Saskatoon, SK", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Justin. Furniture on Wayfair sells, but fees and freight add up. Is that weighing on you? Or tell me to stop and I will."],
+        ["prospect", "stop"]
+      ],
+      "esperado": { "acoes": ["registrar_optout"] }
+    },
+    {
+      "id": "ca-13",
+      "tema": "outro_idioma",
+      "lead": { "nome": "Julie Tremblay", "cargo": "Directrice e-commerce", "empresa": "Boutique Tremblay", "localizacao": "Montreal, QC", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Julie. Many brands sell well and lose margin to shipping and returns. Do you track margin by channel? Or tell me to stop and I will."],
+        ["prospect", "Bonjour Luiz, je préfère en français si possible. Oui, les retours nous coûtent cher. Vous faites quoi exactement?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"] }
+    },
+    {
+      "id": "ca-14",
+      "tema": "outro_idioma",
+      "lead": { "nome": "Rafael Oliveira", "cargo": "Founder", "empresa": "Samba Snacks Canada", "localizacao": "Toronto, ON", "angulo": "O número não bate" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Rafael. Ad numbers and finance rarely match. Does that happen at Samba Snacks? Or tell me to stop and I will."],
+        ["prospect", "Opa Luiz, vi que você é brasileiro também! Acontece sim, os números nunca batem. Como vocês resolvem isso?"]
+      ],
+      "esperado": { "acoes": ["responder"], "idioma": "pt" }
+    },
+    {
+      "id": "ca-15",
+      "tema": "monossilabica",
+      "lead": { "nome": "Chris Anderson", "cargo": "CEO", "empresa": "Anderson Bikes", "localizacao": "Victoria, BC", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Chris. Bikes are costly to ship and hard to return. Do you know your margin by channel? Or tell me to stop and I will."],
+        ["prospect", "yes"]
+      ],
+      "esperado": { "acoes": ["responder"] }
+    },
+    {
+      "id": "ca-16",
+      "tema": "monossilabica",
+      "lead": { "nome": "Ashley Brown", "cargo": "Marketplace Manager", "empresa": "Glow Cosmetics", "localizacao": "Mississauga, ON", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Ashley. Beauty sells a lot on Amazon, but fees eat the margin. Does that ring true? Or tell me to stop and I will."],
+        ["prospect", "k"]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "ca-17",
+      "tema": "monossilabica",
+      "lead": { "nome": "Matthew Singh", "cargo": "Director", "empresa": "Singh Gifts", "localizacao": "Brampton, ON", "angulo": "Cliente que é seu" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Matthew. Many brands pay for ads again to reach existing customers. Do you measure repeat purchases? Or tell me to stop and I will."],
+        ["prospect", "maybe"]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "ca-18",
+      "tema": "interesse",
+      "lead": { "nome": "Lauren Fraser", "cargo": "CEO", "empresa": "Fraser Jewellery", "localizacao": "Toronto, ON", "angulo": "ROAS de verdade" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Lauren. High ROAS doesn't always turn into profit after shipping and returns. Do you run that math? Or tell me to stop and I will."],
+        ["prospect", "We don't, and it's been bugging me for a while. How do you guys work?"]
+      ],
+      "esperado": { "acoes": ["responder", "propor_reuniao"] }
+    },
+    {
+      "id": "ca-19",
+      "tema": "interesse",
+      "lead": { "nome": "Nathan Gagnon", "cargo": "Founder", "empresa": "Gagnon Maple Goods", "localizacao": "Sherbrooke, QC", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Nathan. Food shipped online has tight margins with freight. Do you know what's left per channel? Or tell me to stop and I will."],
+        ["prospect", "Honestly no, and I'd like to. Worth a chat."]
+      ],
+      "esperado": { "acoes": ["propor_reuniao"] }
+    },
+    {
+      "id": "ca-20",
+      "tema": "quer_marcar",
+      "lead": { "nome": "Rachel Morgan", "cargo": "Director of E-commerce", "empresa": "Morgan Linens", "localizacao": "Hamilton, ON", "angulo": "O número não bate" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Rachel. Ad dashboards rarely agree with finance. Does that happen at Morgan Linens? Or tell me to stop and I will."],
+        ["prospect", "All the time. Happy to talk, when are you free next week?"]
+      ],
+      "esperado": { "acoes": ["propor_reuniao"] }
+    },
+    {
+      "id": "ca-21",
+      "tema": "o_que_e",
+      "lead": { "nome": "Eric Johnson", "cargo": "General Manager", "empresa": "Johnson Tools", "localizacao": "Kitchener, ON", "angulo": "Engenharia, não achismo" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Eric. A lot of budget decisions still run on gut feel. How do you decide where to invest? Or tell me to stop and I will."],
+        ["prospect", "What does GuessLess actually do?"]
+      ],
+      "esperado": { "acoes": ["responder"] }
+    },
+    {
+      "id": "ca-22",
+      "tema": "nao_tem_interesse",
+      "lead": { "nome": "Samantha Reid", "cargo": "CEO", "empresa": "Reid Activewear", "localizacao": "Vancouver, BC", "angulo": "Cliente que é seu" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Samantha. Many activewear brands pay again to sell to past buyers. Do you track repeat purchases? Or tell me to stop and I will."],
+        ["prospect", "Thanks, but not interested."]
+      ],
+      "esperado": { "acoes": ["encerrar"] }
+    },
+    {
+      "id": "ca-23",
+      "tema": "fora_do_escritorio",
+      "lead": { "nome": "Mark Ellis", "cargo": "VP Sales", "empresa": "Ellis Toys", "localizacao": "Toronto, ON", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Mark. Toys are seasonal and margin swings a lot by channel. Do you track that? Or tell me to stop and I will."],
+        ["prospect", "Thank you for your message. I am out of the office until October 20 with limited access to messages. For urgent matters, please contact Anna."]
+      ],
+      "esperado": { "acoes": ["nenhuma"] }
+    },
+    {
+      "id": "ca-24",
+      "tema": "irrelevante",
+      "lead": { "nome": "Nicole Baker", "cargo": "E-commerce Analyst", "empresa": "Baker Eyewear", "localizacao": "Regina, SK", "angulo": "ROAS de verdade" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Nicole. High ROAS isn't always profit. Do you net out shipping and returns? Or tell me to stop and I will."],
+        ["prospect", "Hey! Are you hiring? I'm looking for a new role in e-commerce."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar", "escalar_humano"] }
+    },
+    {
+      "id": "ca-25",
+      "tema": "reclamacao",
+      "lead": { "nome": "Paul Henderson", "cargo": "CEO", "empresa": "Henderson Auto Parts", "localizacao": "Windsor, ON", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Paul. Auto parts sell on Amazon, but fees and freight add up. Is that weighing on you? Or tell me to stop and I will."],
+        ["perfil", "Paul, quick follow up. Happy to show how other stores measure it. Or tell me to stop and I will."],
+        ["prospect", "Every single day someone pitches me on here. It's getting old."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar", "escalar_humano"], "humano": true }
+    },
+    {
+      "id": "ca-26",
+      "tema": "outro_canal",
+      "lead": { "nome": "Amanda Price", "cargo": "Co-owner", "empresa": "Price Swimwear", "localizacao": "Kelowna, BC", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Amanda. Swimwear has a short peak, and margin by channel decides the year. Do you track it? Or tell me to stop and I will."],
+        ["prospect", "Interesting. Email me at amanda@priceswim.ca, I barely check LinkedIn."]
+      ],
+      "esperado": { "acoes": ["responder", "propor_reuniao", "escalar_humano"], "humano": true, "reuniao": true }
+    },
+    {
+      "id": "ca-27",
+      "tema": "e_robo",
+      "lead": { "nome": "Steven Park", "cargo": "CTO", "empresa": "Park Electronics", "localizacao": "Richmond, BC", "angulo": "Engenharia, não achismo" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Steven. Budget calls still run on gut feel even with data everywhere. How do you decide? Or tell me to stop and I will."],
+        ["prospect", "Is this automated? Am I talking to a bot?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"] }
+    },
+    {
+      "id": "ca-28",
+      "tema": "agora_nao",
+      "lead": { "nome": "Kimberly Hall", "cargo": "Head of Growth", "empresa": "Hall Nutrition", "localizacao": "Oakville, ON", "angulo": "ROAS de verdade" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Kimberly. High ROAS can hide losses after shipping. Do you look at that? Or tell me to stop and I will."],
+        ["prospect", "Not a good time, we're heads down on Black Friday. Maybe in the new year."]
+      ],
+      "esperado": { "acoes": ["responder", "encerrar"] }
+    },
+    {
+      "id": "ca-29",
+      "tema": "pede_resultado",
+      "lead": { "nome": "Jason Murphy", "cargo": "CEO", "empresa": "Murphy Cycles", "localizacao": "Guelph, ON", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Jason. Bikes cost a lot to ship and return. Do you know your margin by channel? Or tell me to stop and I will."],
+        ["prospect", "Interesting. How much do you usually improve margins for clients? Any case study with numbers?"]
+      ],
+      "esperado": { "acoes": ["responder", "propor_reuniao", "escalar_humano"], "reuniao": true }
+    },
+    {
+      "id": "ca-30",
+      "tema": "indica_outra_pessoa",
+      "lead": { "nome": "Linda Campbell", "cargo": "CFO", "empresa": "Campbell Home & Table", "localizacao": "Toronto, ON", "angulo": "O número não bate" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Linda. Ad dashboards rarely match what finance sees. Does that happen at Campbell? Or tell me to stop and I will."],
+        ["prospect", "It does, but Peter Campbell runs e-commerce. Reach out to him."]
+      ],
+      "esperado": { "acoes": ["responder"] }
+    },
+    {
+      "id": "ca-31",
+      "tema": "optout_ambiguo",
+      "lead": { "nome": "Greg Sullivan", "cargo": "Partner", "empresa": "Sullivan Wines", "localizacao": "Niagara-on-the-Lake, ON", "angulo": "Cliente que é seu" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Greg. Wine has strong repeat buying, and many shops pay ads again to reach existing customers. Do you measure it? Or tell me to stop and I will."],
+        ["perfil", "Greg, following up. Happy to share how we split new versus repeat. Or tell me to stop and I will."],
+        ["prospect", "No need to keep going, thanks."]
+      ],
+      "esperado": { "acoes": ["encerrar", "registrar_optout", "escalar_humano"] }
+    },
+    {
+      "id": "ca-32",
+      "tema": "experiencia_ruim",
+      "lead": { "nome": "Christine Dubois", "cargo": "CEO", "empresa": "Dubois Bedding", "localizacao": "Laval, QC", "angulo": "Engenharia, não achismo" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Christine. Many stores invest on gut feel even with data available. How do you decide budget today? Or tell me to stop and I will."],
+        ["prospect", "We hired consultants twice and it was money down the drain. Why would you be any different?"]
+      ],
+      "esperado": { "acoes": ["responder", "escalar_humano"] }
+    },
+    {
+      "id": "ca-33",
+      "tema": "perguntas_esgotadas",
+      "lead": { "nome": "Owen Bennett", "cargo": "Director of E-commerce", "empresa": "Bennett Lighting", "localizacao": "Toronto, ON", "angulo": "Margem invisível" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Owen. Lighting ships expensive and breaks in transit. Do you know how much that takes from margin? Or tell me to stop and I will."],
+        ["prospect", "Roughly. Around 8% goes to shipping and replacements."],
+        ["perfil", "That's a lot. Does it change much between your site and Amazon? Or tell me to stop and I will."],
+        ["prospect", "It does, Amazon is worse. But we don't really split it out."]
+      ],
+      "esperado": { "acoes": ["responder", "propor_reuniao"] }
+    },
+    {
+      "id": "ca-34",
+      "tema": "quer_marcar",
+      "lead": { "nome": "Victoria Lam", "cargo": "CEO", "empresa": "Lam Stationery", "localizacao": "Markham, ON", "angulo": "Refém do marketplace" },
+      "conversa": [
+        ["perfil", "Thanks for connecting, Victoria. Stationery sells a lot on Amazon, but margin disappears in fees. Is that weighing on you? Or tell me to stop and I will."],
+        ["prospect", "A lot. Tell me more about this 30 minute diagnostic?"],
+        ["perfil", "It's a call with Juliano, who looks at your margin by channel with you and where it's leaking. No strings attached. Or tell me to stop and I will."],
+        ["prospect", "Great, I'm in. How do I book?"]
+      ],
+      "esperado": { "acoes": ["propor_reuniao"] }
+    }
+  ]
+}
