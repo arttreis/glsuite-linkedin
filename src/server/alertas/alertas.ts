@@ -9,7 +9,7 @@ export interface EnviadorDeEmail {
 export type NovoAlerta = {
   /** Deduplica: o mesmo fato nunca vira dois e-mails. */
   chave: string;
-  tipo: "perfil_pausado" | "sla" | "revisao";
+  tipo: "perfil_pausado" | "sla" | "revisao" | "modo_rebaixado";
   perfilId: string | null;
   assunto: string;
   texto: string;

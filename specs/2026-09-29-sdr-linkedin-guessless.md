@@ -549,6 +549,54 @@ Anotadas durante a execução, por ticket.
   artefato. Sem o secret `ANTHROPIC_API_KEY`, o job só deixa um aviso e
   passa.
 
+### SDR-17 · Modo automático por perfil
+- "Eval aprovado" fica numa tabela, `evals`: uma linha por praça e por
+  rodada, com veredito, versão dos prompts e do juiz, casos, custo e motivos.
+  O eval não fala com o banco. O admin sobe o `relatorio.json` da rodada em
+  **Perfis** ("Registrar eval"), e o sistema recusa uma rodada de outra versão
+  dos prompts. Vale a rodada mais recente da praça na versão atual
+  (`VERSAO_DOS_PROMPTS`). Se o prompt muda, o gate fecha até um eval novo ser
+  registrado.
+- Desde quando o perfil está no modo atual: coluna `perfis.modo_desde`. Toda
+  troca de modo, manual ou automática, reinicia esse relógio. Perfis que já
+  existiam contam desde a ativação.
+- O gate (§7.1), em `avaliarGate` (`src/server/perfis/modo.ts`), exige:
+  - o perfil em `aprovacao` há pelo menos `gate_automatico.dias_em_aprovacao`
+    dias (14);
+  - pelo menos `amostra_minima_aprovacao` (20) rascunhos de conversa decididos
+    nessa janela, com a taxa de edição e rejeição abaixo de `limiar_edicao`
+    (10%, D6). A taxa é a de `taxaDeEdicao`, do SDR-11. Sem a amostra mínima,
+    a taxa de 0% de 2 rascunhos não diria nada;
+  - o eval da praça do perfil aprovado na versão atual dos prompts.
+- Na Espanha, o automático não existe: a DM é manual pela §4.5, e o
+  despachante já cancela DM que não seja humana. As outras trocas de modo
+  (`manual` e `aprovacao`) são livres, feitas por qualquer operador com
+  acesso ao perfil.
+- Tentar ligar sem o gate é bloqueado: o painel mostra os motivos, e a
+  tentativa fica em `eventos` (`automatico_bloqueado`, com o operador). A
+  troca aceita grava `modo_alterado`.
+- Quando o perfil sai do automático, por troca manual ou por rebaixamento, os
+  rascunhos automáticos que ainda não saíram (`pendente`) voltam para a fila,
+  com o motivo.
+- "Taxa de erro" do rebaixamento (interpretação). A base são as DMs que a IA
+  agendou sozinha nos últimos `janela_erro_dias` (7) dias e que já tiveram
+  desfecho. Conta como erro a DM que:
+  - o validador barrou no envio;
+  - falhou de vez;
+  - foi seguida de um pedido de opt-out da pessoa.
+- O perfil é rebaixado quando a taxa passa de `limiar_erro` (10%), com pelo
+  menos `amostra_minima_erro` (10) mensagens. A marcação manual de "resposta
+  ruim" pelo operador fica para depois: hoje não há tela para isso.
+- O rebaixamento é a etapa `modo` do tick. Ela roda depois das guardas e antes
+  do despacho, para que nada saia pelo modo antigo. Ele grava `modo_rebaixado`
+  em `eventos` (ator `sistema`) e manda um alerta `modo_rebaixado` para o dono
+  do perfil e para o admin.
+- Os parâmetros novos entraram na configuração `gate_automatico`, que já
+  existia, então o total de configurações continua 17.
+- No banco dividido com o GL Suite, a migration
+  `20261008120000_modo_automatico.sql` vai por SQL. Ela dá o grant da tabela
+  `evals` ao `sdr_servidor`, mas só se o papel existir.
+
 ### Ambiente de teste (30/09/2026)
 - Painel na Vercel: projeto `guessless-sdr` (time GuessLess), em
   https://guessless-sdr.vercel.app. O `vercel.json` declara o framework, porque

@@ -122,6 +122,26 @@ Os prompts ficam em `src/server/agente/prompts.ts`, com versão gravada em cada
 rascunho. Voz e regras de cada perfil ficam em `perfis.voz_md` e
 `perfis.regras_md`. A oferta fica na configuração `oferta_vigente`.
 
+### Modo automático (gate da §7.1)
+
+Em **Perfis**, cada operador troca o modo de resposta dos perfis que opera.
+Para ligar o `automatico`, três condições precisam valer:
+
+- o perfil está há 14 dias em `aprovacao`;
+- teve pelo menos 20 rascunhos decididos nesse período, com edição e
+  rejeição abaixo de 10%;
+- o eval da praça foi aprovado na versão atual dos prompts.
+
+Sem isso, a troca é bloqueada e o painel mostra o que falta. Para registrar o
+eval, o admin sobe o `relatorio.json` da rodada (`pnpm eval`) em
+"Registrar eval".
+
+O tick devolve o perfil para `aprovacao` sozinho, com alerta, quando mais de
+10% das mensagens automáticas dos últimos 7 dias dão erro. Erro é a mensagem
+que o validador barrou, que falhou ou que foi seguida de opt-out. Os
+parâmetros ficam na configuração `gate_automatico`. Na Espanha não existe
+modo automático.
+
 ### T1 personalizado (campanha `personalizada`)
 
 Na aprovação da triagem, cada lead é sorteado para um braço do A/B: o T1 da
