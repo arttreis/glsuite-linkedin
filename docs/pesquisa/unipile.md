@@ -29,6 +29,8 @@ os [verificar] do épico sobre a Unipile. O cliente está em
 | Mensagem em conversa | `POST /chats/{chat_id}/messages` (multipart) | `text`, `account_id`. Resposta 201 `{ object: "MessageSent", message_id }`. |
 | Mensagens da conversa | `GET /chats/{chat_id}/messages?limit=` | Mais recentes primeiro; `is_sender` é 0/1. |
 | Conversas com a pessoa | `GET /chat_attendees/{provider_id}/chats?account_id=` | Para achar o chat 1:1 existente. |
+| Conversas da conta | `GET /chats?account_id=&account_type=LINKEDIN&limit=&cursor=` | `limit` 1–250. Itens: `id`, `attendee_provider_id`, `name`, `timestamp`, `type`, `unread_count`; `cursor` para a próxima página. Fonte: [referência](https://developer.unipile.com/reference/chatscontroller_listallchats). |
+| Participantes da conversa | `GET /chats/{chat_id}/attendees` | Itens: `provider_id`, `name`, `profile_url`, `picture_url`, `is_self` (0/1). [verificar] formato tirado de espelho da documentação. |
 | Busca | `POST /linkedin/search?account_id=` | JSON `{ api, category: "people", keywords }` ou `{ url }`. Item: `id` (provider_id), `name`, `headline`, `location`, `public_identifier`, `public_profile_url`, `current_positions[]`. `network_distance` aqui é `DISTANCE_1`… |
 | Webhooks | `POST /webhooks` | JSON `{ request_url, source, name, headers: [{key, value}], events, format: "json" }`. |
 | País do proxy | `PATCH /accounts/{id}` | `{ country: "CA" }`. Alternativa para a T-1 se o IP não sair do país certo. |

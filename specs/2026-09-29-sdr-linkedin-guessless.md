@@ -232,7 +232,8 @@ Anotadas durante a execução, por ticket.
   épico não previa; a transição foi somada à máquina de estados.
 - Eco de DM que voltou da API sem `message_id`: casado pelo texto na mesma
   conversa (última hora).
-- Conversa com quem não é lead do SDR não é gravada (privacidade).
+- Conversa com quem não é lead do SDR não é gravada (privacidade). Revisto no
+  SDR-20: passa a ser gravada como conversa externa (§4.6).
 - **Rede de segurança do erro mais caro:** antes de cada DM da régua, o
   despachante lê a conversa na Unipile. Mensagem da pessoa posterior ao convite
   que o webhook não trouxe é registrada na hora, e a DM não sai. Se a Unipile
@@ -702,3 +703,24 @@ Anotadas durante a execução, por ticket.
   passo (ativar perfil, aprovar na triagem, mudar status da campanha) fazem
   `revalidatePath("/", "layout")` para o menu destrancar na hora.
 
+### SDR-20 · Inbox com todas as conversas
+
+- Tabela `conversas` (uma por chat de perfil) para o que não é de campanha;
+  `mensagens.conversa_id` aponta para ela e `lead_id` fica nulo. Conversa de
+  campanha continua ancorada no lead, como antes.
+- O webhook de mensagem sem lead grava a conversa externa e para aí: nada de
+  evento de lead, alerta, SLA, IA ou RD. Perfil da Espanha com
+  `travas.dpa_espanha = false` continua sem gravar (trava T-4).
+- Quando a pessoa de uma conversa externa vira lead e manda mensagem, a
+  conversa e as mensagens antigas passam para o lead (`ligarConversaAoLead`).
+  Antes disso, a inbox mostra a etiqueta "Na campanha X" na conversa externa.
+- Histórico: `importarHistorico` lê `GET /chats` (até 100 chats) e, de cada
+  um, `GET /chats/{id}/attendees` e as últimas 20 mensagens. Chat de lead é
+  pulado: reprocessar mensagem antiga mexeria no estado do lead. Roda ao
+  conectar a conta (`after` na rota do hosted auth) e pelo botão "Trazer
+  conversas do LinkedIn" da inbox. É idempotente pelo `provider_message_id`.
+  [verificar] o formato de `GET /chats/{id}/attendees` veio de um espelho da
+  documentação; conferir com uma conta real.
+- Resposta numa conversa externa passa pelo validador como texto humano e
+  exige perfil ativo, igual à resposta de lead. A idempotência é pela chave do
+  formulário, gravada no evento `resposta_externa`.

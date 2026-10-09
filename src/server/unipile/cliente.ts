@@ -53,6 +53,11 @@ export type MensagemDaConversa = {
 
 export type ConversaUnipile = { id: string; attendeeProviderId: string | null };
 
+/** Um chat da conta, como vem de `GET /chats`. */
+export type ConversaDaConta = { id: string; contraparteProviderId: string | null; nome: string | null; em: string | null };
+
+export type ParticipanteDaConversa = { providerId: string; nome: string | null; url: string | null; euMesmo: boolean };
+
 export type ResultadoDeBusca = {
   providerId: string;
   nome: string | null;
@@ -94,6 +99,9 @@ export interface ClienteUnipile {
   enviarMensagem(p: { accountId: string; chatId: string; texto: string }): Promise<{ messageId: string | null }>;
   listarMensagens(chatId: string, limite?: number): Promise<MensagemDaConversa[]>;
   listarConversasComPessoa(accountId: string, providerId: string): Promise<ConversaUnipile[]>;
+  /** Chats da conta, mais recentes primeiro. */
+  listarConversas(accountId: string, p?: { cursor?: string; limite?: number }): Promise<{ itens: ConversaDaConta[]; cursor: string | null }>;
+  listarParticipantes(chatId: string): Promise<ParticipanteDaConversa[]>;
   buscarPessoas(
     accountId: string,
     busca: { url: string } | { keywords: string; api?: "classic" | "sales_navigator" },
@@ -304,6 +312,33 @@ export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
       });
       const itens = Array.isArray(dados.items) ? (dados.items as Json[]) : [];
       return itens.map((item) => ({ id: String(item.id), attendeeProviderId: texto(item.attendee_provider_id) }));
+    },
+
+    async listarConversas(accountId, p) {
+      const dados = await chamar<Json>("GET", "/chats", {
+        query: { account_id: accountId, account_type: "LINKEDIN", limit: p?.limite ?? 100, cursor: p?.cursor },
+      });
+      const itens = Array.isArray(dados.items) ? (dados.items as Json[]) : [];
+      return {
+        itens: itens.map((item) => ({
+          id: String(item.id),
+          contraparteProviderId: texto(item.attendee_provider_id),
+          nome: texto(item.name),
+          em: texto(item.timestamp),
+        })),
+        cursor: texto(dados.cursor),
+      };
+    },
+
+    async listarParticipantes(chatId) {
+      const dados = await chamar<Json>("GET", `/chats/${encodeURIComponent(chatId)}/attendees`);
+      const itens = Array.isArray(dados.items) ? (dados.items as Json[]) : [];
+      return itens.map((item) => ({
+        providerId: String(item.provider_id),
+        nome: texto(item.name),
+        url: texto(item.profile_url),
+        euMesmo: item.is_self === 1 || item.is_self === true,
+      }));
     },
 
     async buscarPessoas(accountId, busca, cursor) {

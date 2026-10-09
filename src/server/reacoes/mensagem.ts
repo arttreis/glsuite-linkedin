@@ -2,6 +2,7 @@ import { ESTADOS_QUE_RESPONDEM, type EstadoDoLead } from "@/domain/estados";
 import { detectarOptout } from "@/domain/optout";
 import { cancelarPendentes } from "@/server/acoes/cancelar";
 import { alertarNovaMensagem } from "@/server/conversas/alertas";
+import { gravarMensagemExterna, ligarConversaAoLead } from "@/server/conversas/externas";
 import { registrarOptout } from "@/server/conversas/optout";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
@@ -12,7 +13,7 @@ import type { MensagemRecebida } from "@/server/unipile/webhooks";
 import { registrarAceite } from "./aceite";
 
 export type ResultadoDaMensagem =
-  | { tipo: "ignorada" | "duplicada" | "nossa" }
+  | { tipo: "ignorada" | "duplicada" | "nossa" | "externa" }
   | {
       tipo: "aceite_pela_nota" | "humano_no_linkedin" | "tarefa_concluida" | "resposta" | "conversa" | "optout";
       leadId: string;
@@ -59,7 +60,10 @@ async function acharLead(tx: Db, perfilId: string, m: MensagemRecebida, contrapa
  */
 export async function registrarMensagem(db: Db, m: MensagemRecebida, agora: Date): Promise<ResultadoDaMensagem> {
   return db.transacao(async (tx): Promise<ResultadoDaMensagem> => {
-    const [perfil] = await tx.query<{ id: string }>("select id from public.perfis where unipile_account_id = $1", [m.accountId]);
+    const [perfil] = await tx.query<{ id: string; praca: string }>(
+      "select id, praca from public.perfis where unipile_account_id = $1",
+      [m.accountId],
+    );
     if (!perfil) return { tipo: "ignorada" };
 
     const [conhecida] = await tx.query<{ direcao: string }>(
@@ -72,8 +76,13 @@ export async function registrarMensagem(db: Db, m: MensagemRecebida, agora: Date
       ? (m.participantes.map((p) => p.providerId).find((id) => id !== m.remetenteProviderId) ?? null)
       : m.remetenteProviderId;
     const lead = await acharLead(tx, perfil.id, m, contraparte);
-    // Conversa com quem não é lead do SDR: não guarda nada (privacidade).
-    if (!lead) return { tipo: "ignorada" };
+    // Conversa com quem não é lead: vai para a inbox como conversa externa, sem
+    // IA, SLA, alerta nem RD (§4.6). Espanha sem DPA não guarda nada.
+    if (!lead) {
+      const gravou = await gravarMensagemExterna(tx, { perfil, m, contraparte, agora });
+      return { tipo: gravou ? "externa" : "ignorada" };
+    }
+    await ligarConversaAoLead(tx, { perfilId: perfil.id, chatId: m.chatId, leadId: lead.id, pessoaId: lead.pessoa_id });
 
     const quando = m.em ? new Date(m.em) : agora;
     const gravar = (direcao: "entrada" | "saida", autor: "prospect" | "humano" | "sistema") =>

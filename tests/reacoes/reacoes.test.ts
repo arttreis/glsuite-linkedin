@@ -194,10 +194,16 @@ describe("reações a eventos (SDR-07)", () => {
     expect((await lead(leadId!)).estado).toBe("em_sequencia");
   });
 
-  it("não guarda conversa de quem não é lead", async () => {
+  it("conversa de quem não é lead vira conversa externa, sem lead, alerta nem RD (§4.6)", async () => {
     await webhook(mensagemRecebida({ chat_id: "chat-estranho", message_id: "x-1", sender: { attendee_provider_id: "ACoDesconhecido" } }));
-    const [contagem] = await banco.db.query<{ n: number }>("select count(*)::int as n from public.mensagens");
-    expect(contagem!.n).toBe(0);
+    const mensagens = await banco.db.query<{ lead_id: string | null; conversa_id: string | null }>(
+      "select lead_id, conversa_id from public.mensagens",
+    );
+    expect(mensagens).toEqual([{ lead_id: null, conversa_id: expect.any(String) }]);
+    const [efeitos] = await banco.db.query<{ alertas: number; rd: number }>(
+      "select (select count(*)::int from public.alertas) as alertas, (select count(*)::int from public.rd_eventos) as rd",
+    );
+    expect(efeitos).toEqual({ alertas: 0, rd: 0 });
   });
 
   it("convite pendente há 21 dias é retirado na Unipile", async () => {
