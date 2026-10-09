@@ -150,7 +150,7 @@ export async function rejeitarAcao(
     if (acao.toque) {
       await tx.query("update public.leads set revisao_motivo = $2 where id = $1::uuid", [
         acao.lead_id,
-        `${acao.toque} rejeitado na fila de aprovação`,
+        "Rejeitada na aprovação",
       ]);
     }
     await registrarEvento(tx, {

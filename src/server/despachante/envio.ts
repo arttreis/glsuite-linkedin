@@ -221,7 +221,7 @@ export async function registrarFalha(
       await tx.query("update public.acoes set status = 'falhou', erro = $2 where id = $1::uuid", [reserva.id, motivo]);
       await tx.query("update public.leads set revisao_motivo = $2 where id = $1::uuid", [
         reserva.lead_id,
-        `${reserva.toque ?? reserva.tipo} falhou: ${motivo}`,
+        `Envio falhou: ${motivo}`,
       ]);
       await registrarEvento(tx, {
         tipo: "acao_falhou",

@@ -1,4 +1,4 @@
-import { ESTADOS_ATIVOS, type EstadoDoLead } from "@/domain/estados";
+import { ESTADOS_ATIVOS, ROTULO_DO_ESTADO, type EstadoDoLead } from "@/domain/estados";
 import type { Db } from "@/server/db/tipos";
 
 export type CampanhaAlvo = { id: string; perfilId: string; angulo: string };
@@ -37,7 +37,7 @@ export async function motivoDeBloqueio(
         limit 1`,
       [p.pessoaId, p.donoPerfilId],
     );
-    if (outroDono) return `Pertence ao perfil ${outroDono.perfil} (um alvo, um dono)`;
+    if (outroDono) return `Já é do perfil ${outroDono.perfil}: cada pessoa fica com um perfil só`;
   }
 
   const historico = await db.query<{ estado: EstadoDoLead; angulo: string | null; retorno_apos: string | null; campanha: string }>(
@@ -53,11 +53,11 @@ export async function motivoDeBloqueio(
 
   for (const lead of historico) {
     if (lead.estado === "triagem") return `Já está em triagem na campanha ${lead.campanha}`;
-    if (ESTADOS_ATIVOS.includes(lead.estado)) return `Já está na campanha ${lead.campanha} (${lead.estado})`;
+    if (ESTADOS_ATIVOS.includes(lead.estado)) return `Já está na campanha ${lead.campanha} (${ROTULO_DO_ESTADO[lead.estado].toLowerCase()})`;
     if (lead.estado === "optout") return "Pediu para não ser contatado";
     if (lead.estado === "encerrado_nao") return `Disse não na campanha ${lead.campanha}: não volta`;
     if (lead.estado === "sem_resposta") {
-      if (!lead.retorno_apos) return "Já passou pela régua e ficou como conexão";
+      if (!lead.retorno_apos) return "Já passou por uma sequência e ficou só como conexão";
       if (lead.retorno_apos > p.hoje) return `Em pausa até ${dataCurta(lead.retorno_apos)}`;
       if (lead.angulo === p.campanha.angulo) return `Só volta com ângulo diferente de "${lead.angulo}"`;
     }
@@ -89,5 +89,5 @@ export async function alertaDeCooldown(
   );
   if (!toque) return null;
   const fim = new Date(new Date(toque.em).getTime() + p.dias * 86_400_000);
-  return `Empresa tocada pelo perfil ${toque.perfil} em ${dataCurta(toque.em)}; cooldown até ${dataCurta(fim)}`;
+  return `O perfil ${toque.perfil} falou com alguém desta empresa em ${dataCurta(toque.em)}. Pode aprovar: o convite espera até ${dataCurta(fim)}`;
 }

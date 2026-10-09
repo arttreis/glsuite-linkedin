@@ -270,6 +270,13 @@ Anotadas durante a execução, por ticket.
 - Painel de saúde na página inicial: saldo do dia e da semana, aceite em 3 dias
   úteis, erros de limite em 24 h, fila e revisão. Perfil que o operador não
   opera mostra só o status e o botão de pausar.
+- Primeira ativação vira checklist por perfil (`src/domain/ativacao.ts`): a
+  conta conectada é checada pelo sistema; as travas da §8 que valem para o
+  perfil (Arthur: D3; Juliano: T-2 se o modo não for manual; Canadá: T-1 do IP,
+  T-3, T-5; Espanha: T-1 do IP, T-3, T-4, T-5) são confirmadas uma a uma, em
+  linguagem direta e com o responsável. O servidor exige todas. Perfil que
+  nunca rodou aparece como "Não ativado", não "Pausado", e o motivo de pausa
+  do seed deixa de aparecer.
 
 ### SDR-09 · Inbox
 - SLA (§4.6): o relógio começa na última mensagem da pessoa sem retorno e para
@@ -656,3 +663,25 @@ Anotadas durante a execução, por ticket.
 - Contraste mínimo de 4,5:1 nos textos pequenos. Por isso o texto fraco é
   `#85858d`, e o botão principal usa um laranja um pouco mais fundo que o da
   referência.
+
+### SDR-18 · Clareza das telas de operação
+
+- Toda tela diz, no cabeçalho, para que serve; os botões dizem a consequência
+  ao lado ("sai no próximo horário permitido do perfil", "nada foi enviado").
+  Toques aparecem como "Nota do convite", "1ª mensagem da sequência" etc.
+  (`src/domain/rotulos.ts`); fonte de importação, pelo nome legível.
+- Aprovação tem um botão só, "Aprovar e enviar", que manda o texto da caixa.
+  `aprovarAcao` já comparava com o original: igual conta como aprovado,
+  diferente como editado. Antes, "Aprovar como está" descartava a edição.
+- Leads parados (`leads.revisao_motivo`, por toque rejeitado ou falha
+  permanente, sem ação viva) aparecem no topo da Aprovação com duas saídas:
+  "Tentar de novo" recria o toque em `aguardando_aprovacao` com o texto que
+  ele tinha (chave nova, `...:de-novo:<ms>`); "Assumir à mão" leva o lead para
+  `escalado_humano` e cancela o que estiver pendente. Os motivos gravados
+  deixam de citar o toque ("Rejeitada na aprovação", "Envio falhou: ...").
+- Confiança da IA só aparece quando é baixa (< 0,7, o mesmo limiar das
+  exceções do automático). A taxa de edição foi para o fim da página, com a
+  explicação de que ela libera o modo automático.
+- Triagem: "selecionar todos" marca só quem pode ser aprovado; o retorno lista
+  todos os motivos de recusa, não só o primeiro.
+

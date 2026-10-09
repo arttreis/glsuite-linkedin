@@ -31,7 +31,7 @@ type Lead = {
 
 type Mensagem = { id: string; direcao: "entrada" | "saida"; autor: string; texto: string; em: Date };
 
-const AUTORES: Record<string, string> = { prospect: "", humano: "Humano", ia: "IA", sistema: "Régua" };
+const AUTORES: Record<string, string> = { prospect: "", humano: "Humano", ia: "IA", sistema: "Sequência" };
 const hora = (valor: Date) =>
   new Date(valor).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" });
 

@@ -2,6 +2,8 @@ import { Check, CircleAlert, TriangleAlert, Upload } from "lucide-react";
 import Link from "next/link";
 import { Aviso } from "@/components/aviso";
 import { Cabecalho } from "@/components/cabecalho";
+import { SelecionarTodos } from "@/components/selecionar-todos";
+import { rotuloDaFonte } from "@/domain/rotulos";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { exigirOperador } from "@/server/supabase/servidor";
@@ -57,7 +59,7 @@ export default async function TriagemPage({ searchParams }: PageProps<"/triagem"
     <>
       <Cabecalho
         titulo="Triagem"
-        descricao="A personalização real é a triagem humana da lista. Aprovar manda o lead para a fila da campanha."
+        descricao="Aqui você escolhe, da lista importada, quem vale receber um convite de conexão. Ninguém recebe nada sem passar por aqui."
       >
         <Link href="/importar" className="botao">
           <Upload aria-hidden />
@@ -87,7 +89,7 @@ export default async function TriagemPage({ searchParams }: PageProps<"/triagem"
 
         {leads.length === 0 ? (
           <div className="vazio mt-6">
-            <p>Nada em triagem aqui. Importe uma lista para começar.</p>
+            <p>Ninguém esperando triagem. Importe uma lista de pessoas para uma campanha e ela aparece aqui.</p>
             <Link href="/importar" className="botao">
               <Upload aria-hidden />
               Importar lista
@@ -96,20 +98,27 @@ export default async function TriagemPage({ searchParams }: PageProps<"/triagem"
         ) : (
           <form className="mt-6">
             {campanhaId && <input type="hidden" name="campanha" value={campanhaId} />}
-            <div className="mb-3 flex flex-wrap gap-2">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
               <button formAction={aprovarSelecionados} className="botao botao-primario">
                 <Check aria-hidden />
-                Aprovar selecionados
+                Aprovar e enviar convite
               </button>
               <button formAction={rejeitarSelecionados} className="botao">
-                Rejeitar selecionados
+                Rejeitar
               </button>
             </div>
+            <p className="mb-4 text-xs text-tinta-fraca">
+              Aprovar coloca a pessoa na sequência da campanha: o convite sai pelo LinkedIn no próximo horário permitido do
+              perfil, quando a campanha estiver ativa. Rejeitar não envia nada; se a pessoa for importada de novo, outro
+              perfil pode ficar com ela. Clique no nome para ver a localização e abrir o perfil.
+            </p>
             <div className="tabela-moldura">
               <table className="tabela">
                 <thead>
                   <tr>
-                    <th className="w-10" />
+                    <th className="w-10">
+                      <SelecionarTodos nome="leadIds" rotulo="Selecionar todos que podem ser aprovados" />
+                    </th>
                     <th>Pessoa</th>
                     <th>Empresa</th>
                     <th>Campanha</th>
@@ -125,7 +134,8 @@ export default async function TriagemPage({ searchParams }: PageProps<"/triagem"
                           name="leadIds"
                           value={lead.id}
                           disabled={Boolean(lead.bloqueio_motivo)}
-                          aria-label={`Selecionar ${lead.nome}`}
+                          aria-label={lead.bloqueio_motivo ? `${lead.nome} não pode ser aprovado` : `Selecionar ${lead.nome}`}
+                          title={lead.bloqueio_motivo ? "Bloqueado: não pode ser aprovado" : undefined}
                           className="mt-0.5 size-4"
                         />
                       </td>
@@ -135,7 +145,7 @@ export default async function TriagemPage({ searchParams }: PageProps<"/triagem"
                           <div className="mt-1.5 flex flex-col gap-0.5 text-xs text-tinta-suave">
                             <span>{lead.localizacao ?? "sem localização"}</span>
                             <span>
-                              Fonte {lead.fonte}, coletado em {data(lead.coletado_em)}
+                              Veio de {rotuloDaFonte(lead.fonte)}, coletado em {data(lead.coletado_em)}
                             </span>
                             <a href={lead.url_publica} target="_blank" rel="noreferrer" className="link w-fit">
                               Abrir no LinkedIn
@@ -152,7 +162,7 @@ export default async function TriagemPage({ searchParams }: PageProps<"/triagem"
                         {lead.bloqueio_motivo && (
                           <p className="flex items-start gap-1.5 text-erro">
                             <CircleAlert className="mt-px size-3.5 shrink-0" aria-hidden />
-                            Bloqueado: {lead.bloqueio_motivo}
+                            Não pode ser aprovado: {lead.bloqueio_motivo}
                           </p>
                         )}
                         {lead.alerta_triagem && (
@@ -161,7 +171,7 @@ export default async function TriagemPage({ searchParams }: PageProps<"/triagem"
                             {lead.alerta_triagem}
                           </p>
                         )}
-                        {!lead.bloqueio_motivo && !lead.alerta_triagem && <span className="etiqueta etiqueta-ok">Ok</span>}
+                        {!lead.bloqueio_motivo && !lead.alerta_triagem && <span className="etiqueta etiqueta-ok">Livre para aprovar</span>}
                       </td>
                     </tr>
                   ))}

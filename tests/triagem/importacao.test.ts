@@ -68,7 +68,7 @@ describe("importação para a triagem", () => {
       {
         provider_id: "ACoDoJuliano0001",
         estado: "triagem",
-        bloqueio_motivo: "Pertence ao perfil Juliano (um alvo, um dono)",
+        bloqueio_motivo: "Já é do perfil Juliano: cada pessoa fica com um perfil só",
         alerta_triagem: null,
       },
     ]);
@@ -104,7 +104,7 @@ describe("importação para a triagem", () => {
 
     expect(resumo).toMatchObject({ novos: 1, comAlerta: 1 });
     const [lead] = await leadsDaCampanha(campanhaArthur);
-    expect(lead!.alerta_triagem).toBe("Empresa tocada pelo perfil Juliano em 25/09/2026; cooldown até 25/10/2026");
+    expect(lead!.alerta_triagem).toBe("O perfil Juliano falou com alguém desta empresa em 25/09/2026. Pode aprovar: o convite espera até 25/10/2026");
   });
 
   it("resolve na Unipile quem veio só com URL, até o limite", async () => {
@@ -157,7 +157,7 @@ describe("importação para a triagem", () => {
     it("sem resposta no Brasil fica como conexão", async () => {
       const id = await comHistorico("sem_resposta");
       await importar([pessoa(id)]);
-      expect((await leadsDaCampanha(campanhaArthur))[0]!.bloqueio_motivo).toBe("Já passou pela régua e ficou como conexão");
+      expect((await leadsDaCampanha(campanhaArthur))[0]!.bloqueio_motivo).toBe("Já passou por uma sequência e ficou só como conexão");
     });
 
     it("pausa de 60 dias: bloqueia antes do prazo e com o mesmo ângulo, libera com ângulo novo", async () => {

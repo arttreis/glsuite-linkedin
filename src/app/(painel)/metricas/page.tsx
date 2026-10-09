@@ -18,7 +18,7 @@ function Taxa({ valor, faixa }: { valor: number | null; faixa: { minimo: number;
 }
 
 function Tabela({ titulo, linhas, colunas }: { titulo: string; linhas: LinhaDoFunil[]; colunas: ("perfil" | "campanha" | "angulo" | "variante")[] }) {
-  const ROTULOS = { perfil: "Perfil", campanha: "Campanha", angulo: "Ângulo", variante: "Copy do T1" };
+  const ROTULOS = { perfil: "Perfil", campanha: "Campanha", angulo: "Ângulo", variante: "Texto do convite" };
   return (
     <section>
       <h2 className="mb-3 text-[15px] font-semibold">{titulo}</h2>
@@ -89,7 +89,7 @@ export default async function MetricasPage() {
         <Tabela titulo="Por campanha" linhas={funil.porCampanha} colunas={["perfil", "campanha", "angulo", "variante"]} />
         <Tabela titulo="Por ângulo" linhas={funil.porAngulo} colunas={["angulo"]} />
         <Tabela titulo="Por perfil" linhas={funil.porPerfil} colunas={["perfil"]} />
-        <Tabela titulo="Template × personalizado (T1)" linhas={funil.porVariante} colunas={["perfil", "campanha", "variante"]} />
+        <Tabela titulo="Convite: template × personalizado pela IA" linhas={funil.porVariante} colunas={["perfil", "campanha", "variante"]} />
       </div>
     </>
   );

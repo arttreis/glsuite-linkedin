@@ -188,7 +188,7 @@ describe("despachante: régua, revalidação e erros", () => {
       await tick(new Date(SEGUNDA_10H.getTime() + 45 * 60_000));
       [acao] = await acoesDoLead(leadId);
       expect(acao!.status).toBe("falhou");
-      expect((await lead(leadId)).revisao_motivo).toMatch(/^T1 falhou: 503/);
+      expect((await lead(leadId)).revisao_motivo).toMatch(/^Envio falhou: 503/);
     });
 
     it("limite do LinkedIn: volta para a fila no próximo dia útil e conta para a parada", async () => {

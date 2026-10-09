@@ -25,7 +25,9 @@ export function EtiquetaDaCampanha({ status }: { status: StatusDaCampanha }) {
   return <span className={`etiqueta ${tom}`}>{rotulo}</span>;
 }
 
-export function EtiquetaDoPerfil({ status }: { status: "ativo" | "pausado" }) {
+/** Perfil que nunca foi ativado não está "pausado": ainda espera o checklist de ativação. */
+export function EtiquetaDoPerfil({ status, nuncaAtivado = false }: { status: "ativo" | "pausado"; nuncaAtivado?: boolean }) {
+  if (nuncaAtivado && status === "pausado") return <span className="etiqueta etiqueta-ponto">Não ativado</span>;
   return status === "ativo" ? (
     <span className="etiqueta etiqueta-ponto etiqueta-ok">Ativo</span>
   ) : (

@@ -4,6 +4,7 @@ import { instanteLocal } from "@/domain/calendario";
 import { processarMensagensPendentes } from "@/server/agente/agente";
 import { aprovarAcao, rejeitarAcao } from "@/server/aprovacao/aprovar";
 import { listarFila, taxaDeEdicao } from "@/server/aprovacao/fila";
+import { assumirParado, listarParados, tentarDeNovo } from "@/server/aprovacao/parados";
 import { despachar } from "@/server/despachante/despachante";
 import { registrarMensagem } from "@/server/reacoes/mensagem";
 import { criarBancoDeTeste, type BancoDeTeste } from "../support/banco";
@@ -146,6 +147,51 @@ describe("fila de aprovação (SDR-11)", () => {
     await banco.db.query("update public.perfis set proxima_acao_apos = null");
     await despachar({ db: banco.db, unipile, agora: new Date(AGORA.getTime() + 10 * 60_000), aleatorio: () => 0.5 });
     expect(unipile.chamadasDe("iniciarConversa")[0]).toMatchObject({ texto: "Oi Pessoa, tudo bem?" });
+  });
+
+  it("aprovar com o texto da caixa igual ao original conta como aprovado, não como editado", async () => {
+    const { acaoId } = await rascunhoNaFila();
+    expect(await aprovar(acaoId, `  ${modelo.decisaoPadrao.mensagem}  `)).toEqual({ ok: true, enviada: true });
+    expect(await acao(acaoId)).toMatchObject({ decisao_humana: "aprovada" });
+  });
+
+  describe("leads parados por toque rejeitado", () => {
+    async function toqueRejeitado() {
+      const campanha = await criarCampanha(banco.db);
+      const [leadId] = await leadsComAcao(banco.db, { campanhaId: campanha, quantidade: 1, estado: "aceito", toque: "T2", desde: AGORA });
+      await banco.db.query(
+        "update public.acoes set status = 'aguardando_aprovacao', texto_gerado = 'Oi Pessoa, tudo bem?' where lead_id = $1::uuid",
+        [leadId],
+      );
+      const [item] = await listarFila(banco.db);
+      await rejeitarAcao(banco.db, { acaoId: item!.acaoId, operadorId: operador, agora: AGORA });
+      return leadId!;
+    }
+
+    it("o lead aparece como parado, com o motivo e o texto do toque", async () => {
+      const leadId = await toqueRejeitado();
+      expect(await listarParados(banco.db)).toEqual([
+        expect.objectContaining({ leadId, toque: "T2", texto: "Oi Pessoa, tudo bem?", motivo: expect.stringMatching(/rejeitada/i) }),
+      ]);
+    });
+
+    it("tentar de novo devolve o toque à fila de aprovação e tira o lead dos parados", async () => {
+      const leadId = await toqueRejeitado();
+      expect(await tentarDeNovo(banco.db, { leadId, operadorId: operador, agora: AGORA })).toBe(true);
+      expect(await listarParados(banco.db)).toEqual([]);
+      expect(await listarFila(banco.db)).toEqual([expect.objectContaining({ leadId, toque: "T2", textoGerado: "Oi Pessoa, tudo bem?" })]);
+    });
+
+    it("assumir passa o lead para humano", async () => {
+      const leadId = await toqueRejeitado();
+      expect(await assumirParado(banco.db, { leadId, operadorId: operador, agora: AGORA })).toBe(true);
+      const [lead] = await banco.db.query<{ estado: string; revisao_motivo: string | null }>(
+        "select estado, revisao_motivo from public.leads where id = $1::uuid",
+        [leadId],
+      );
+      expect(lead).toEqual({ estado: "escalado_humano", revisao_motivo: null });
+      expect(await listarParados(banco.db)).toEqual([]);
+    });
   });
 
   it("não aprova resposta com o perfil pausado", async () => {

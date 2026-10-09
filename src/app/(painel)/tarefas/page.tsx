@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { Check, Send } from "lucide-react";
+import Link from "next/link";
 import { Aviso } from "@/components/aviso";
 import { Avatar } from "@/components/avatar";
 import { Cabecalho } from "@/components/cabecalho";
+import { rotuloDoToque } from "@/domain/rotulos";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { exigirOperador } from "@/server/supabase/servidor";
@@ -20,14 +22,16 @@ export default async function TarefasPage({ searchParams }: PageProps<"/tarefas"
   return (
     <>
       <Cabecalho
-        titulo="Tarefas manuais"
-        descricao="Na Espanha, do aceite em diante cada toque é escrito à mão (§4.5). O roteiro é apoio, não texto para colar."
+        titulo="Tarefas manuais (Espanha)"
+        descricao="Mensagens que a lei espanhola não deixa automatizar. Depois que a pessoa aceita o convite, cada mensagem da sequência vira uma tarefa aqui, no dia certo. Use o roteiro como base e escreva com as suas palavras."
       />
       <div className="max-w-3xl">
         {typeof msg === "string" && <Aviso className="mb-5">{msg}</Aviso>}
 
         {tarefas.length === 0 ? (
-          <p className="vazio">Nenhuma tarefa pendente.</p>
+          <p className="vazio">
+            Nenhuma tarefa agora. Só o perfil da Espanha gera tarefas: elas aparecem quando alguém aceita o convite.
+          </p>
         ) : (
           <ul className="flex flex-col gap-4">
             {tarefas.map((t) => (
@@ -40,16 +44,19 @@ export default async function TarefasPage({ searchParams }: PageProps<"/tarefas"
                         {t.pessoa}
                       </a>
                       <p className="text-xs text-tinta-fraca">
-                        {t.cargo ?? "sem cargo"}, {t.empresa ?? "sem empresa"}, {t.perfil}
+                        {t.cargo ?? "sem cargo"}, {t.empresa ?? "sem empresa"}, perfil {t.perfil} ·{" "}
+                        <Link href={`/inbox/${t.leadId}`} className="link">
+                          ver conversa
+                        </Link>
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="etiqueta">{t.toque}</span>
+                    <span className="etiqueta">{rotuloDoToque(t.toque)}</span>
                     {t.vencida ? (
-                      <span className="etiqueta etiqueta-ponto etiqueta-atencao">Para hoje</span>
+                      <span className="etiqueta etiqueta-ponto etiqueta-atencao">Já pode enviar</span>
                     ) : (
-                      <span className="etiqueta">A partir de {data(t.agendadaPara)}</span>
+                      <span className="etiqueta">Liberada em {data(t.agendadaPara)} (Madri)</span>
                     )}
                   </div>
                 </div>
@@ -77,9 +84,14 @@ export default async function TarefasPage({ searchParams }: PageProps<"/tarefas"
                     </button>
                     <button formAction={marcarComoFeita} className="botao">
                       <Check aria-hidden />
-                      Já enviei direto no LinkedIn
+                      Já enviei pelo LinkedIn
                     </button>
                   </div>
+                  <p className="text-xs text-tinta-fraca">
+                    Enviar pelo LinkedIn manda o seu texto daqui. Se você já escreveu pelo app do LinkedIn, marque como enviada.
+                    Nos dois casos a tarefa sai da lista e a próxima mensagem é agendada; se a pessoa responder, as próximas são
+                    canceladas e a conversa vai para a Inbox.
+                  </p>
                 </form>
               </li>
             ))}

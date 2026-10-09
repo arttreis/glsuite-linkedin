@@ -26,6 +26,7 @@ type LinhaPerfil = {
   unipile_status: string | null;
   tipo_conta: string;
   modo_resposta: string;
+  nunca_ativado: boolean;
   acessivel: boolean;
 };
 
@@ -73,7 +74,8 @@ export default async function PerfisPage({ searchParams }: PageProps<"/perfis">)
   const perfis = await comOperador(obterDb(), operador.id, (tx) =>
     tx.query<LinhaPerfil>(`
       select id, nome, praca, status, motivo_pausa, unipile_account_id is not null as conectado,
-             unipile_status, tipo_conta, modo_resposta, public.pode_ver_perfil(id) as acessivel
+             unipile_status, tipo_conta, modo_resposta, ativado_em is null as nunca_ativado,
+             public.pode_ver_perfil(id) as acessivel
         from public.perfis
        order by array_position(array['arthur', 'juliano', 'luiz', 'jp'], slug), nome`),
   );
@@ -114,7 +116,7 @@ export default async function PerfisPage({ searchParams }: PageProps<"/perfis">)
 
         <ul className="flex flex-col gap-4">
           {perfis.map((perfil) => (
-            <li key={perfil.id} className="cartao p-5">
+            <li key={perfil.id} id={`perfil-${perfil.id}`} className="cartao scroll-mt-6 p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-3">
                   <Avatar nome={perfil.nome} />
@@ -130,7 +132,7 @@ export default async function PerfisPage({ searchParams }: PageProps<"/perfis">)
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <EtiquetaDoPerfil status={perfil.status} />
+                  <EtiquetaDoPerfil status={perfil.status} nuncaAtivado={perfil.nunca_ativado} />
                   {perfil.acessivel && (
                     <form action={conectarLinkedIn}>
                       <input type="hidden" name="perfilId" value={perfil.id} />
@@ -142,7 +144,9 @@ export default async function PerfisPage({ searchParams }: PageProps<"/perfis">)
                   )}
                 </div>
               </div>
-              {perfil.status === "pausado" && perfil.motivo_pausa && <p className="recuo mt-4">{perfil.motivo_pausa}</p>}
+              {perfil.status === "pausado" && !perfil.nunca_ativado && perfil.motivo_pausa && (
+                <p className="recuo mt-4">{perfil.motivo_pausa}</p>
+              )}
               {perfil.acessivel && (
                 <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-linha pt-4">
                   <form action={trocarModoDoPerfil} className="flex items-center gap-2">

@@ -1,6 +1,8 @@
+import { travasDaAtivacao, type Trava } from "@/domain/ativacao";
 import { dataLocal } from "@/domain/calendario";
+import { STATUS_SAUDAVEIS } from "@/domain/conta";
 import { avaliarAceite, type Taxa } from "@/domain/guardas";
-import { limitesDaSemana, semanaDesdeAtivacao, type LimitesDoDia } from "@/domain/rampa";
+import { limitesDaSemana, semanaDesdeAtivacao, type EtapaDaRampa, type LimitesDoDia } from "@/domain/rampa";
 import { lerConfiguracao } from "@/server/configuracoes";
 import type { Db } from "@/server/db/tipos";
 import { contarEnvios, feriadosDaPraca, type PerfilDoDespachante } from "@/server/despachante/perfis";
@@ -14,10 +16,15 @@ export type SaudeDoPerfil = {
   motivoPausa: string | null;
   unipileStatus: string | null;
   conectado: boolean;
+  /** Conectado e com status em que o despachante envia: o mesmo critério do despausar. */
+  contaPronta: boolean;
   primeiraAtivacao: boolean;
+  /** O que o operador confirma antes da primeira ativação; vazio depois dela. */
+  travas: Trava[];
   acessivel: boolean;
   detalhes: null | {
     semana: number | null;
+    rampa: EtapaDaRampa[];
     limites: LimitesDoDia | null;
     teto: number;
     convitesHoje: number;
@@ -32,7 +39,12 @@ export type SaudeDoPerfil = {
   };
 };
 
-type LinhaDoPerfil = PerfilDoDespachante & { status: "ativo" | "pausado"; motivo_pausa: string | null; acessivel: boolean };
+type LinhaDoPerfil = PerfilDoDespachante & {
+  status: "ativo" | "pausado";
+  motivo_pausa: string | null;
+  modo_resposta: string;
+  acessivel: boolean;
+};
 
 /**
  * Painel de saúde por perfil (§9 SDR-08): aceite em 3 dias úteis, erros de
@@ -43,7 +55,7 @@ type LinhaDoPerfil = PerfilDoDespachante & { status: "ativo" | "pausado"; motivo
 export async function saudeDosPerfis(db: Db, agora: Date): Promise<SaudeDoPerfil[]> {
   const perfis = await db.query<LinhaDoPerfil>(`
     select id, slug, nome, praca, fuso, janela, rampa, teto_convites_semana, ativado_em, proxima_acao_apos,
-           unipile_account_id, unipile_status, unipile_status_em, status, motivo_pausa,
+           unipile_account_id, unipile_status, unipile_status_em, status, motivo_pausa, modo_resposta,
            public.pode_ver_perfil(id) as acessivel
       from public.perfis
      order by array_position(array['arthur', 'juliano', 'luiz', 'jp'], slug)`);
@@ -59,7 +71,13 @@ export async function saudeDosPerfis(db: Db, agora: Date): Promise<SaudeDoPerfil
       motivoPausa: perfil.motivo_pausa,
       unipileStatus: perfil.unipile_status,
       conectado: Boolean(perfil.unipile_account_id),
+      contaPronta:
+        Boolean(perfil.unipile_account_id) && (perfil.unipile_status === null || STATUS_SAUDAVEIS.has(perfil.unipile_status)),
       primeiraAtivacao: perfil.ativado_em === null,
+      travas:
+        perfil.ativado_em === null
+          ? travasDaAtivacao({ slug: perfil.slug, nome: perfil.nome, praca: perfil.praca, modoResposta: perfil.modo_resposta })
+          : [],
       acessivel: perfil.acessivel,
     };
     if (!perfil.acessivel) {
@@ -90,6 +108,7 @@ export async function saudeDosPerfis(db: Db, agora: Date): Promise<SaudeDoPerfil
       ...base,
       detalhes: {
         semana,
+        rampa: perfil.rampa,
         limites: semana ? limitesDaSemana(perfil.rampa, semana) : null,
         teto: perfil.teto_convites_semana,
         convitesHoje: contagem.convitesHoje,

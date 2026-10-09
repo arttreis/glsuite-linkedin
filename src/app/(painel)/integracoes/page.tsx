@@ -45,7 +45,7 @@ export default async function IntegracoesPage({ searchParams }: PageProps<"/inte
 
   return (
     <>
-      <Cabecalho titulo="Integrações" descricao="RD Station CRM, funil Comercial · Serviço. Só leads da praça Doméstico entram (§4.9)." />
+      <Cabecalho titulo="Integrações" descricao="RD Station CRM, funil Comercial · Serviço. Só entram leads dos perfis do Brasil." />
       <div className="flex max-w-4xl flex-col gap-5">
         {typeof msg === "string" && <Aviso>{msg}</Aviso>}
 

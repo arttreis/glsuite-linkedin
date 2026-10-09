@@ -60,7 +60,7 @@ export default async function CampanhasPage() {
 
         {campanhas.length === 0 ? (
           <div className="vazio">
-            <p>Nenhuma campanha ainda. A campanha define o ângulo e os textos de T1 a T4.</p>
+            <p>Nenhuma campanha ainda. A campanha define o ângulo, o convite e as mensagens que cada pessoa aprovada recebe.</p>
             <Link href="/campanhas/nova" className="botao botao-primario">
               <Plus aria-hidden />
               Nova campanha
@@ -75,7 +75,7 @@ export default async function CampanhasPage() {
                   <th>Ângulo</th>
                   <th>Status</th>
                   <th className="numero">Triagem</th>
-                  <th className="numero">Na régua</th>
+                  <th className="numero">Na sequência</th>
                   <th className="numero">Em conversa</th>
                 </tr>
               </thead>
