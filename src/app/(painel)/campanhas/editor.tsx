@@ -1,11 +1,14 @@
 "use client";
 
+import { Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { validarCopyDaSequencia, type ContextoDoPerfil } from "@/domain/campanha";
-import { sequenciaPadrao, tetoDoPasso, type Sequencia } from "@/domain/sequencia";
+import { Aviso } from "@/components/aviso";
+import type { ContextoDoPerfil } from "@/domain/campanha";
+import { fluxoPadrao, validarCopyDoFluxo, validarFluxo, type Fluxo } from "@/domain/fluxo";
 import type { ValoresDoTemplate } from "@/domain/template";
 import { salvarCampanhaDoPainel } from "./acoes";
+import { EditorDeFluxo } from "./editor-de-fluxo";
 
 export type PerfilDoEditor = { id: string; nome: string; contexto: ContextoDoPerfil };
 
@@ -17,11 +20,8 @@ export type CampanhaDoEditor = {
   nicho: string | null;
   modoCopy: "template" | "personalizada";
   maxLeads: number | null;
-  sequencia: Sequencia;
+  fluxo: Fluxo;
 };
-
-const QUANDO: Record<string, string> = { inicio: "da aprovação", aceite: "do aceite", anterior: "do toque anterior" };
-const campo = "rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm";
 
 export function EditorDeCampanha({
   perfis,
@@ -43,28 +43,36 @@ export function EditorDeCampanha({
       nicho: null,
       modoCopy: "template",
       maxLeads: null,
-      sequencia: sequenciaPadrao(),
+      fluxo: fluxoPadrao(perfis[0]?.contexto.praca ?? "domestico"),
     },
   );
+  // Campanha nova acompanha a praça do perfil escolhido até o operador mexer no fluxo.
+  const [fluxoMexido, setFluxoMexido] = useState(false);
   const [erros, setErros] = useState<string[]>([]);
   const [salvando, iniciar] = useTransition();
 
   const perfil = perfis.find((p) => p.id === campanha.perfilId);
-  const manualNaEspanha = perfil?.contexto.praca === "espanha";
-  const problemas = useMemo(
-    () =>
-      perfil
-        ? validarCopyDaSequencia(campanha.sequencia, perfil.contexto, exemplo, { t1PelaIa: campanha.modoCopy === "personalizada" })
-        : [],
-    [campanha.sequencia, campanha.modoCopy, perfil, exemplo],
+  const espanha = perfil?.contexto.praca === "espanha";
+  const problemasDeCopy = useMemo(
+    () => (perfil ? validarCopyDoFluxo(campanha.fluxo, perfil.contexto, exemplo) : []),
+    [campanha.fluxo, perfil, exemplo],
   );
-  const temProblema = problemas.some((p) => p.violacoes.length > 0);
+  const problemasDoFluxo = useMemo(() => validarFluxo(campanha.fluxo), [campanha.fluxo]);
+  const temProblemaDeCopy = problemasDeCopy.some((p) => p.violacoes.length > 0);
 
-  const atualizarPasso = (indice: number, mudanca: Partial<Sequencia[number]>) =>
+  function trocarPerfil(perfilId: string) {
+    const novo = perfis.find((p) => p.id === perfilId);
     setCampanha((atual) => ({
       ...atual,
-      sequencia: atual.sequencia.map((passo, i) => (i === indice ? { ...passo, ...mudanca } : passo)),
+      perfilId,
+      fluxo: !atual.id && !fluxoMexido && novo ? fluxoPadrao(novo.contexto.praca) : atual.fluxo,
     }));
+  }
+
+  function mudarFluxo(fluxo: Fluxo) {
+    setFluxoMexido(true);
+    setCampanha((atual) => ({ ...atual, fluxo }));
+  }
 
   function salvar() {
     setErros([]);
@@ -81,151 +89,117 @@ export function EditorDeCampanha({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid max-w-3xl grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Perfil
-          <select
-            value={campanha.perfilId}
-            disabled={Boolean(campanha.id)}
-            onChange={(e) => setCampanha({ ...campanha, perfilId: e.target.value })}
-            className={campo}
-          >
-            {perfis.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Nome
-          <input value={campanha.nome} onChange={(e) => setCampanha({ ...campanha, nome: e.target.value })} className={campo} />
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Ângulo de abertura
-          <select value={campanha.angulo} onChange={(e) => setCampanha({ ...campanha, angulo: e.target.value })} className={campo}>
-            {angulos.map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Nicho
-          <input
-            value={campanha.nicho ?? ""}
-            onChange={(e) => setCampanha({ ...campanha, nicho: e.target.value || null })}
-            className={campo}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Copy do T1
-          <select
-            value={campanha.modoCopy}
-            onChange={(e) => setCampanha({ ...campanha, modoCopy: e.target.value as CampanhaDoEditor["modoCopy"] })}
-            className={campo}
-          >
-            <option value="template">Template</option>
-            <option value="personalizada">Personalizada pela IA (com aprovação)</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Máximo de leads (opcional)
-          <input
-            type="number"
-            min={1}
-            value={campanha.maxLeads ?? ""}
-            onChange={(e) => setCampanha({ ...campanha, maxLeads: e.target.value ? Number(e.target.value) : null })}
-            className={campo}
-          />
-        </label>
-      </div>
-
-      <p className="text-xs text-neutral-500">
-        Use só {"{{first_name}}"} e {"{{company}}"}. A prévia usa valores longos de exemplo ({exemplo.first_name},{" "}
-        {exemplo.company}).
-        {manualNaEspanha && " Na Espanha, T2 a T4 viram tarefa manual: o texto é o roteiro de apoio do JP."}
-      </p>
-
-      {campanha.sequencia.map((passo, indice) => {
-        const problema = problemas[indice];
-        const texto = passo.template;
-        return (
-          <section key={passo.toque} className="rounded-lg border border-neutral-200 bg-white p-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <h3 className="font-medium">
-                {passo.toque} · {passo.tipo === "convite" ? "Convite" : manualNaEspanha ? "Roteiro (manual)" : "DM"}
-              </h3>
-              {indice > 0 && (
-                <label className="flex items-center gap-1 text-xs text-neutral-600">
-                  +
-                  <input
-                    type="number"
-                    min={0}
-                    max={30}
-                    value={passo.offset_dias_uteis}
-                    onChange={(e) => atualizarPasso(indice, { offset_dias_uteis: Number(e.target.value) })}
-                    className="w-14 rounded border border-neutral-300 px-1 py-0.5"
-                  />
-                  dias úteis {QUANDO[passo.ancora]}
-                </label>
-              )}
-              <label className="flex items-center gap-1 text-xs text-neutral-600">
-                teto
-                <input
-                  type="number"
-                  min={1}
-                  max={passo.tipo === "convite" ? 300 : 2000}
-                  value={tetoDoPasso(passo)}
-                  onChange={(e) => atualizarPasso(indice, { max_caracteres: Number(e.target.value) })}
-                  className="w-16 rounded border border-neutral-300 px-1 py-0.5"
-                />
-                caracteres
-              </label>
-            </div>
-            <textarea
-              value={texto}
-              onChange={(e) => atualizarPasso(indice, { template: e.target.value })}
-              rows={3}
-              placeholder={
-                passo.tipo === "convite"
-                  ? campanha.modoCopy === "personalizada"
-                    ? "Braço de controle do A/B: parte dos leads recebe este texto (vazio = convite sem nota); a outra recebe o T1 escrito pela IA. Também serve de base de estilo."
-                    : "Nota curta, sem oferta, sem link. Vazio = convite sem nota."
-                  : ""
-              }
-              className={`${campo} mt-2 w-full font-mono`}
+      <section className="cartao p-5">
+        <h2 className="text-[15px] font-semibold">Dados da campanha</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="rotulo">
+            Perfil
+            <select
+              value={campanha.perfilId}
+              disabled={Boolean(campanha.id)}
+              onChange={(e) => trocarPerfil(e.target.value)}
+              className="campo"
+            >
+              {perfis.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nome}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="rotulo">
+            Nome
+            <input value={campanha.nome} onChange={(e) => setCampanha({ ...campanha, nome: e.target.value })} className="campo" />
+          </label>
+          <label className="rotulo">
+            Ângulo de abertura
+            <select value={campanha.angulo} onChange={(e) => setCampanha({ ...campanha, angulo: e.target.value })} className="campo">
+              {angulos.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="rotulo">
+            Nicho
+            <input
+              value={campanha.nicho ?? ""}
+              onChange={(e) => setCampanha({ ...campanha, nicho: e.target.value || null })}
+              className="campo"
             />
-            {problema?.previa && (
-              <p className="mt-2 rounded bg-neutral-50 p-2 text-sm text-neutral-700">
-                <span className="text-xs uppercase tracking-wide text-neutral-400">Prévia · {problema.previa.length} caracteres</span>
-                <br />
-                {problema.previa}
-              </p>
+          </label>
+          <label className="rotulo">
+            Texto do convite
+            <select
+              value={campanha.modoCopy}
+              onChange={(e) => setCampanha({ ...campanha, modoCopy: e.target.value as CampanhaDoEditor["modoCopy"] })}
+              className="campo"
+            >
+              <option value="template">O texto do bloco Convite</option>
+              <option value="personalizada">Personalizado pela IA (com aprovação)</option>
+            </select>
+            {campanha.modoCopy === "personalizada" && (
+              <span className="text-xs font-normal text-tinta-fraca">
+                Parte dos leads recebe o texto do bloco Convite (vazio = sem nota) e a outra parte, uma nota escrita pela IA
+                no mesmo estilo. Você aprova cada nota da IA antes de sair.
+              </span>
             )}
-            {problema?.violacoes.map((violacao) => (
-              <p key={violacao.regra} className="mt-1 text-sm text-red-700">
-                {violacao.mensagem}
-              </p>
-            ))}
-          </section>
-        );
-      })}
+          </label>
+          <label className="rotulo">
+            Máximo de leads (opcional)
+            <input
+              type="number"
+              min={1}
+              value={campanha.maxLeads ?? ""}
+              onChange={(e) => setCampanha({ ...campanha, maxLeads: e.target.value ? Number(e.target.value) : null })}
+              className="campo"
+            />
+          </label>
+        </div>
+      </section>
 
-      {erros.map((erro) => (
-        <p key={erro} className="text-sm text-red-700">
-          {erro}
-        </p>
-      ))}
+      <section className="cartao flex flex-col gap-4 p-5">
+        <div>
+          <h2 className="text-[15px] font-semibold">Fluxo</h2>
+          <p className="mt-1 flex items-start gap-2 text-[13px] text-tinta-suave">
+            <Info className="mt-0.5 size-4 shrink-0 text-tinta-fraca" aria-hidden />
+            <span>
+              O caminho de cada lead, do Início até um Fim. Nos textos, use só {"{{first_name}}"} e {"{{company}}"}; a prévia
+              usa valores longos de exemplo ({exemplo.first_name}, {exemplo.company}).
+              {espanha && " Na Espanha, cada Mensagem vira tarefa manual: o texto é o roteiro de apoio do JP."}
+            </span>
+          </p>
+        </div>
+        {problemasDoFluxo.length > 0 && (
+          <Aviso tom="atencao">
+            O fluxo ainda está incompleto: dá para salvar como rascunho, mas a campanha só ativa com o fluxo completo.
+          </Aviso>
+        )}
+        <EditorDeFluxo
+          fluxo={campanha.fluxo}
+          onChange={mudarFluxo}
+          problemasDeCopy={problemasDeCopy}
+          problemasDoFluxo={problemasDoFluxo}
+          espanha={espanha}
+        />
+      </section>
+
+      {erros.length > 0 && (
+        <Aviso tom="erro">
+          {erros.map((erro) => (
+            <p key={erro}>{erro}</p>
+          ))}
+        </Aviso>
+      )}
       <div>
         <button
           type="button"
           onClick={salvar}
-          disabled={salvando || temProblema || !campanha.nome.trim()}
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          disabled={salvando || temProblemaDeCopy || !campanha.nome.trim()}
+          className="botao botao-primario"
         >
-          {salvando ? "Salvando..." : temProblema ? "Corrija a copy para salvar" : "Salvar campanha"}
+          {salvando ? "Salvando..." : temProblemaDeCopy ? "Corrija os textos para salvar" : "Salvar campanha"}
         </button>
       </div>
     </div>

@@ -1,7 +1,6 @@
 import { contextoDeValidacao } from "@/domain/campanha";
 import { dentroDaJanela, limitesDoDia, type Janela } from "@/domain/calendario";
 import { STATUS_SAUDAVEIS } from "@/domain/conta";
-import { passoDoToque, sequencia } from "@/domain/sequencia";
 import { validarMensagem, type Praca, type ResultadoDaValidacao } from "@/domain/validador";
 import type { ConviteT1, ModeloDeLinguagem, Resposta } from "@/server/agente/modelo";
 import { entradaDoConvite, promptDoConvite, VERSAO_DOS_PROMPTS } from "@/server/agente/prompts";
@@ -9,6 +8,7 @@ import { lerConfiguracao } from "@/server/configuracoes";
 import type { Db } from "@/server/db/tipos";
 import { feriadosDaPraca } from "@/server/despachante/perfis";
 import { registrarEvento } from "@/server/eventos";
+import { passoDoLead } from "@/server/fluxo/fluxos";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
 import { classificarErro } from "@/server/unipile/erros";
 
@@ -54,7 +54,7 @@ type Pendente = {
   empresa: string | null;
   localizacao: string | null;
   angulo: string;
-  sequencia: unknown;
+  toque: string | null;
   account_id: string;
   unipile_status: string | null;
   perfil_nome: string;
@@ -94,7 +94,7 @@ export async function processarPesquisasPendentes(
   const config = await lerConfiguracao(db, "pesquisa");
   const pendentes = await db.query<Pendente>(
     `select a.id as acao_id, a.lead_id, a.perfil_id, a.tentativas, l.pesquisa, pe.provider_id, pe.primeiro_nome,
-            pe.nome, pe.cargo, pe.empresa, pe.localizacao, c.angulo, c.sequencia,
+            pe.nome, pe.cargo, pe.empresa, pe.localizacao, c.angulo, a.toque,
             pf.unipile_account_id as account_id, pf.unipile_status, pf.nome as perfil_nome, pf.praca, pf.idioma,
             pf.fuso, pf.janela, pf.voz_md, pf.regras_md, pf.palavras_proibidas, pf.rodape_obrigatorio,
             pf.limite_nota_convite
@@ -199,8 +199,8 @@ async function escreverT1(
   p: Pendente,
   pesquisa: Pesquisa,
 ): Promise<void> {
-  const passos = sequencia.safeParse(p.sequencia);
-  const t1 = passos.success ? (passoDoToque(passos.data, "T1") ?? null) : null;
+  // O bloco de convite do fluxo do lead: referência de estilo e teto da nota.
+  const t1 = await passoDoLead(deps.db, p.lead_id, p.toque ?? "T1");
   const perfilDeValidacao = {
     praca: p.praca,
     palavrasProibidas: p.palavras_proibidas,

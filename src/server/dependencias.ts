@@ -26,6 +26,15 @@ export function obterUnipile(): ClienteUnipile {
   return unipile;
 }
 
+/** A Unipile, ou undefined quando o ambiente não tem as chaves (quem chama segue sem ela). */
+export function obterUnipileSeConfigurada(): ClienteUnipile | undefined {
+  try {
+    return obterUnipile();
+  } catch {
+    return undefined;
+  }
+}
+
 /** Segredo que a Unipile manda no header `Unipile-Auth` e no callback do hosted auth. */
 export function segredoDaUnipile(): string {
   return envUnipile().UNIPILE_WEBHOOK_SECRET;

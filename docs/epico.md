@@ -44,7 +44,35 @@ rodando, depois ~2–4 h/semana de manutenção.
 Estas regras são requisito, não sugestão. Cada uma tem ticket que a
 implementa e teste que a verifica.
 
-### 4.1 · A sequência padrão — 4 toques
+### 4.1 · O fluxo da campanha — montado com blocos, com 4 toques de modelo
+
+Cada campanha tem o seu fluxo, montado no editor ligando blocos (nodes). O
+operador decide quantos toques, a ordem, as esperas e os desvios. Os blocos:
+
+| Bloco | O que faz |
+|---|---|
+| Início | ponto de entrada: o lead aprovado na triagem entra aqui |
+| Convite | pedido de conexão, com nota opcional (template ou personalizada pela IA) |
+| Esperar | N dias úteis no fuso do perfil, a partir do bloco anterior |
+| Condição | desvia o caminho: aceitou o convite em até N dias úteis? · já é conexão de 1º grau? |
+| Mensagem | DM com template |
+| Tarefa manual | o dono do perfil escreve à mão; o roteiro do bloco é apoio |
+| Fim | encerra o fluxo: sem resposta, ou pausa de 60 dias com ângulo novo |
+
+O sistema não deixa ativar um fluxo inválido. Um fluxo é válido quando:
+
+- tem um único Início e todo caminho termina num Fim, sem ciclos;
+- Mensagem só aparece em caminho que passou por "aceitou" ou "já é conexão"
+  (DM só para 1º grau, §4.3);
+- todo bloco de texto passa no validador (§4.2) com o exemplo longo.
+
+As regras abaixo valem dentro de **qualquer** fluxo, e o editor não desliga
+nenhuma delas: validador (§4.2), teto e janela do perfil (§4.3), parada
+automática (§4.4), regras da praça (§4.5: na Espanha, Mensagem vira Tarefa
+manual; no Canadá, toda DM leva a saída), saída de quem responde e um alvo, um
+dono (§4.7).
+
+O fluxo padrão de uma campanha nova é o de 4 toques, já montado:
 
 | Toque | Quando | Objetivo | Regra |
 |---|---|---|---|
@@ -61,8 +89,11 @@ implementa e teste que a verifica.
   canceladas no mesmo processamento do webhook. É o erro mais caro do sistema.
 - A copy aprovada usa só `{{first_name}}` e `{{company}}`. "Token não é
   personalização" — a personalização real é a triagem humana da lista.
-- Offsets e textos são configuração da campanha, não código. Os valores acima
-  são o default.
+- Offsets, textos e a forma do fluxo são configuração da campanha, não código.
+  Os valores acima são o default. Onde este documento diz T1–T4, leia "o
+  convite e as mensagens do fluxo".
+- Fluxo de campanha ativa com leads em andamento não muda por baixo deles:
+  editar cria uma versão nova, que vale para os leads que entrarem depois.
 
 ### 4.2 · Validador de copy — toda mensagem que sai passa por ele
 
@@ -72,9 +103,9 @@ Vale para template, para texto da IA e para texto editado por humano:
 |---|---|
 | Sem travessão (—) nem meia-risca (–) | todas |
 | Sem as palavras proibidas: agência, marketing, growth, tráfego (lista configurável por perfil/idioma) | todas |
-| Sem URL | T1–T4 |
-| Teto de caracteres por toque: 250 · 350 · 250 · 180 (T1 · T2 · T3 · T4) | T1–T4, configurável |
-| Limite do LinkedIn para nota de convite [verificar por tipo de conta] | T1 |
+| Sem URL | convite e mensagens do fluxo |
+| Teto de caracteres por bloco, configurável (fluxo padrão: 250 · 350 · 250 · 180) | convite e mensagens do fluxo |
+| Limite do LinkedIn para nota de convite [verificar por tipo de conta] | convite |
 | Nunca afirmar que a mensagem foi escrita à mão | mensagens da IA |
 | Descadastro presente (ver 4.5) | perfis da praça Canadá |
 
@@ -140,6 +171,20 @@ qualquer operador, sem precisar de reunião.
 
 ⛔ Sem escalada de canal: nada de WhatsApp ou e-mail sem convite explícito da pessoa.
 
+**Inbox: todas as conversas do LinkedIn do perfil.** A inbox mostra todas as
+conversas das contas conectadas, inclusive as que não vieram de campanha, e
+destaca as de campanha. O histórico é trazido da Unipile ao conectar a conta e
+pode ser atualizado pelo painel; daí em diante chega por webhook.
+
+- Conversa fora de campanha é só leitura e resposta humana: não dispara IA,
+  SLA, alerta, RD nem mexe em estado de lead.
+- Se a pessoa de uma conversa fora de campanha for importada depois, a
+  conversa passa a aparecer como de campanha.
+- Perfil da Espanha só grava conversa fora de campanha com o DPA assinado
+  (trava T-4). Sem DPA, a inbox do JP mostra só as de campanha.
+- Quem pediu opt-out continua fora de qualquer importação, mas a conversa
+  dele segue visível na inbox para quem opera o perfil.
+
 ### 4.7 · Um alvo, um dono
 
 - Uma pessoa (por `provider_id` do LinkedIn) pertence a um perfil da casa.
@@ -175,6 +220,27 @@ O ângulo é o único dado que ensina alguma coisa. Toque sem ângulo registrado
 é bug. Lista fechada de ângulos: Refém do marketplace · Margem invisível · O
 número não bate · Cliente que é seu · ROAS de verdade · Engenharia, não achismo,
 mais os ângulos das campanhas de indústria e parceria. É configuração, não código.
+
+### 4.10 · Primeiros passos obrigatórios
+
+Enquanto o operador não tem uma campanha pronta, o Início vira a página de
+primeiros passos, e só ficam abertas as telas necessárias para cumpri-los
+(Início, Perfis, Campanhas, Importar, Triagem). As outras aparecem trancadas
+no menu e redirecionam para o Início. Depois, o mesmo espaço do Início mostra
+o que está esperando alguém agora (conversas, aprovação, leads parados,
+tarefas, triagem). Os passos, nesta ordem:
+
+1. Conectar o LinkedIn de um perfil que o operador opera.
+2. Ativar esse perfil (checklist da §8).
+3. Criar uma campanha com fluxo válido (§4.1).
+4. Importar uma lista para a campanha.
+5. Aprovar pelo menos um lead na triagem.
+6. Ativar a campanha.
+
+"Campanha pronta" = campanha ativa, num perfil ativo que o operador opera, com
+pelo menos um lead aprovado. O admin vale para qualquer perfil. Depois que o
+operador tem uma campanha pronta, o bloqueio não volta, mesmo que a campanha
+seja pausada.
 
 ## 5 · Arquitetura
 
@@ -240,21 +306,23 @@ perfis (
 campanhas (
   id, perfil_id, nome, angulo, nicho,
   modo_copy,                                      -- 'template' | 'personalizada'
-  sequencia jsonb,                                -- [{toque:'T1', tipo:'convite', offset_dias_uteis:0, ancora:'inicio', template:'...'}, ...]
-  pos_t4,                                         -- 'conexao' | 'pausa_60_novo_angulo'
+  sequencia jsonb,                                -- legado: [{toque:'T1', tipo:'convite', offset_dias_uteis:0, ancora:'inicio', template:'...'}, ...]
+  fluxo_id,                                       -- versão atual do fluxo de blocos (§4.1)
+  pos_t4,                                         -- 'conexao' | 'pausa_60_novo_angulo' (padrão do bloco Fim)
   max_leads, status
 )
+fluxos (id, campanha_id, versao, grafo jsonb)     -- {nodes:[{id, tipo, ...}], arestas:[{de, para, saida}]}
 pessoas (
   id, provider_id unique, url_publica, nome, cargo, empresa, empresa_dominio,
   localizacao, fonte, coletado_em, dono_perfil_id, optout_em, praca
 )
 leads (
-  id, pessoa_id, campanha_id, estado, angulo, passo_atual,
+  id, pessoa_id, campanha_id, fluxo_id, estado, angulo, passo_atual,
   pesquisa jsonb, rd_deal_id, criado_em, atualizado_em
 )
 acoes (
   id, lead_id, perfil_id, tipo,                   -- 'convite' | 'dm' | 'retirar_convite' | 'tarefa_manual'
-  toque, texto_gerado, texto_final, origem,       -- 'template' | 'ia' | 'humano'
+  toque, texto_gerado, texto_final, origem,       -- toque = id do bloco do fluxo; origem 'template' | 'ia' | 'humano'
   status,                                         -- 'pendente' | 'aguardando_aprovacao' | 'enviada' | 'falhou' | 'cancelada'
   agendada_para, idempotency_key unique, tentativas, erro,
   enviada_em, provider_message_id, aprovada_por, validacao jsonb
@@ -289,6 +357,11 @@ Regra somada na implementação (SDR-07 e SDR-13): se o dono do perfil escreve
 direto no LinkedIn para quem ainda está na régua, a régua para (pendentes
 canceladas) e o lead vai para `escalado_humano`. Na Espanha, onde T2–T4 são
 tarefas manuais, a mensagem do JP conclui a tarefa do toque e a régua segue.
+
+Somado no SDR-21 (fluxo com blocos): `na_fila → aceito` quando o fluxo pergunta
+"Já é conexão?" e a resposta é sim; `aceito → sem_resposta` quando o fluxo
+termina logo depois do aceite. Convite retirado segue pela saída "não" da
+condição de aceite; um Fim depois disso mantém o lead em `convite_retirado`.
 
 Toda transição grava um evento. Todo `em_conversa` cancela as ações pendentes
 na mesma transação.
@@ -502,6 +575,39 @@ ativar assim que T-3/T-4/T-5 caírem.
   a fila; o sistema volta sozinho para `aprovacao` se a taxa de erro subir.
 - ✅ Aceite: tentar ligar sem o gate é bloqueado; o rebaixamento automático fica
   registrado.
+
+### Marco 5 · Painel guiado e fluxo livre (decidido em 09/10/2026)
+
+**SDR-18 · Clareza das telas de operação**
+
+- Cada tela diz para que serve e o que cada botão faz depois de clicado, sem
+  códigos internos (T-x, §, nomes de estado). Ativação do perfil vira
+  checklist com responsável. "Aprovar" na aprovação usa o texto que está na
+  caixa. Toque rejeitado aparece para alguém resolver.
+- ✅ Aceite: nenhum texto do painel cita §, T-x ou D-x; editar e aprovar envia
+  o texto editado; lead com toque rejeitado aparece na aprovação com o motivo.
+
+**SDR-19 · Primeiros passos obrigatórios**
+
+- Página de primeiros passos e bloqueio da §4.10.
+- ✅ Aceite: operador sem campanha pronta é redirecionado de qualquer tela fora
+  da lista; ao cumprir o passo 6 o bloqueio sai e não volta.
+
+**SDR-20 · Inbox com todas as conversas**
+
+- Importação do histórico de chats da Unipile, webhook gravando conversa fora
+  de campanha e inbox com destaque para as de campanha (§4.6).
+- ✅ Aceite: conversa fora de campanha aparece e não dispara IA, SLA nem RD;
+  perfil da Espanha sem DPA não grava conversa fora de campanha.
+
+**SDR-21 · Fluxo de campanha com blocos**
+
+- Modelo de fluxo em grafo, versionado, com validação da §4.1; o despachante e
+  as reações andam pelo grafo; editor visual no painel. O fluxo de 4 toques
+  vira o modelo padrão e as campanhas existentes migram para ele.
+- ✅ Aceite: as regras da §4 continuam verdes nos testes com o fluxo padrão;
+  fluxo com desvio por aceite, esperas e mensagens arbitrárias roda no relógio
+  simulado; fluxo inválido não ativa.
 
 ## 10 · Decisões abertas
 

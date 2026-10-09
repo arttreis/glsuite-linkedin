@@ -1,4 +1,5 @@
-import type { NextRequest } from "next/server";
+import { after, type NextRequest } from "next/server";
+import { importarHistorico } from "@/server/conversas/externas";
 import { obterDb } from "@/server/db";
 import { obterUnipile, segredoDaUnipile } from "@/server/dependencias";
 import { registrarContaConectada } from "@/server/perfis/conexao";
@@ -11,5 +12,16 @@ export async function POST(request: NextRequest) {
   }
   const corpo = await request.json().catch(() => null);
   const resultado = await registrarContaConectada({ db: obterDb(), unipile: obterUnipile() }, corpo, new Date());
+  if (resultado.ok) {
+    // Conta conectada: o histórico de conversas vai para a inbox (§4.6), sem
+    // segurar a resposta à Unipile. Se falhar, o botão da inbox refaz.
+    after(async () => {
+      try {
+        await importarHistorico({ db: obterDb(), unipile: obterUnipile(), agora: new Date() }, { perfilId: resultado.perfilId });
+      } catch (erro) {
+        console.error("histórico da Unipile não importado", erro);
+      }
+    });
+  }
   return Response.json(resultado, { status: resultado.ok ? 200 : 422 });
 }

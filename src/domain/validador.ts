@@ -6,7 +6,8 @@ import { semAcentos } from "./texto";
  * revisão humana com o motivo. Ele nunca corrige nada em silêncio.
  */
 
-export type Toque = "T1" | "T2" | "T3" | "T4";
+/** Toque da sequência padrão (T1 a T4) ou id de um bloco do fluxo (SDR-21). */
+export type Toque = string;
 export type Praca = "domestico" | "canada" | "espanha";
 export type Origem = "template" | "ia" | "humano";
 

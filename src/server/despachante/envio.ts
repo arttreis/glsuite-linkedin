@@ -1,7 +1,7 @@
 import { aberturaDoProximoDiaUtil, dataLocal, somarDiasUteis, sortearIntervalo, type Feriados } from "@/domain/calendario";
 import { agendarAcao, chaveDoToque } from "@/server/acoes/agendar";
 import { lerConfiguracao } from "@/server/configuracoes";
-import { avancarRegua } from "@/server/sequencia/agendar-toque";
+import { aoRetirarConvite, aposAcao, prazoDoConvite } from "@/server/fluxo/motor";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import { avaliarErrosDeLimite } from "@/server/guardas/guardas";
@@ -71,9 +71,9 @@ async function chamarUnipile(unipile: ClienteUnipile, perfil: PerfilDoDespachant
 }
 
 /**
- * Grava o envio e agenda o passo seguinte (§5.1, passo 5):
- * T1 → retirada do convite em 21 dias; T2/T3 → próximo toque em dias úteis;
- * T4 → sem resposta (e pausa de 60 dias onde a praça manda).
+ * Grava o envio e anda o fluxo (§5.1, passo 5): convite → retirada no fim do
+ * prazo de aceite; mensagem → o bloco seguinte do fluxo; convite retirado →
+ * a saída "não" da condição de aceite.
  */
 export async function registrarSucesso(
   db: Db,
@@ -91,9 +91,9 @@ export async function registrarSucesso(
     if (reserva.tipo === "convite") {
       await tx.query(
         `update public.leads
-            set convite_enviado_em = $2, convite_id = $3, passo_atual = 'T1', ultimo_toque_em = $2
+            set convite_enviado_em = $2, convite_id = $3, passo_atual = coalesce($4, 'T1'), ultimo_toque_em = $2
           where id = $1::uuid`,
-        [reserva.lead_id, agora, resultado.providerMessageId],
+        [reserva.lead_id, agora, resultado.providerMessageId, reserva.toque],
       );
       await transicionarLead(tx, { leadId: reserva.lead_id, para: "convite_enviado", ator: "despachante", agora });
       const proximoPasso = { texto: "Acompanhar o aceite do convite", data: somarDiasUteis(dataLocal(agora, perfil.fuso), 5, p.feriados) };
@@ -107,14 +107,13 @@ export async function registrarSucesso(
         etapa: "02",
         dados: { proximo_passo: proximoPasso.texto, proximo_passo_em: proximoPasso.data },
       });
-      const expira = await lerConfiguracao(tx, "convite_expira_dias");
       await agendarAcao(tx, {
         leadId: reserva.lead_id,
         perfilId: perfil.id,
         tipo: "retirar_convite",
         toque: null,
         origem: "template",
-        agendadaPara: new Date(agora.getTime() + expira * 86_400_000),
+        agendadaPara: await prazoDoConvite(tx, { perfil, leadId: reserva.lead_id, toque: reserva.toque, agora, feriados: p.feriados }),
         chave: chaveDoToque(reserva.lead_id, "retirar"),
       });
     } else if (reserva.tipo === "retirar_convite") {
@@ -126,6 +125,7 @@ export async function registrarSucesso(
         agora,
         motivo: "convite pendente além do prazo",
       });
+      await aoRetirarConvite(tx, { perfil, leadId: reserva.lead_id, agora, ator: "despachante" });
     } else {
       await tx.query(
         `insert into public.mensagens (lead_id, perfil_id, pessoa_id, acao_id, chat_id, direcao, autor, texto, provider_message_id, em)
@@ -142,7 +142,7 @@ export async function registrarSucesso(
         [reserva.lead_id, resultado.chatId ?? null, reserva.toque, agora],
       );
       if (reserva.toque) {
-        await avancarRegua(tx, { perfil, leadId: reserva.lead_id, toque: reserva.toque, agora, feriados: p.feriados, ator: "despachante" });
+        await aposAcao(tx, { perfil, leadId: reserva.lead_id, toque: reserva.toque, agora, feriados: p.feriados, ator: "despachante" });
       }
     }
 
@@ -221,7 +221,7 @@ export async function registrarFalha(
       await tx.query("update public.acoes set status = 'falhou', erro = $2 where id = $1::uuid", [reserva.id, motivo]);
       await tx.query("update public.leads set revisao_motivo = $2 where id = $1::uuid", [
         reserva.lead_id,
-        `${reserva.toque ?? reserva.tipo} falhou: ${motivo}`,
+        `Envio falhou: ${motivo}`,
       ]);
       await registrarEvento(tx, {
         tipo: "acao_falhou",

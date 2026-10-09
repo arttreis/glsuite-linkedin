@@ -2,10 +2,12 @@ import type {
   ClienteUnipile,
   ContaUnipile,
   ConviteEnviado,
+  ConversaDaConta,
   ConversaUnipile,
   DonoDaConta,
   LinkDeConexao,
   MensagemDaConversa,
+  ParticipanteDaConversa,
   PerfilLinkedIn,
   PostLinkedIn,
   ResultadoDeBusca,
@@ -27,6 +29,8 @@ export class UnipileFalso implements ClienteUnipile {
   posts = new Map<string, PostLinkedIn[]>();
   mensagensPorChat = new Map<string, MensagemDaConversa[]>();
   conversasPorPessoa = new Map<string, ConversaUnipile[]>();
+  conversasDaConta: ConversaDaConta[] = [];
+  participantesPorChat = new Map<string, ParticipanteDaConversa[]>();
   resultadosDeBusca: ResultadoDeBusca[] = [];
   convitesPendentes: ConviteEnviado[] = [];
   webhooks: WebhookUnipile[] = [];
@@ -120,6 +124,18 @@ export class UnipileFalso implements ClienteUnipile {
   async listarConversasComPessoa(accountId: string, providerId: string) {
     this.registrar("listarConversasComPessoa", { accountId, providerId });
     return this.conversasPorPessoa.get(providerId) ?? [];
+  }
+
+  async listarConversas(accountId: string, p?: { cursor?: string; limite?: number }) {
+    this.registrar("listarConversas", { accountId, ...p });
+    const inicio = p?.cursor ? Number(p.cursor) : 0;
+    const fim = inicio + (p?.limite ?? 100);
+    return { itens: this.conversasDaConta.slice(inicio, fim), cursor: fim < this.conversasDaConta.length ? String(fim) : null };
+  }
+
+  async listarParticipantes(chatId: string) {
+    this.registrar("listarParticipantes", { chatId });
+    return this.participantesPorChat.get(chatId) ?? [];
   }
 
   async buscarPessoas(accountId: string, busca: unknown, cursor?: string) {

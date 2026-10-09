@@ -4,7 +4,8 @@ export type NovaAcao = {
   leadId: string;
   perfilId: string;
   tipo: "convite" | "dm" | "retirar_convite" | "tarefa_manual";
-  toque: "T1" | "T2" | "T3" | "T4" | null;
+  /** Id do bloco do fluxo (no fluxo padrão, T1 a T4); null para conversa e retirada. */
+  toque: string | null;
   origem: "template" | "ia" | "humano";
   agendadaPara: Date;
   /** Chave de idempotência: a mesma ação nunca é criada duas vezes. */

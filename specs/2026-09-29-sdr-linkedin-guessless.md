@@ -232,7 +232,8 @@ Anotadas durante a execução, por ticket.
   épico não previa; a transição foi somada à máquina de estados.
 - Eco de DM que voltou da API sem `message_id`: casado pelo texto na mesma
   conversa (última hora).
-- Conversa com quem não é lead do SDR não é gravada (privacidade).
+- Conversa com quem não é lead do SDR não é gravada (privacidade). Revisto no
+  SDR-20: passa a ser gravada como conversa externa (§4.6).
 - **Rede de segurança do erro mais caro:** antes de cada DM da régua, o
   despachante lê a conversa na Unipile. Mensagem da pessoa posterior ao convite
   que o webhook não trouxe é registrada na hora, e a DM não sai. Se a Unipile
@@ -270,6 +271,13 @@ Anotadas durante a execução, por ticket.
 - Painel de saúde na página inicial: saldo do dia e da semana, aceite em 3 dias
   úteis, erros de limite em 24 h, fila e revisão. Perfil que o operador não
   opera mostra só o status e o botão de pausar.
+- Primeira ativação vira checklist por perfil (`src/domain/ativacao.ts`): a
+  conta conectada é checada pelo sistema; as travas da §8 que valem para o
+  perfil (Arthur: D3; Juliano: T-2 se o modo não for manual; Canadá: T-1 do IP,
+  T-3, T-5; Espanha: T-1 do IP, T-3, T-4, T-5) são confirmadas uma a uma, em
+  linguagem direta e com o responsável. O servidor exige todas. Perfil que
+  nunca rodou aparece como "Não ativado", não "Pausado", e o motivo de pausa
+  do seed deixa de aparecer.
 
 ### SDR-09 · Inbox
 - SLA (§4.6): o relógio começa na última mensagem da pessoa sem retorno e para
@@ -549,6 +557,54 @@ Anotadas durante a execução, por ticket.
   artefato. Sem o secret `ANTHROPIC_API_KEY`, o job só deixa um aviso e
   passa.
 
+### SDR-17 · Modo automático por perfil
+- "Eval aprovado" fica numa tabela, `evals`: uma linha por praça e por
+  rodada, com veredito, versão dos prompts e do juiz, casos, custo e motivos.
+  O eval não fala com o banco. O admin sobe o `relatorio.json` da rodada em
+  **Perfis** ("Registrar eval"), e o sistema recusa uma rodada de outra versão
+  dos prompts. Vale a rodada mais recente da praça na versão atual
+  (`VERSAO_DOS_PROMPTS`). Se o prompt muda, o gate fecha até um eval novo ser
+  registrado.
+- Desde quando o perfil está no modo atual: coluna `perfis.modo_desde`. Toda
+  troca de modo, manual ou automática, reinicia esse relógio. Perfis que já
+  existiam contam desde a ativação.
+- O gate (§7.1), em `avaliarGate` (`src/server/perfis/modo.ts`), exige:
+  - o perfil em `aprovacao` há pelo menos `gate_automatico.dias_em_aprovacao`
+    dias (14);
+  - pelo menos `amostra_minima_aprovacao` (20) rascunhos de conversa decididos
+    nessa janela, com a taxa de edição e rejeição abaixo de `limiar_edicao`
+    (10%, D6). A taxa é a de `taxaDeEdicao`, do SDR-11. Sem a amostra mínima,
+    a taxa de 0% de 2 rascunhos não diria nada;
+  - o eval da praça do perfil aprovado na versão atual dos prompts.
+- Na Espanha, o automático não existe: a DM é manual pela §4.5, e o
+  despachante já cancela DM que não seja humana. As outras trocas de modo
+  (`manual` e `aprovacao`) são livres, feitas por qualquer operador com
+  acesso ao perfil.
+- Tentar ligar sem o gate é bloqueado: o painel mostra os motivos, e a
+  tentativa fica em `eventos` (`automatico_bloqueado`, com o operador). A
+  troca aceita grava `modo_alterado`.
+- Quando o perfil sai do automático, por troca manual ou por rebaixamento, os
+  rascunhos automáticos que ainda não saíram (`pendente`) voltam para a fila,
+  com o motivo.
+- "Taxa de erro" do rebaixamento (interpretação). A base são as DMs que a IA
+  agendou sozinha nos últimos `janela_erro_dias` (7) dias e que já tiveram
+  desfecho. Conta como erro a DM que:
+  - o validador barrou no envio;
+  - falhou de vez;
+  - foi seguida de um pedido de opt-out da pessoa.
+- O perfil é rebaixado quando a taxa passa de `limiar_erro` (10%), com pelo
+  menos `amostra_minima_erro` (10) mensagens. A marcação manual de "resposta
+  ruim" pelo operador fica para depois: hoje não há tela para isso.
+- O rebaixamento é a etapa `modo` do tick. Ela roda depois das guardas e antes
+  do despacho, para que nada saia pelo modo antigo. Ele grava `modo_rebaixado`
+  em `eventos` (ator `sistema`) e manda um alerta `modo_rebaixado` para o dono
+  do perfil e para o admin.
+- Os parâmetros novos entraram na configuração `gate_automatico`, que já
+  existia, então o total de configurações continua 17.
+- No banco dividido com o GL Suite, a migration
+  `20261008120000_modo_automatico.sql` vai por SQL. Ela dá o grant da tabela
+  `evals` ao `sdr_servidor`, mas só se o papel existir.
+
 ### Ambiente de teste (30/09/2026)
 - Painel na Vercel: projeto `guessless-sdr` (time GuessLess), em
   https://guessless-sdr.vercel.app. O `vercel.json` declara o framework, porque
@@ -576,3 +632,137 @@ Anotadas durante a execução, por ticket.
 - Sem cron (pg_cron) por enquanto: nada sai sozinho.
 - Na saída do GL Suite, o caminho é um projeto próprio em São Paulo (§5):
   aplicar as migrations e trocar as variáveis na Vercel.
+
+### Painel · tema visual (09/10/2026)
+- O tema é escuro, com um só destaque laranja (`--color-destaque`). O
+  laranja aparece em dois lugares: no item ativo do menu e na ação principal
+  da tela, e no máximo uma ação principal por tela ou por cartão. Os status
+  (ok, atenção, erro, info) ficam só em etiquetas e avisos.
+- Os tokens ficam em `src/app/globals.css` (`@theme`) e viram utilitários do
+  Tailwind: `bg-superficie`, `border-linha`, `text-tinta-suave` e assim por
+  diante. Uma tela nova não usa cor fixa (`neutral-*`, `bg-white`).
+- As peças repetidas são classes em `@layer components`, para os utilitários
+  poderem ajustar caso a caso:
+  - `.cartao`, `.recuo` e `.vazio`;
+  - `.botao`, com as variantes `-primario`, `-perigo` e `-pequeno`;
+  - `.campo`, com a variante `-pequeno`, e mais `.campo-arquivo` e `.rotulo`;
+  - `.etiqueta`, com os tons `-ok`, `-atencao`, `-erro`, `-info`, `-destaque`
+    e o modificador `-ponto`;
+  - `.aviso`, `.segmentos`/`.segmento` e `.tabela-moldura`/`.tabela`.
+- O estado ativo de menus e filtros sai de `aria-current="page"`, não de uma
+  classe condicional.
+- Componentes em `src/components/`:
+  - `Estrutura`: a moldura, com a barra lateral e o menu do celular;
+  - `Navegacao`: grupos recolhíveis com linhas de árvore;
+  - `Cabecalho`: título, descrição e ações. A linha de baixo atravessa a área
+    principal pelo `--respiro`;
+  - `Aviso`, `Avatar`, `Marca` e as etiquetas de estado, de campanha e de
+    perfil.
+- Os estados do lead aparecem com o texto de `ROTULO_DO_ESTADO`
+  (`src/domain/estados.ts`), nunca com o valor cru do banco.
+- Os ícones são do `lucide-react`.
+- Contraste mínimo de 4,5:1 nos textos pequenos. Por isso o texto fraco é
+  `#85858d`, e o botão principal usa um laranja um pouco mais fundo que o da
+  referência.
+
+### SDR-18 · Clareza das telas de operação
+
+- Toda tela diz, no cabeçalho, para que serve; os botões dizem a consequência
+  ao lado ("sai no próximo horário permitido do perfil", "nada foi enviado").
+  Toques aparecem como "Nota do convite", "1ª mensagem da sequência" etc.
+  (`src/domain/rotulos.ts`); fonte de importação, pelo nome legível.
+- Aprovação tem um botão só, "Aprovar e enviar", que manda o texto da caixa.
+  `aprovarAcao` já comparava com o original: igual conta como aprovado,
+  diferente como editado. Antes, "Aprovar como está" descartava a edição.
+- Leads parados (`leads.revisao_motivo`, por toque rejeitado ou falha
+  permanente, sem ação viva) aparecem no topo da Aprovação com duas saídas:
+  "Tentar de novo" recria o toque em `aguardando_aprovacao` com o texto que
+  ele tinha (chave nova, `...:de-novo:<ms>`); "Assumir à mão" leva o lead para
+  `escalado_humano` e cancela o que estiver pendente. Os motivos gravados
+  deixam de citar o toque ("Rejeitada na aprovação", "Envio falhou: ...").
+- Confiança da IA só aparece quando é baixa (< 0,7, o mesmo limiar das
+  exceções do automático). A taxa de edição foi para o fim da página, com a
+  explicação de que ela libera o modo automático.
+- Triagem: "selecionar todos" marca só quem pode ser aprovado; o retorno lista
+  todos os motivos de recusa, não só o primeiro.
+
+### SDR-19 · Primeiros passos obrigatórios
+
+- O Início é a página de primeiros passos: é nele que o perfil é ativado, então
+  não faz sentido uma rota separada. Depois de concluídos, o mesmo bloco vira
+  "Para agora" (`src/server/painel/proximos.ts`).
+- O bloqueio é por página: as telas fora da lista chamam
+  `exigirOperadorLiberado()` em vez de `exigirOperador()`. Tela nova nasce
+  liberada; quem a criar decide se ela entra no bloqueio. As server actions
+  não são bloqueadas: sem a página, não há como chegar nelas pelo painel.
+- `avaliarPrimeirosPassos` lê tudo como o operador, com `pode_ver_perfil`
+  explícito (perfis são visíveis a todos por RLS). Quando acha a campanha
+  pronta, grava `operadores.primeira_campanha_em` e daí em diante devolve
+  "concluído" sem consultar nada.
+- Layout não é refeito em navegação comum. As ações que podem concluir um
+  passo (ativar perfil, aprovar na triagem, mudar status da campanha) fazem
+  `revalidatePath("/", "layout")` para o menu destrancar na hora.
+
+### SDR-20 · Inbox com todas as conversas
+
+- Tabela `conversas` (uma por chat de perfil) para o que não é de campanha;
+  `mensagens.conversa_id` aponta para ela e `lead_id` fica nulo. Conversa de
+  campanha continua ancorada no lead, como antes.
+- O webhook de mensagem sem lead grava a conversa externa e para aí: nada de
+  evento de lead, alerta, SLA, IA ou RD. Perfil da Espanha com
+  `travas.dpa_espanha = false` continua sem gravar (trava T-4).
+- Quando a pessoa de uma conversa externa vira lead e manda mensagem, a
+  conversa e as mensagens antigas passam para o lead (`ligarConversaAoLead`).
+  Antes disso, a inbox mostra a etiqueta "Na campanha X" na conversa externa.
+- Histórico: `importarHistorico` lê `GET /chats` (até 100 chats) e, de cada
+  um, `GET /chats/{id}/attendees` e as últimas 20 mensagens. Chat de lead é
+  pulado: reprocessar mensagem antiga mexeria no estado do lead. Roda ao
+  conectar a conta (`after` na rota do hosted auth) e pelo botão "Trazer
+  conversas do LinkedIn" da inbox. É idempotente pelo `provider_message_id`.
+  [verificar] o formato de `GET /chats/{id}/attendees` veio de um espelho da
+  documentação; conferir com uma conta real.
+- Resposta numa conversa externa passa pelo validador como texto humano e
+  exige perfil ativo, igual à resposta de lead. A idempotência é pela chave do
+  formulário, gravada no evento `resposta_externa`.
+
+### SDR-21 · Fluxo de campanha com blocos
+
+- O fluxo é um grafo em `fluxos.grafo` (schema em `src/domain/fluxo.ts`),
+  versionado por campanha. `leads.fluxo_id` guarda a versão em que o lead
+  entrou. Salvar reescreve a versão atual se nenhum lead entrou nela; senão
+  cria outra (`salvarFluxo`).
+- Compatibilidade: campanha ou lead sem versão segue `campanhas.sequencia`,
+  convertida por `sequenciaParaFluxo` para o grafo equivalente (convite →
+  "aceitou?" → esperas e mensagens → fim do pós-T4). Os ids dos blocos de
+  texto convertidos são T1 a T4, então as ações gravadas continuam apontando
+  para eles. Com isso o motor é um só, e os testes antigos da régua rodam por
+  ele sem mudança.
+- `acoes.toque` e `leads.passo_atual` passam a guardar o id do bloco (as
+  checagens T1–T4 do banco caíram). A chave de idempotência continua
+  `lead:<id>:<toque>`: cada bloco roda no máximo uma vez por lead, e o
+  validador do fluxo proíbe ciclos.
+- Motor (`src/server/fluxo/motor.ts`): anda do evento até o próximo bloco que
+  espera alguém. "Esperar" não vira ação; empurra o relógio para a abertura
+  da janela do perfil N dias úteis depois. Entradas: aprovação na triagem
+  (`entrarNoFluxo`), mensagem enviada ou tarefa feita (`aposAcao`), aceite
+  (`aoAceitar`) e convite retirado (`aoRetirarConvite`).
+- Regras de forma (`validarFluxo`): um Início; condição com "sim" e "não";
+  convite seguido direto de "Aceitou o convite?"; "Já é conexão?" só logo
+  depois do Início; mensagem só em caminho que passou por um "sim"; um
+  convite por caminho; sem ciclos nem blocos soltos. A análise visita cada
+  combinação (bloco, já é conexão, convites) uma vez, sem enumerar caminhos.
+  Fluxo com problema de forma salva como rascunho, mas não ativa
+  (`mudarStatusDaCampanha` lança `ErroDeStatus`). Problema de copy não salva.
+- "Já é conexão?" é decidida na aprovação da triagem: só quando o fluxo começa
+  por ela, a triagem pergunta à Unipile (`obterPerfil().ehConexao`) fora da
+  transação. Sem Unipile ou com erro, conta como não e a pessoa recebe
+  convite.
+- Prazo do aceite: o da condição, em dias úteis; sem prazo, o padrão da casa
+  (`convite_expira_dias`, dias corridos), como antes.
+- Tarefa manual existe como bloco em qualquer praça; na Espanha, toda mensagem
+  continua virando tarefa (§4.5).
+- O modo de copy (template ou personalizada pela IA) continua sendo da
+  campanha e vale para os blocos de convite.
+- Editor visual com React Flow (`@xyflow/react`): blocos, setas com saída
+  "sim"/"não" nas condições, painel do bloco com prévia e violações, e a
+  lista de problemas do fluxo.

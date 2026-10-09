@@ -3,7 +3,7 @@ import type { Praca, Toque } from "@/domain/validador";
 import type { Db } from "@/server/db/tipos";
 import { feriadosDaPraca } from "@/server/despachante/perfis";
 import { registrarEvento } from "@/server/eventos";
-import { avancarRegua } from "@/server/sequencia/agendar-toque";
+import { aposAcao } from "@/server/fluxo/motor";
 
 export type ComoFoiFeita = "painel" | "linkedin" | "botao";
 
@@ -50,7 +50,7 @@ export async function concluirTarefaManual(
       p.agora,
       tarefa.toque,
     ]);
-    await avancarRegua(tx, {
+    await aposAcao(tx, {
       perfil: { id: tarefa.perfil_id, fuso: tarefa.fuso, janela: tarefa.janela, praca: tarefa.praca },
       leadId: tarefa.lead_id,
       toque: tarefa.toque,

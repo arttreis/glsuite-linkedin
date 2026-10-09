@@ -1,8 +1,8 @@
 import { z } from "zod";
-import type { Praca, Toque } from "./validador";
+import type { Praca } from "./validador";
 
 /** Teto de caracteres por toque (§4.2), default da campanha. */
-export const TETOS_PADRAO: Record<Toque, number> = { T1: 250, T2: 350, T3: 250, T4: 180 };
+export const TETOS_PADRAO: Readonly<Record<string, number>> = { T1: 250, T2: 350, T3: 250, T4: 180 };
 
 export const passoDaSequencia = z.object({
   toque: z.enum(["T1", "T2", "T3", "T4"]),
@@ -15,7 +15,7 @@ export const passoDaSequencia = z.object({
 
 export type PassoDaSequencia = z.infer<typeof passoDaSequencia>;
 
-const ORDEM: Toque[] = ["T1", "T2", "T3", "T4"];
+const ORDEM = ["T1", "T2", "T3", "T4"] as const;
 
 /**
  * A sequência é configuração da campanha (§4.1): T1 é o convite (âncora no
@@ -58,15 +58,19 @@ export function sequenciaPadrao(): Sequencia {
   ];
 }
 
-export function tetoDoPasso(passo: PassoDaSequencia): number {
-  return passo.max_caracteres ?? TETOS_PADRAO[passo.toque];
+/**
+ * Teto de caracteres de um texto que sai: o configurado no passo, o do toque
+ * padrão (T1 a T4) ou, para blocos do fluxo com outro id, o padrão do tipo.
+ */
+export function tetoDoPasso(passo: { toque: string; tipo: "convite" | "dm"; max_caracteres?: number }): number {
+  return passo.max_caracteres ?? TETOS_PADRAO[passo.toque] ?? (passo.tipo === "convite" ? 250 : 350);
 }
 
-export function passoDoToque(passos: Sequencia, toque: Toque): PassoDaSequencia | undefined {
+export function passoDoToque(passos: Sequencia, toque: string): PassoDaSequencia | undefined {
   return passos.find((passo) => passo.toque === toque);
 }
 
-export function proximoToque(passos: Sequencia, toque: Toque): PassoDaSequencia | undefined {
+export function proximoToque(passos: Sequencia, toque: string): PassoDaSequencia | undefined {
   return passos[passos.findIndex((passo) => passo.toque === toque) + 1];
 }
 

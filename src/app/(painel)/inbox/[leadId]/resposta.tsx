@@ -1,6 +1,8 @@
 "use client";
 
+import { CircleAlert, Send } from "lucide-react";
 import { useActionState, useMemo, useState } from "react";
+import { Aviso } from "@/components/aviso";
 import { contextoDeValidacao, type ContextoDoPerfil } from "@/domain/campanha";
 import { validarMensagem } from "@/domain/validador";
 import { responder, type EstadoDaResposta } from "../acoes";
@@ -35,10 +37,10 @@ export function FormularioDeResposta({
     [texto, contexto],
   );
 
-  if (bloqueio) return <p className="rounded-md bg-neutral-100 px-3 py-2 text-sm text-neutral-600">{bloqueio}</p>;
+  if (bloqueio) return <Aviso tom="atencao">{bloqueio}</Aviso>;
 
   return (
-    <form action={acao} className="flex flex-col gap-2">
+    <form action={acao} className="cartao flex flex-col gap-3 p-4">
       <input type="hidden" name="leadId" value={leadId} />
       <input type="hidden" name="chave" value={chave} />
       <textarea
@@ -46,31 +48,36 @@ export function FormularioDeResposta({
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
         rows={4}
+        aria-label="Resposta"
         placeholder="Escreva a resposta. Ela sai pelo LinkedIn do perfil, com você como autor."
-        className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm"
+        className="campo w-full"
       />
-      <div className="flex items-center justify-between text-xs text-neutral-500">
-        <span>{texto.trim().length} caracteres</span>
-        {estado.status === "enviada" && <span className="text-emerald-700">Enviada.</span>}
-      </div>
       {validacao?.violacoes.map((v) => (
-        <p key={v.regra} className="text-sm text-red-700">
+        <p key={v.regra} className="flex items-start gap-1.5 text-sm text-erro">
+          <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
           {v.mensagem}
         </p>
       ))}
       {estado.status === "erro" && (
-        <div className="text-sm text-red-700">
+        <Aviso tom="erro">
           <p>{estado.mensagem}</p>
           {estado.violacoes?.map((v) => <p key={v.regra}>{v.mensagem}</p>)}
-        </div>
+        </Aviso>
       )}
-      <button
-        type="submit"
-        disabled={enviando || !texto.trim() || (validacao !== null && !validacao.ok)}
-        className="self-start rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
-        {enviando ? "Enviando..." : "Enviar pelo LinkedIn"}
-      </button>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs text-tinta-fraca tabular-nums">
+          {texto.trim().length} caracteres
+          {estado.status === "enviada" && <span className="ml-3 text-ok">Enviada.</span>}
+        </span>
+        <button
+          type="submit"
+          disabled={enviando || !texto.trim() || (validacao !== null && !validacao.ok)}
+          className="botao botao-primario"
+        >
+          <Send aria-hidden />
+          {enviando ? "Enviando..." : "Enviar pelo LinkedIn"}
+        </button>
+      </div>
     </form>
   );
 }

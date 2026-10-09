@@ -9,6 +9,7 @@ import { avaliarGuardasDeTodos } from "@/server/guardas/guardas";
 import type { ClienteRd } from "@/server/rd/cliente";
 import { processarEventosRd } from "@/server/rd/sincronizar";
 import { reconciliarAcoesEmVoo } from "@/server/despachante/reconciliar";
+import { avaliarModosAutomaticos } from "@/server/perfis/modo";
 import { sincronizarStatusDasContas } from "@/server/perfis/status-conta";
 import { processarPesquisasPendentes } from "@/server/pesquisa/pesquisa";
 import { criarVerificadorDeResposta } from "@/server/reacoes/verificar-resposta";
@@ -39,9 +40,10 @@ export type RelatorioDoTick =
 
 /**
  * O tick do cron (a cada 5 min). Uma etapa que falha não derruba as outras.
- * Ordem: contas → webhooks atrasados → ações presas → guardas → despacho →
- * agente → pesquisa (T1 personalizado) → RD → SLA → alertas. O despacho vem
- * depois de tudo o que pode pausar um perfil ou tirar um lead da régua.
+ * Ordem: contas → webhooks atrasados → ações presas → guardas → modo
+ * automático (rebaixamento) → despacho → agente → pesquisa (T1 personalizado) → RD → SLA → alertas. O despacho vem
+ * depois de tudo o que pode pausar um perfil, tirar um lead da régua ou
+ * devolver um rascunho automático para a fila.
  */
 export async function executarTick(deps: DependenciasDoTick): Promise<RelatorioDoTick> {
   const soltar = await pegarTrava(deps.db, "tick", deps.agora, 4 * 60_000);
@@ -67,6 +69,7 @@ export async function executarTick(deps: DependenciasDoTick): Promise<RelatorioD
       reconciliarAcoesEmVoo({ ...contexto, feriadosPorPraca: await carregarFeriados(deps.db) }),
     );
     await etapa("guardas", () => avaliarGuardasDeTodos(deps.db, deps.agora));
+    await etapa("modo", () => avaliarModosAutomaticos(deps.db, deps.agora));
     const despacho =
       (await etapa("despacho", () =>
         despachar({ ...contexto, aleatorio: deps.aleatorio, verificarResposta: criarVerificadorDeResposta(contexto) }),

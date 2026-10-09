@@ -1,7 +1,9 @@
 "use client";
 
+import { FileUp, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { Aviso } from "@/components/aviso";
 import {
   ehLinhaInvalida,
   lerArquivoDeImportacao,
@@ -15,22 +17,33 @@ export type OpcaoDeCampanha = { id: string; nome: string; perfil: string };
 
 type Previa = { arquivoNome: string; pessoas: PessoaImportada[]; invalidas: LinhaInvalida[] };
 
-const campo = "rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm";
-
 function Resultado({ resposta, campanhaId }: { resposta: RespostaDaImportacao; campanhaId: string }) {
-  if (!resposta.ok) return <p className="text-sm text-red-700">{resposta.erro}</p>;
+  if (!resposta.ok) return <Aviso tom="erro">{resposta.erro}</Aviso>;
   const r = resposta.resumo;
+  const numeros: [string, number][] = [
+    ["Novos na triagem", r.novos],
+    ["Bloqueados", r.bloqueados],
+    ["Duplicados", r.duplicados],
+    ["Com opt-out (não entraram)", r.optouts],
+    ["Sem provider_id", r.semProviderId],
+    ["Linhas inválidas", r.invalidas.length],
+    ...(r.comAlerta > 0 ? ([["Com alerta de cooldown", r.comAlerta]] as [string, number][]) : []),
+  ];
   return (
-    <div className="rounded-md bg-neutral-100 p-3 text-sm">
-      <p>
-        {r.novos} novos na triagem · {r.bloqueados} bloqueados · {r.duplicados} duplicados · {r.optouts} com
-        opt-out (não entraram) · {r.semProviderId} sem provider_id · {r.invalidas.length} linhas inválidas
-        {r.comAlerta > 0 && ` · ${r.comAlerta} com alerta de cooldown`}
-      </p>
-      <Link href={`/triagem?campanha=${campanhaId}`} className="mt-2 inline-block underline underline-offset-2">
+    <Aviso tom="ok">
+      <p className="font-medium">Importação concluída.</p>
+      <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">
+        {numeros.map(([rotulo, valor]) => (
+          <div key={rotulo} className="flex justify-between gap-3">
+            <dt className="text-tinta-suave">{rotulo}</dt>
+            <dd className="tabular-nums">{valor}</dd>
+          </div>
+        ))}
+      </dl>
+      <Link href={`/triagem?campanha=${campanhaId}`} className="link mt-3 inline-block">
         Ir para a triagem
       </Link>
-    </div>
+    </Aviso>
   );
 }
 
@@ -64,87 +77,114 @@ export function FormularioImportacao({ campanhas }: { campanhas: OpcaoDeCampanha
   }
 
   if (campanhas.length === 0) {
-    return <p className="text-sm text-neutral-600">Nenhuma campanha disponível. Crie uma campanha antes de importar.</p>;
+    return (
+      <div className="vazio">
+        <p>Nenhuma campanha disponível. Crie uma campanha antes de importar.</p>
+        <Link href="/campanhas/nova" className="botao botao-primario">
+          <Plus aria-hidden />
+          Nova campanha
+        </Link>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <label className="flex max-w-md flex-col gap-1 text-sm font-medium">
+    <div className="flex flex-col gap-5">
+      <label className="rotulo max-w-md">
         Campanha
-        <select value={campanhaId} onChange={(e) => setCampanhaId(e.target.value)} className={campo}>
+        <select value={campanhaId} onChange={(e) => setCampanhaId(e.target.value)} className="campo">
           {campanhas.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.perfil} · {c.nome}
+              {c.perfil}: {c.nome}
             </option>
           ))}
         </select>
       </label>
 
-      <section className="rounded-lg border border-neutral-200 bg-white p-4">
-        <h2 className="font-medium">Arquivo CSV ou JSON (Apify)</h2>
-        <p className="mt-1 text-xs text-neutral-500">
+      <section className="cartao p-5">
+        <h2 className="flex items-center gap-2 text-[15px] font-semibold">
+          <FileUp className="size-4 text-tinta-fraca" aria-hidden />
+          Arquivo CSV ou JSON (Apify)
+        </h2>
+        <p className="mt-1.5 text-[13px] text-tinta-suave">
           Colunas aceitas: provider_id ou URL do perfil, nome, cargo, empresa, empresa_dominio, localização, data da coleta.
         </p>
         <input
           type="file"
           accept=".csv,.json,text/csv,application/json"
+          aria-label="Arquivo da lista"
           onChange={(e) => lerArquivo(e.target.files?.[0])}
-          className="mt-3 text-sm"
+          className="campo-arquivo mt-4 block"
         />
-        {erroArquivo && <p className="mt-2 text-sm text-red-700">{erroArquivo}</p>}
+        {erroArquivo && (
+          <Aviso tom="erro" className="mt-4">
+            {erroArquivo}
+          </Aviso>
+        )}
         {previa && (
-          <div className="mt-3 text-sm">
+          <div className="mt-4 flex flex-col gap-3 text-sm">
             <p>
-              {previa.pessoas.length} pessoas válidas · {previa.invalidas.length} linhas inválidas
+              <span className="tabular-nums">{previa.pessoas.length}</span> pessoas válidas e{" "}
+              <span className="tabular-nums">{previa.invalidas.length}</span> linhas inválidas
             </p>
-            {previa.invalidas.slice(0, 5).map((linha) => (
-              <p key={linha.linha} className="text-xs text-neutral-500">
-                Linha {linha.linha}: {linha.motivo}
-              </p>
-            ))}
-            <ul className="mt-2 max-h-48 overflow-auto text-xs text-neutral-600">
+            {previa.invalidas.length > 0 && (
+              <ul className="flex flex-col gap-0.5 text-xs text-tinta-fraca">
+                {previa.invalidas.slice(0, 5).map((linha) => (
+                  <li key={linha.linha}>
+                    Linha {linha.linha}: {linha.motivo}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <ul className="recuo max-h-48 overflow-auto text-xs">
               {previa.pessoas.slice(0, 10).map((pessoa) => (
-                <li key={pessoa.urlPublica}>
-                  {pessoa.nome} · {pessoa.cargo ?? "sem cargo"} · {pessoa.empresa ?? "sem empresa"}
+                <li key={pessoa.urlPublica} className="py-0.5">
+                  <span className="text-tinta">{pessoa.nome}</span>, {pessoa.cargo ?? "sem cargo"}, {pessoa.empresa ?? "sem empresa"}
                 </li>
               ))}
             </ul>
-            <button
-              type="button"
-              disabled={pendente || previa.pessoas.length === 0}
-              onClick={() =>
-                iniciar(async () => {
-                  setResposta(
-                    await importarArquivo({
-                      campanhaId,
-                      fonte: previa.arquivoNome.toLowerCase().endsWith(".json") ? "apify" : "csv",
-                      arquivoNome: previa.arquivoNome,
-                      pessoas: previa.pessoas,
-                      invalidas: previa.invalidas,
-                    }),
-                  );
-                })
-              }
-              className="mt-3 rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-            >
-              {pendente ? "Importando..." : `Importar ${previa.pessoas.length} pessoas`}
-            </button>
+            <div>
+              <button
+                type="button"
+                disabled={pendente || previa.pessoas.length === 0}
+                onClick={() =>
+                  iniciar(async () => {
+                    setResposta(
+                      await importarArquivo({
+                        campanhaId,
+                        fonte: previa.arquivoNome.toLowerCase().endsWith(".json") ? "apify" : "csv",
+                        arquivoNome: previa.arquivoNome,
+                        pessoas: previa.pessoas,
+                        invalidas: previa.invalidas,
+                      }),
+                    );
+                  })
+                }
+                className="botao botao-primario"
+              >
+                {pendente ? "Importando..." : `Importar ${previa.pessoas.length} pessoas`}
+              </button>
+            </div>
           </div>
         )}
       </section>
 
-      <section className="rounded-lg border border-neutral-200 bg-white p-4">
-        <h2 className="font-medium">Busca na Unipile</h2>
-        <p className="mt-1 text-xs text-neutral-500">
+      <section className="cartao p-5">
+        <h2 className="flex items-center gap-2 text-[15px] font-semibold">
+          <Search className="size-4 text-tinta-fraca" aria-hidden />
+          Busca na Unipile
+        </h2>
+        <p className="mt-1.5 text-[13px] text-tinta-suave">
           Cole a URL de uma busca do LinkedIn (ou Sales Navigator) ou digite palavras-chave. A busca usa a conta do perfil da
           campanha.
         </p>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-2">
           <input
             value={consulta}
             onChange={(e) => setConsulta(e.target.value)}
+            aria-label="Busca do LinkedIn ou palavras-chave"
             placeholder="https://www.linkedin.com/search/results/people/?keywords=..."
-            className={`${campo} min-w-80 flex-1`}
+            className="campo min-w-0 flex-1 basis-72"
           />
           <input
             type="number"
@@ -152,7 +192,7 @@ export function FormularioImportacao({ campanhas }: { campanhas: OpcaoDeCampanha
             max={500}
             value={limite}
             onChange={(e) => setLimite(Number(e.target.value))}
-            className={`${campo} w-24`}
+            className="campo w-24 tabular-nums"
             aria-label="Máximo de resultados"
           />
           <button
@@ -163,7 +203,7 @@ export function FormularioImportacao({ campanhas }: { campanhas: OpcaoDeCampanha
                 setResposta(await importarBuscaDaUnipile({ campanhaId, consulta, limite }));
               })
             }
-            className="rounded-md border border-neutral-300 px-3 py-2 text-sm disabled:opacity-50"
+            className="botao"
           >
             Buscar e importar
           </button>

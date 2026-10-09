@@ -1,9 +1,9 @@
 import { contextoDeValidacao } from "@/domain/campanha";
-import { passoDoToque, sequencia, type PassoDaSequencia } from "@/domain/sequencia";
 import { renderizarTemplate } from "@/domain/template";
 import { validarMensagem, type Toque, type Violacao } from "@/domain/validador";
 import type { Db } from "@/server/db/tipos";
 import { contextoDoPerfil } from "@/server/campanhas/perfil";
+import { passoDoLead } from "@/server/fluxo/fluxos";
 
 export type TextoPreparado =
   | { ok: true; texto: string; origem: "template" | "ia" | "humano" }
@@ -17,7 +17,7 @@ type AcaoParaTexto = {
   texto_final: string | null;
   texto_gerado: string | null;
   perfil_id: string;
-  sequencia: unknown;
+  lead_id: string;
   primeiro_nome: string | null;
   empresa: string | null;
 };
@@ -29,19 +29,18 @@ type AcaoParaTexto = {
  */
 export async function prepararTexto(db: Db, acaoId: string): Promise<TextoPreparado> {
   const [acao] = await db.query<AcaoParaTexto>(
-    `select a.tipo, a.toque, a.origem, a.texto_final, a.texto_gerado, a.perfil_id,
-            c.sequencia, pe.primeiro_nome, pe.empresa
+    `select a.tipo, a.toque, a.origem, a.texto_final, a.texto_gerado, a.perfil_id, a.lead_id,
+            pe.primeiro_nome, pe.empresa
        from public.acoes a
        join public.leads l on l.id = a.lead_id
-       join public.campanhas c on c.id = l.campanha_id
        join public.pessoas pe on pe.id = l.pessoa_id
       where a.id = $1::uuid`,
     [acaoId],
   );
   if (!acao) return { ok: false, violacoes: [{ regra: "vazio", mensagem: "Ação não encontrada." }] };
 
-  const passos = sequencia.safeParse(acao.sequencia);
-  const passo: PassoDaSequencia | null = acao.toque && passos.success ? (passoDoToque(passos.data, acao.toque) ?? null) : null;
+  // O bloco do fluxo em que o lead entrou (SDR-21); no fluxo padrão, o toque T1 a T4.
+  const passo = await passoDoLead(db, acao.lead_id, acao.toque);
 
   let texto = acao.texto_final ?? acao.texto_gerado;
   if (texto === null) {

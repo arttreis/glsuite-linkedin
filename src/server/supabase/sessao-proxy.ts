@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { envPublico } from "@/lib/env";
+import { OPCOES_DO_COOKIE } from "@/lib/supabase/cookie";
 
 const ROTAS_PUBLICAS = ["/login", "/auth/"];
 
@@ -14,6 +15,7 @@ export async function atualizarSessao(request: NextRequest) {
   let resposta = NextResponse.next({ request });
 
   const supabase = createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
+    cookieOptions: OPCOES_DO_COOKIE,
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (cookiesParaGravar, cabecalhos) => {

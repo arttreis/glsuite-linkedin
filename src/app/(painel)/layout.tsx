@@ -1,26 +1,16 @@
 import type { ReactNode } from "react";
-import { Navegacao } from "@/components/navegacao";
+import { Estrutura } from "@/components/estrutura";
+import { obterDb } from "@/server/db";
+import { avaliarPrimeirosPassos } from "@/server/onboarding/primeiros-passos";
 import { exigirOperador } from "@/server/supabase/servidor";
 
 export default async function PainelLayout({ children }: { children: ReactNode }) {
   const operador = await exigirOperador();
+  const { concluido } = await avaliarPrimeirosPassos(obterDb(), operador.id, new Date());
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="flex w-56 shrink-0 flex-col border-r border-neutral-200 bg-white px-4 py-6">
-        <p className="px-2 text-sm font-semibold">SDR · GuessLess</p>
-        <Navegacao />
-        <div className="mt-auto flex flex-col gap-2 px-2 text-xs text-neutral-500">
-          <span className="truncate font-medium text-neutral-700">{operador.nome}</span>
-          <span className="truncate">{operador.email}</span>
-          <form action="/auth/sair" method="post">
-            <button type="submit" className="text-neutral-700 underline-offset-2 hover:underline">
-              Sair
-            </button>
-          </form>
-        </div>
-      </aside>
-      <main className="flex-1 px-8 py-6">{children}</main>
-    </div>
+    <Estrutura operador={{ nome: operador.nome, email: operador.email, papel: operador.papel, emPrimeirosPassos: !concluido }}>
+      {children}
+    </Estrutura>
   );
 }

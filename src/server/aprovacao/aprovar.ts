@@ -1,9 +1,9 @@
 import { contextoDeValidacao } from "@/domain/campanha";
-import { passoDoToque, sequencia } from "@/domain/sequencia";
 import { validarMensagem, type Toque, type Violacao } from "@/domain/validador";
 import { contextoDoPerfil } from "@/server/campanhas/perfil";
 import { marcarDesfecho } from "@/server/conversas/desfecho";
 import { enviarDmDeConversa } from "@/server/conversas/enviar";
+import { passoDoLead } from "@/server/fluxo/fluxos";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
@@ -26,7 +26,6 @@ type AcaoNaFila = {
   provider_id: string;
   optout_em: Date | null;
   status_perfil: string;
-  sequencia: unknown;
   acao_sugerida: string | null;
 };
 
@@ -47,13 +46,12 @@ export async function aprovarAcao(
   const preparo = await db.transacao(async (tx) => {
     const [acao] = await tx.query<AcaoNaFila>(
       `select a.lead_id, a.perfil_id, a.tipo, a.toque, a.origem, a.status, a.texto_gerado, a.texto_final,
-              l.chat_id, l.convite_id, pe.provider_id, pe.optout_em, pf.status as status_perfil, c.sequencia,
+              l.chat_id, l.convite_id, pe.provider_id, pe.optout_em, pf.status as status_perfil,
               (select r.acao_sugerida from public.rascunhos r where r.acao_id = a.id limit 1) as acao_sugerida
          from public.acoes a
          join public.leads l on l.id = a.lead_id
          join public.pessoas pe on pe.id = l.pessoa_id
          join public.perfis pf on pf.id = a.perfil_id
-         join public.campanhas c on c.id = l.campanha_id
         where a.id = $1::uuid
         for update of a`,
       [p.acaoId],
@@ -68,8 +66,7 @@ export async function aprovarAcao(
     if (!final) return { erro: "Não há texto para aprovar: edite a mensagem." };
     const houveEdicao = editado !== null && editado !== original;
 
-    const passos = sequencia.safeParse(acao.sequencia);
-    const passo = acao.toque && passos.success ? (passoDoToque(passos.data, acao.toque) ?? null) : null;
+    const passo = await passoDoLead(tx, acao.lead_id, acao.toque);
     const contexto = {
       ...contextoDeValidacao(await contextoDoPerfil(tx, acao.perfil_id), passo, houveEdicao ? "humano" : acao.origem),
       tipo: acao.tipo,
@@ -150,7 +147,7 @@ export async function rejeitarAcao(
     if (acao.toque) {
       await tx.query("update public.leads set revisao_motivo = $2 where id = $1::uuid", [
         acao.lead_id,
-        `${acao.toque} rejeitado na fila de aprovação`,
+        "Rejeitada na aprovação",
       ]);
     }
     await registrarEvento(tx, {

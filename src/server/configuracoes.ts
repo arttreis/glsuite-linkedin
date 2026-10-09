@@ -20,7 +20,14 @@ export const ESQUEMAS_DE_CONFIGURACAO = {
   alerta_admin_email: z.email().nullable(),
   template_exemplo: z.object({ first_name: z.string(), company: z.string() }),
   leitura_minima_toques: z.number().int().positive(),
-  gate_automatico: z.object({ limiar_edicao: z.number().min(0).max(1), dias_em_aprovacao: z.number().int().positive() }),
+  gate_automatico: z.object({
+    limiar_edicao: z.number().min(0).max(1),
+    dias_em_aprovacao: z.number().int().positive(),
+    amostra_minima_aprovacao: z.number().int().min(0),
+    limiar_erro: z.number().min(0).max(1),
+    janela_erro_dias: z.number().int().positive(),
+    amostra_minima_erro: z.number().int().positive(),
+  }),
   conta_estavel_minutos: z.number().int().min(0),
   oferta_vigente: z.string(),
   agente: z.object({
