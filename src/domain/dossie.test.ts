@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizarUrlDoSite, resumoDaOferta, type Dossie } from "./dossie";
+import { dossie, explicarErroDoDossie, limparDossieEditado, normalizarUrlDoSite, resumoDaOferta, type Dossie } from "./dossie";
 
 describe("normalizarUrlDoSite", () => {
   it("aceita endereço sem esquema e tira o www do domínio", () => {
@@ -52,5 +52,39 @@ describe("resumoDaOferta", () => {
   it("nunca passa de 1.500 caracteres", () => {
     const longo = { ...DOSSIE, dores: Array.from({ length: 8 }, () => "d".repeat(200)), diferenciais: Array.from({ length: 8 }, () => "x".repeat(200)) };
     expect(resumoDaOferta(longo).length).toBeLessThanOrEqual(1500);
+  });
+});
+
+describe("limparDossieEditado", () => {
+  it("tira espaço das pontas e descarta item de lista em branco", () => {
+    const editado = {
+      ...DOSSIE,
+      empresa: { nome: "  GuessLess ", resumo: DOSSIE.empresa.resumo },
+      diferenciais: ["Engenharia, não achismo", "   "],
+      objecoes: [{ objecao: "", resposta: " " }],
+      provas: [...DOSSIE.provas, { tipo: "case", texto: "", fonte_url: "" }],
+    };
+    const limpo = dossie.parse(limparDossieEditado(editado));
+    expect(limpo.empresa.nome).toBe("GuessLess");
+    expect(limpo.diferenciais).toEqual(["Engenharia, não achismo"]);
+    expect(limpo.objecoes).toEqual([]);
+    expect(limpo.provas).toHaveLength(1);
+  });
+
+  it("prova escrita à mão fica sem fonte", () => {
+    const editado = { ...DOSSIE, provas: [{ tipo: "cliente", texto: "Atende a Kakou", fonte_url: " " }] };
+    expect(dossie.parse(limparDossieEditado(editado)).provas[0]!.fonte_url).toBeNull();
+  });
+});
+
+describe("explicarErroDoDossie", () => {
+  const erro = (entrada: unknown) => explicarErroDoDossie(dossie.safeParse(limparDossieEditado(entrada)).error!);
+
+  it("diz a seção e o item do problema", () => {
+    expect(erro({ ...DOSSIE, produtos: [] })).toBe("O que vocês vendem: precisa de pelo menos 1.");
+    expect(erro({ ...DOSSIE, produtos: [{ nome: "", descricao: "Algo", para_quem: "" }] })).toBe("O que vocês vendem, item 1, nome: não pode ficar em branco.");
+    expect(erro({ ...DOSSIE, empresa: { nome: "GuessLess", resumo: "" } })).toBe("Empresa, resumo: não pode ficar em branco.");
+    expect(erro({ ...DOSSIE, tom_de_voz: "x".repeat(601) })).toBe("Tom de voz: passou de 600 caracteres.");
+    expect(erro({ ...DOSSIE, dores: Array.from({ length: 9 }, (_, i) => `dor ${i}`) })).toBe("Dores: no máximo 8.");
   });
 });

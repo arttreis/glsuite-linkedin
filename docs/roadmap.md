@@ -6,10 +6,10 @@ Decisões de cada ticket: `specs/2026-09-29-sdr-linkedin-guessless.md`.
 **Onde estamos:** do SDR-01 ao SDR-16, tudo foi mergeado na `main` pelo PR #1;
 do SDR-17 ao SDR-21 (Marco 5: painel guiado, inbox completa e fluxo com
 blocos), pelo PR #2. O Marco 6 (jornada do Kakou: site → dossiê → públicos →
-busca com nota → fluxo gerado) começou: SDR-22 e SDR-23 têm código pronto e
-testado, no PR da branch `feature/sdr-23-dossie-da-oferta`. Todas as
-migrations, até `20261010120000_ofertas`, estão aplicadas no banco por SQL
-(conferido em 09/10). O painel está no ar para teste em
+busca com nota → fluxo gerado) começou: SDR-22 e SDR-23 entraram pelo PR #3,
+e a jornada revisada nos docs pelo PR #4. O SDR-24 está em PR. As migrations
+até `20261010120000_ofertas` estão aplicadas no banco por SQL (conferido em
+09/10); a `20261010140000_dossie_confirmado`, do SDR-24, ainda não. O painel está no ar para teste em
 https://guessless-sdr.vercel.app, com o banco dividido com o GL Suite. Faltam
 as chaves das integrações e as travas da §8. Detalhes em
 `docs/handoff-2026-09-30.md`.
@@ -39,10 +39,10 @@ as chaves das integrações e as travas da §8. Detalhes em
 | M5 | SDR-19 Primeiros passos obrigatórios | ✅ | ✅ #2 | — |
 | M5 | SDR-20 Inbox com todas as conversas | ✅ | ✅ #2 | ⛔ Unipile: conferir `GET /chats/{id}/attendees` com conta real |
 | M5 | SDR-21 Fluxo de campanha com blocos | ✅ | ✅ #2 | ⛔ testar o editor no navegador |
-| M6 · Jornada do Kakou | SDR-22 Organização como raiz | ✅ | ⏳ PR aberto | — |
-| M6 | SDR-23 Dossiê da oferta a partir do site | ✅ | ⏳ PR aberto | ⛔ chave da Anthropic |
-| M6 | SDR-24 Dossiê editável e confirmado | 🔜 próximo | — | — |
-| M6 | SDR-25 Públicos sugeridos a partir do dossiê | 🔜 | — | ⛔ chave da Anthropic |
+| M6 · Jornada do Kakou | SDR-22 Organização como raiz | ✅ | ✅ #3 | — |
+| M6 | SDR-23 Dossiê da oferta a partir do site | ✅ | ✅ #3 | ⛔ chave da Anthropic |
+| M6 | SDR-24 Dossiê editável e confirmado | ✅ | ⏳ PR aberto | ⛔ aplicar a migration `20261010140000` no banco |
+| M6 | SDR-25 Públicos sugeridos a partir do dossiê | 🔜 próximo | — | ⛔ chave da Anthropic |
 | M6 | SDR-26 Campanha nasce do público | 🔜 | — | — |
 | M6 | SDR-27 Busca a partir do público | 🔜 | — | ⛔ Unipile: filtros da busca clássica e limite de uso comercial |
 | M6 | SDR-28 Nota de aderência | 🔜 | — | ⛔ chave da Anthropic |
@@ -61,8 +61,8 @@ Legenda: ✅ feito · 🔜 a fazer · ⏳ aguardando · ⛔ bloqueado por algo e
 | 3 | Chaves na Vercel: Unipile, Anthropic, Resend, RD | Arthur passa, Claude cadastra | ⏳ |
 | 4 | 1ª rodada real do eval (`pnpm eval`) e revisão humana do `revisao.json` | Claude + Arthur | depende da chave da Anthropic |
 | 5 | ~~SDR-17 a SDR-21~~ | — | ✅ PR #2 |
-| 5a | Mergear o PR do SDR-22 e SDR-23 e depois o da jornada revisada (docs) | Arthur | ⏳ |
-| 5b | SDR-24 a SDR-30, um por vez, na ordem do Marco 6 | Claude | depois do 5a |
+| 5a | ~~Mergear o PR do SDR-22 e SDR-23 e depois o da jornada revisada (docs)~~ | — | ✅ #3 e #4 |
+| 5b | SDR-24 a SDR-30, um por vez, na ordem do Marco 6 | Claude | SDR-24 em PR |
 | 6 | ~~Migrations do SDR-17 ao SDR-21 por SQL no GL Suite~~ | — | ✅ 09/10, sem tocar no histórico do GL Suite |
 | 7 | ~~Abrir e mergear os PRs do SDR-01 ao SDR-16~~ | — | ✅ PR #1 |
 | 8 | Ligar o tick (pg_cron ou Vercel Cron) | Claude | depois da Unipile e do teste |
@@ -83,7 +83,9 @@ Legenda: ✅ feito · 🔜 a fazer · ⏳ aguardando · ⛔ bloqueado por algo e
 | T-6 | Token do RD e funil Comercial · Serviço | M3 | Arthur | aberta |
 | D3 | Rampa e teto do perfil do Arthur | ativar Arthur | Arthur | padrão: igual ao Juliano, 75/semana |
 | D1, D2, D4–D7 | Link de agenda, rascunho pro JP, cooldown, alerta, limiar, triagem | — | vários | rodando com o padrão do épico, muda por configuração |
-| D8–D10 | Teto de busca, nota de corte, opt-out por organização | SDR-27, 28, 32 | Arthur | padrão do épico: 100/dia, 70, só na organização |
+| D8 | Teto de busca por perfil | SDR-27 | Arthur | ✅ 100 resultados/dia (09/10) |
+| D9 | Nota de corte para aprovar em lote | SDR-28 | Arthur | aberta; padrão 70 |
+| D10 | Opt-out por organização | SDR-32 | Arthur | ✅ vale só na organização (09/10) |
 
 ## 4 · Como vai ficar
 
