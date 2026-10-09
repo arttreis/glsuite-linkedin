@@ -4,6 +4,8 @@ import { lerEnv } from "@/lib/env";
 import { criarModeloClaude } from "@/server/agente/claude";
 import type { ModeloDeLinguagem } from "@/server/agente/modelo";
 import type { EnviadorDeEmail } from "@/server/alertas/alertas";
+import { criarLeitorClaude } from "@/server/oferta/claude";
+import type { LeitorDeSite } from "@/server/oferta/leitor";
 import { criarEnviadorResend } from "@/server/alertas/resend";
 import { criarClienteRd, type ClienteRd } from "@/server/rd/cliente";
 import { criarClienteUnipile, type ClienteUnipile } from "@/server/unipile/cliente";
@@ -87,6 +89,19 @@ export function obterModeloDeLinguagem(): ModeloDeLinguagem | null {
       : null;
   }
   return modelo;
+}
+
+let leitorDeSite: LeitorDeSite | null | undefined;
+
+/** Leitor do site para o dossiê da oferta, ou null sem ANTHROPIC_API_KEY. */
+export function obterLeitorDeSite(): LeitorDeSite | null {
+  if (leitorDeSite === undefined) {
+    const env = envIa();
+    leitorDeSite = env.ANTHROPIC_API_KEY
+      ? criarLeitorClaude({ apiKey: env.ANTHROPIC_API_KEY, modelo: env.IA_MODELO_RASCUNHO, esforco: env.IA_ESFORCO_RASCUNHO })
+      : null;
+  }
+  return leitorDeSite;
 }
 
 const envRd = lerEnv(z.object({ RD_STATION_TOKEN: z.string().min(1).optional() }));

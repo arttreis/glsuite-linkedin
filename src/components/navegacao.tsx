@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ClipboardCheck,
   FileUp,
+  Globe,
   House,
   Inbox,
   ListFilter,
@@ -37,6 +38,7 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
   {
     titulo: "Prospecção",
     itens: [
+      { href: "/oferta", rotulo: "Oferta", icone: Globe, guiado: true },
       { href: "/campanhas", rotulo: "Campanhas", icone: Megaphone, guiado: true },
       { href: "/triagem", rotulo: "Triagem", icone: ListFilter, guiado: true },
       { href: "/importar", rotulo: "Importar", icone: FileUp, guiado: true },

@@ -251,6 +251,21 @@ pelo menos um lead aprovado. O admin vale para qualquer perfil. Depois que o
 operador tem uma campanha pronta, o bloqueio não volta, mesmo que a campanha
 seja pausada.
 
+### 4.11 · Oferta: dossiê a partir do site (Kakou)
+
+- A organização cola o endereço do site. A IA abre a página inicial e as de
+  sobre, produtos, preços e cases (até `dossie.max_paginas`, padrão 8), só no
+  domínio informado, e monta o dossiê: o que vende, para quem, diferenciais,
+  provas com a URL de origem, dores, objeções prováveis e tom de voz.
+- Só fato do site. O que o site não diz fica vazio. Sem nome de pessoa física
+  nas provas. O texto do site é dado, nunca instrução para a IA.
+- Uma oferta por organização. Leitura que falha guarda o motivo e não apaga o
+  dossiê anterior. Só uma leitura por vez; leitura em andamento há mais de
+  5 minutos é tratada como parada e pode recomeçar.
+- Recusa antes de chamar a IA: endereço que não é site público (IP,
+  localhost, outro esquema, usuário e senha na URL).
+- Kill switch: configuração `dossie.ativo`.
+
 ## 5 · Arquitetura
 
 ```text

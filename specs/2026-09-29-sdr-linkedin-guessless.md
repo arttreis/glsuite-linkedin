@@ -803,3 +803,19 @@ Hoje com ação direta → 26 dossiê no agente · 27 sugerir públicos · 28 bu
   `public.organizacoes` e `public.organizacao_do_operador()` não existem lá.
   Depois, `grant select, insert, update, delete on public.organizacoes to
   sdr_servidor`.
+### SDR-23 · Dossiê da oferta a partir do site
+
+- Leitura pela ferramenta `web_fetch_20260209` da API da Claude (roda no
+  servidor da Anthropic; sem crawler nosso e sem superfície de SSRF na nossa
+  infra), presa a `allowed_domains = [domínio, www.domínio]`, `max_uses` da
+  configuração e ~6 mil tokens por página. Retoma `pause_turn` até 4 vezes.
+- Dois passos: a leitura (com a ferramenta, devolve notas em texto) e a
+  estruturação (saída estruturada com o esquema `dossie`). Separados porque
+  saída estruturada com ferramenta de servidor não foi confirmada, e citações
+  não combinam com o formato fixo.
+- Modelo e esforço: `IA_MODELO_RASCUNHO` e `IA_ESFORCO_RASCUNHO`. Custo gravado
+  por leitura (`ofertas.custo_usd`) e no evento `dossie_gerado`.
+- A ação grava "lendo" e roda a IA com `after()`; a página tem
+  `maxDuration = 300` e se atualiza sozinha enquanto lê. O tick continua
+  desligado, então nada depende dele.
+- Fica para depois: editar e confirmar o dossiê e o agente passar a usá-lo.
