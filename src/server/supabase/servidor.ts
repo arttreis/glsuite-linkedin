@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { envPublico } from "@/lib/env";
+import { OPCOES_DO_COOKIE } from "@/lib/supabase/cookie";
 import { obterDb } from "@/server/db";
 import { buscarOperadorAtivo, type Operador } from "@/server/db/operador";
 
@@ -11,6 +12,7 @@ export async function criarClienteSupabase() {
   const cookieStore = await cookies();
   const env = envPublico();
   return createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
+    cookieOptions: OPCOES_DO_COOKIE,
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll: (cookiesParaGravar) => {
