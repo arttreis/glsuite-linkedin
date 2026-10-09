@@ -23,7 +23,14 @@ export async function enviarLinkDeAcesso(_anterior: EstadoLogin, formData: FormD
     email: email.data,
     options: { shouldCreateUser: false, emailRedirectTo: destino.toString() },
   });
+  if (error?.code === "over_email_send_rate_limit") {
+    return {
+      status: "erro",
+      mensagem: "Já mandamos um link há menos de 1 minuto. Confira a caixa de entrada e o spam, ou espere um pouco para pedir outro.",
+    };
+  }
   if (error) {
+    console.error("Link de acesso não enviado", error.code, error.message);
     return { status: "erro", mensagem: "Não foi possível enviar o link. O acesso é só para operadores cadastrados." };
   }
   return { status: "enviado", email: email.data };
