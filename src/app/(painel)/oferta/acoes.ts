@@ -6,7 +6,7 @@ import { after } from "next/server";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { obterLeitorDeSite } from "@/server/dependencias";
-import { concluirLeitura, iniciarLeitura } from "@/server/oferta/oferta";
+import { concluirLeitura, iniciarLeitura, salvarDossie, voltarAoConfirmado, type ResultadoDaEdicao } from "@/server/oferta/oferta";
 import { exigirOperador } from "@/server/supabase/servidor";
 
 const voltar = (msg: string) => redirect(`/oferta?msg=${encodeURIComponent(msg)}`);
@@ -31,4 +31,29 @@ export async function analisarSite(formData: FormData) {
     after(() => concluirLeitura({ db: obterDb(), leitor: leitor!, agora: () => new Date() }, { ofertaId }));
   }
   revalidatePath("/oferta");
+}
+
+/** Grava a edição do dossiê e, se pedido, confirma. Devolve o erro para o editor mostrar. */
+export async function salvarDossieDoPainel(entrada: { dossie: unknown; confirmar: boolean }): Promise<ResultadoDaEdicao> {
+  const operador = await exigirOperador();
+  const resultado = await comOperador(obterDb(), operador.id, (tx) =>
+    salvarDossie(tx, {
+      organizacaoId: operador.organizacaoId,
+      dossie: entrada.dossie,
+      confirmar: entrada.confirmar,
+      operadorId: operador.id,
+      agora: new Date(),
+    }),
+  );
+  if (resultado.ok) revalidatePath("/oferta");
+  return resultado;
+}
+
+/** Descarta o rascunho e volta ao último dossiê confirmado. */
+export async function voltarAoConfirmadoDoPainel() {
+  const operador = await exigirOperador();
+  const resultado = await comOperador(obterDb(), operador.id, (tx) =>
+    voltarAoConfirmado(tx, { organizacaoId: operador.organizacaoId, operadorId: operador.id, agora: new Date() }),
+  );
+  voltar(resultado.ok ? "O rascunho foi descartado. O dossiê voltou ao último confirmado." : resultado.erro);
 }

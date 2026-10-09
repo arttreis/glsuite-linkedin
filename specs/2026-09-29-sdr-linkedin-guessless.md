@@ -867,3 +867,32 @@ migrations das duas linhas já estão no banco (conferido em 09/10).
   desligado, então nada depende dele.
 - Fica para o SDR-24 editar e confirmar o dossiê, e para o SDR-34 o agente
   passar a usá-lo.
+
+### SDR-24 · Dossiê editável e confirmado
+
+- `ofertas.dossie` passa a ser o rascunho: a última leitura, ou a edição
+  humana por cima dela. `dossie_confirmado`, `confirmado_em` e
+  `confirmado_por` guardam o que vale. `dossieConfirmado()` é a porta de
+  leitura de públicos, fluxo e agente (SDR-25, SDR-29 e SDR-34).
+- A leitura do site continua escrevendo só no rascunho (e zera `editado_*`).
+  Ela nunca toca no confirmado.
+- Salvar e confirmar são a mesma ação com uma flag: "Confirmar dossiê" grava
+  o que está na tela e confirma; "Salvar rascunho" só grava. Confirmar sem
+  mudar nada não conta como edição: `editado_*` e o evento `dossie_editado`
+  só mudam quando o conteúdo muda (comparação de jsonb no banco).
+- O que vem do editor é limpo antes de validar (`limparDossieEditado`):
+  textos sem espaço nas pontas, item de lista em branco descartado, fonte
+  vazia como null. O erro de validação vira uma frase com a seção e o item
+  (`explicarErroDoDossie`), em vez da mensagem do zod.
+- Prova escrita à mão fica sem fonte: edição humana vale como fato (§4.11).
+- Não edita durante a leitura, porque o rascunho seria trocado por baixo.
+  Leitura parada há mais de 5 minutos libera.
+- "Descartar o rascunho" copia o confirmado de volta para o rascunho,
+  gravando quem e quando.
+- O aviso de público desatualizado (§4.11) fica para o SDR-25, quando houver
+  público.
+- O editor remonta quando chega leitura nova ou quando o rascunho volta ao
+  confirmado (a chave é a data da leitura mais a mensagem da tela). Ao salvar,
+  não remonta, para o retorno continuar visível.
+- Migration `20261010140000_dossie_confirmado`: aditiva e idempotente. Vai ao
+  banco do GL Suite por SQL antes do deploy, como as outras.

@@ -29,6 +29,73 @@ export const dossie = z.object({
 });
 export type Dossie = z.infer<typeof dossie>;
 
+const emBranco = (item: unknown) =>
+  item === "" ||
+  (item !== null &&
+    typeof item === "object" &&
+    !Array.isArray(item) &&
+    Object.entries(item).every(([chave, valor]) => chave === "tipo" || valor === "" || valor === null));
+
+/**
+ * O que o editor manda, arrumado antes de validar: textos sem espaço nas
+ * pontas, item de lista em branco descartado e fonte vazia como null. Item em
+ * branco é o "adicionar" que ninguém preencheu, não um erro.
+ */
+export function limparDossieEditado(entrada: unknown): unknown {
+  if (typeof entrada === "string") return entrada.trim();
+  if (Array.isArray(entrada)) return entrada.map(limparDossieEditado).filter((item) => !emBranco(item));
+  if (entrada !== null && typeof entrada === "object") {
+    const limpo = Object.fromEntries(Object.entries(entrada).map(([chave, valor]) => [chave, limparDossieEditado(valor)]));
+    if (limpo.fonte_url === "") limpo.fonte_url = null;
+    return limpo;
+  }
+  return entrada;
+}
+
+const SECOES: Record<string, string> = {
+  empresa: "Empresa",
+  produtos: "O que vocês vendem",
+  para_quem: "Para quem",
+  diferenciais: "Por que escolhem vocês",
+  provas: "Provas",
+  dores: "Dores",
+  objecoes: "Objeções",
+  tom_de_voz: "Tom de voz",
+  idioma: "Idioma",
+};
+
+const CAMPOS: Record<string, string> = {
+  nome: "nome",
+  resumo: "resumo",
+  descricao: "descrição",
+  para_quem: "para quem",
+  texto: "texto",
+  objecao: "objeção",
+  resposta: "resposta",
+};
+
+/** O primeiro problema da validação, numa frase para quem editou o dossiê. */
+export function explicarErroDoDossie(erro: z.ZodError): string {
+  const issue = erro.issues[0];
+  if (!issue) return "O dossiê não é válido.";
+  const [secao, indice, campo] = issue.path;
+  const partes = [SECOES[String(secao)] ?? String(secao)];
+  if (typeof indice === "number") partes.push(`item ${indice + 1}`);
+  else if (typeof indice === "string") partes.push(CAMPOS[indice] ?? indice);
+  if (typeof campo === "string") partes.push(CAMPOS[campo] ?? campo);
+  const onde = partes.join(", ");
+
+  if (issue.code === "too_small") {
+    if (issue.origin === "array") return `${onde}: precisa de pelo menos ${issue.minimum}.`;
+    return `${onde}: não pode ficar em branco.`;
+  }
+  if (issue.code === "too_big") {
+    if (issue.origin === "array") return `${onde}: no máximo ${issue.maximum}.`;
+    return `${onde}: passou de ${issue.maximum} caracteres.`;
+  }
+  return `${onde}: valor inválido.`;
+}
+
 const LIMITE_DO_RESUMO = 1500;
 
 /** O dossiê em texto curto, para entrar no prompt do agente e da sequência. */

@@ -1,4 +1,10 @@
-import { dossie as esquemaDoDossie, normalizarUrlDoSite, type Dossie } from "@/domain/dossie";
+import {
+  dossie as esquemaDoDossie,
+  explicarErroDoDossie,
+  limparDossieEditado,
+  normalizarUrlDoSite,
+  type Dossie,
+} from "@/domain/dossie";
 import { ErroDoModelo, type Uso } from "@/server/agente/modelo";
 import { lerConfiguracao } from "@/server/configuracoes";
 import type { Db } from "@/server/db/tipos";
@@ -14,10 +20,15 @@ export type SituacaoDaOferta = {
   ofertaId: string | null;
   url: string | null;
   leitura: { status: "nenhuma" | "lendo" | "pronta" | "erro" | "parada"; erro: string | null; iniciadaEm: Date | null };
+  /** O rascunho: a última leitura, ou a edição humana por cima dela. */
   dossie: Dossie | null;
   fontes: FonteDoSite[];
   geradoEm: Date | null;
-  editadoEm: Date | null;
+  editado: { em: Date; por: string | null } | null;
+  /** O que vale para públicos, fluxo e agente (§4.11). */
+  confirmado: { em: Date; por: string | null } | null;
+  /** O rascunho tem o que o confirmado não tem: leitura nova ou edição. */
+  rascunhoPendente: boolean;
   custoUsd: number | null;
 };
 
@@ -31,14 +42,28 @@ type LinhaDaOferta = {
   leitura_iniciada_em: Date;
   gerado_em: Date | null;
   editado_em: Date | null;
+  editado_por: string | null;
+  confirmado_em: Date | null;
+  confirmado_por: string | null;
+  tem_confirmado: boolean;
+  igual_ao_confirmado: boolean;
   custo_usd: string | null;
 };
+
+const lendoDeVerdade = (linha: { status: string; leitura_iniciada_em: Date }, agora: Date) =>
+  linha.status === "lendo" && agora.getTime() - new Date(linha.leitura_iniciada_em).getTime() <= LEITURA_PARADA_MS;
 
 /** A oferta da organização como a tela mostra. Roda como o operador (RLS) ou como sistema. */
 export async function ofertaDaOrganizacao(db: Db, organizacaoId: string, agora: Date): Promise<SituacaoDaOferta> {
   const [linha] = await db.query<LinhaDaOferta>(
-    `select id, url, status, dossie, fontes, erro, leitura_iniciada_em, gerado_em, editado_em, custo_usd
-       from public.ofertas where organizacao_id = $1::uuid`,
+    `select o.id, o.url, o.status, o.dossie, o.fontes, o.erro, o.leitura_iniciada_em, o.gerado_em, o.custo_usd,
+            o.editado_em, ed.nome as editado_por, o.confirmado_em, co.nome as confirmado_por,
+            o.dossie_confirmado is not null as tem_confirmado,
+            o.dossie is not distinct from o.dossie_confirmado as igual_ao_confirmado
+       from public.ofertas o
+       left join public.operadores ed on ed.id = o.editado_por
+       left join public.operadores co on co.id = o.confirmado_por
+      where o.organizacao_id = $1::uuid`,
     [organizacaoId],
   );
   if (!linha) {
@@ -49,11 +74,13 @@ export async function ofertaDaOrganizacao(db: Db, organizacaoId: string, agora: 
       dossie: null,
       fontes: [],
       geradoEm: null,
-      editadoEm: null,
+      editado: null,
+      confirmado: null,
+      rascunhoPendente: false,
       custoUsd: null,
     };
   }
-  const parada = linha.status === "lendo" && agora.getTime() - new Date(linha.leitura_iniciada_em).getTime() > LEITURA_PARADA_MS;
+  const parada = linha.status === "lendo" && !lendoDeVerdade(linha, agora);
   const lido = esquemaDoDossie.safeParse(linha.dossie);
   return {
     ofertaId: linha.id,
@@ -62,9 +89,108 @@ export async function ofertaDaOrganizacao(db: Db, organizacaoId: string, agora: 
     dossie: lido.success ? lido.data : null,
     fontes: linha.fontes,
     geradoEm: linha.gerado_em,
-    editadoEm: linha.editado_em,
+    editado: linha.editado_em ? { em: linha.editado_em, por: linha.editado_por } : null,
+    confirmado: linha.tem_confirmado && linha.confirmado_em ? { em: linha.confirmado_em, por: linha.confirmado_por } : null,
+    rascunhoPendente: lido.success && !linha.igual_ao_confirmado,
     custoUsd: linha.custo_usd === null ? null : Number(linha.custo_usd),
   };
+}
+
+/**
+ * O dossiê que vale para públicos, fluxo e agente: o último confirmado por um
+ * humano, ou null. Leitura e edição sem confirmar não mudam o que sai daqui.
+ */
+export async function dossieConfirmado(db: Db, organizacaoId: string): Promise<Dossie | null> {
+  const [linha] = await db.query<{ dossie_confirmado: unknown }>(
+    "select dossie_confirmado from public.ofertas where organizacao_id = $1::uuid",
+    [organizacaoId],
+  );
+  const lido = esquemaDoDossie.safeParse(linha?.dossie_confirmado);
+  return lido.success ? lido.data : null;
+}
+
+export type ResultadoDaEdicao = { ok: true } | { ok: false; erro: string };
+
+type OfertaParaEditar = { id: string; status: string; leitura_iniciada_em: Date; tem_dossie: boolean; tem_confirmado: boolean };
+
+async function ofertaParaEditar(
+  db: Db,
+  organizacaoId: string,
+  agora: Date,
+): Promise<{ ok: true; oferta: OfertaParaEditar } | { ok: false; erro: string }> {
+  const [oferta] = await db.query<OfertaParaEditar>(
+    `select id, status, leitura_iniciada_em, dossie is not null as tem_dossie, dossie_confirmado is not null as tem_confirmado
+       from public.ofertas where organizacao_id = $1::uuid for update`,
+    [organizacaoId],
+  );
+  if (!oferta?.tem_dossie) return { ok: false, erro: "Analise o site antes de editar o dossiê." };
+  if (lendoDeVerdade(oferta, agora)) {
+    return { ok: false, erro: "Espere a leitura do site terminar: ela traz um rascunho novo." };
+  }
+  return { ok: true, oferta };
+}
+
+/**
+ * Grava a edição humana no rascunho e, se pedido, confirma. Edição humana vale
+ * como fato (§4.11). Roda como o operador: o RLS garante a organização.
+ */
+export async function salvarDossie(
+  db: Db,
+  p: { organizacaoId: string; dossie: unknown; confirmar: boolean; operadorId: string; agora: Date },
+): Promise<ResultadoDaEdicao> {
+  const validado = esquemaDoDossie.safeParse(limparDossieEditado(p.dossie));
+  if (!validado.success) return { ok: false, erro: explicarErroDoDossie(validado.error) };
+
+  const editavel = await ofertaParaEditar(db, p.organizacaoId, p.agora);
+  if (!editavel.ok) return editavel;
+  const { oferta } = editavel;
+
+  const [gravado] = await db.query<{ mudou: boolean }>(
+    `with antes as (select dossie from public.ofertas where id = $1::uuid)
+     update public.ofertas o
+        set dossie = $2::jsonb,
+            editado_por = case when antes.dossie is distinct from $2::jsonb then $3::uuid else o.editado_por end,
+            editado_em = case when antes.dossie is distinct from $2::jsonb then $4 else o.editado_em end,
+            dossie_confirmado = case when $5 then $2::jsonb else o.dossie_confirmado end,
+            confirmado_por = case when $5 then $3::uuid else o.confirmado_por end,
+            confirmado_em = case when $5 then $4 else o.confirmado_em end,
+            atualizado_em = $4
+       from antes
+      where o.id = $1::uuid
+      returning antes.dossie is distinct from $2::jsonb as mudou`,
+    [oferta.id, JSON.stringify(validado.data), p.operadorId, p.agora, p.confirmar],
+  );
+  const evento = { entidade: "oferta", entidadeId: oferta.id, payload: {}, ator: p.operadorId, em: p.agora };
+  if (gravado?.mudou) await registrarEvento(db, { ...evento, tipo: "dossie_editado" });
+  if (p.confirmar) await registrarEvento(db, { ...evento, tipo: "dossie_confirmado" });
+  return { ok: true };
+}
+
+/** Joga fora o rascunho (leitura nova ou edição) e volta ao dossiê confirmado. */
+export async function voltarAoConfirmado(
+  db: Db,
+  p: { organizacaoId: string; operadorId: string; agora: Date },
+): Promise<ResultadoDaEdicao> {
+  const editavel = await ofertaParaEditar(db, p.organizacaoId, p.agora);
+  if (!editavel.ok) return editavel;
+  const { oferta } = editavel;
+  if (!oferta.tem_confirmado) return { ok: false, erro: "Ainda não há dossiê confirmado para voltar." };
+
+  await db.query(
+    `update public.ofertas
+        set dossie = dossie_confirmado, editado_por = $2::uuid, editado_em = $3, atualizado_em = $3
+      where id = $1::uuid and dossie is distinct from dossie_confirmado`,
+    [oferta.id, p.operadorId, p.agora],
+  );
+  await registrarEvento(db, {
+    tipo: "dossie_rascunho_descartado",
+    entidade: "oferta",
+    entidadeId: oferta.id,
+    payload: {},
+    ator: p.operadorId,
+    em: p.agora,
+  });
+  return { ok: true };
 }
 
 /**
