@@ -5,7 +5,7 @@ import { ROTULO_DO_ESTADO, type EstadoDoLead } from "@/domain/estados";
 import { listarConversas } from "@/server/conversas/inbox";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperadorLiberado } from "@/server/supabase/servidor";
 import { SeloDoSla } from "./sla";
 
 const FILTROS: { valor: string; rotulo: string }[] = [
@@ -21,7 +21,7 @@ const quando = (valor: Date | null) =>
   valor ? new Date(valor).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) : "";
 
 export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorLiberado();
   const params = await searchParams;
   const estado = typeof params.estado === "string" ? params.estado : "abertas";
   const perfilId = typeof params.perfil === "string" ? params.perfil : null;

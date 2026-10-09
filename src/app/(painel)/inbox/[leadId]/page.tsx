@@ -7,7 +7,7 @@ import type { EstadoDoLead } from "@/domain/estados";
 import { contextoDoPerfil } from "@/server/campanhas/perfil";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperadorLiberado } from "@/server/supabase/servidor";
 import { marcarConversa, registrarOptoutDaConversa } from "../acoes";
 import { FormularioDeResposta } from "./resposta";
 
@@ -38,7 +38,7 @@ const hora = (valor: Date) =>
 const CONECTADOS: EstadoDoLead[] = ["aceito", "em_sequencia", "sem_resposta", "em_conversa", "qualificado", "reuniao_marcada", "escalado_humano"];
 
 export default async function ConversaPage({ params, searchParams }: PageProps<"/inbox/[leadId]">) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorLiberado();
   const { leadId } = await params;
   const { msg } = await searchParams;
 

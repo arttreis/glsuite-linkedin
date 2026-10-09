@@ -15,6 +15,7 @@ function voltar(formData: FormData, mensagem: string) {
   const params = new URLSearchParams({ msg: mensagem });
   if (campanha.success) params.set("campanha", campanha.data);
   revalidatePath("/triagem");
+  revalidatePath("/", "layout");
   redirect(`/triagem?${params.toString()}`);
 }
 

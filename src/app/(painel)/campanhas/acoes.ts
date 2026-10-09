@@ -44,4 +44,6 @@ export async function alterarStatusDaCampanha(formData: FormData) {
   await mudarStatusDaCampanha(obterDb(), { campanhaId, status, operadorId: operador.id, agora: new Date() });
   revalidatePath(`/campanhas/${campanhaId}`);
   revalidatePath("/campanhas");
+  // Ativar a campanha pode concluir os primeiros passos: o menu destranca.
+  revalidatePath("/", "layout");
 }

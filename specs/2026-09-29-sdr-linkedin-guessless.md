@@ -685,3 +685,20 @@ Anotadas durante a execução, por ticket.
 - Triagem: "selecionar todos" marca só quem pode ser aprovado; o retorno lista
   todos os motivos de recusa, não só o primeiro.
 
+### SDR-19 · Primeiros passos obrigatórios
+
+- O Início é a página de primeiros passos: é nele que o perfil é ativado, então
+  não faz sentido uma rota separada. Depois de concluídos, o mesmo bloco vira
+  "Para agora" (`src/server/painel/proximos.ts`).
+- O bloqueio é por página: as telas fora da lista chamam
+  `exigirOperadorLiberado()` em vez de `exigirOperador()`. Tela nova nasce
+  liberada; quem a criar decide se ela entra no bloqueio. As server actions
+  não são bloqueadas: sem a página, não há como chegar nelas pelo painel.
+- `avaliarPrimeirosPassos` lê tudo como o operador, com `pode_ver_perfil`
+  explícito (perfis são visíveis a todos por RLS). Quando acha a campanha
+  pronta, grava `operadores.primeira_campanha_em` e daí em diante devolve
+  "concluído" sem consultar nada.
+- Layout não é refeito em navegação comum. As ações que podem concluir um
+  passo (ativar perfil, aprovar na triagem, mudar status da campanha) fazem
+  `revalidatePath("/", "layout")` para o menu destrancar na hora.
+

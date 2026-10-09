@@ -49,5 +49,5 @@ export async function despausarPerfilDoPainel(formData: FormData) {
     if (erro instanceof ErroDeAtivacao) redirect(`/?msg=${encodeURIComponent(erro.message)}`);
     throw erro;
   }
-  revalidatePath("/");
+  revalidatePath("/", "layout");
 }

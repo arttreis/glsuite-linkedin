@@ -8,6 +8,7 @@ import {
   House,
   Inbox,
   ListFilter,
+  Lock,
   Megaphone,
   PenLine,
   Plug,
@@ -18,13 +19,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
-type Item = { href: string; rotulo: string; icone: LucideIcon; soAdmin?: boolean };
+/** `guiado`: liberado durante os primeiros passos (§4.10); os outros ficam trancados até lá. */
+type Item = { href: string; rotulo: string; icone: LucideIcon; soAdmin?: boolean; guiado?: boolean };
 
 const GRUPOS: { titulo: string; itens: Item[] }[] = [
   {
     titulo: "Operação",
     itens: [
-      { href: "/", rotulo: "Início", icone: House },
+      { href: "/", rotulo: "Início", icone: House, guiado: true },
       { href: "/inbox", rotulo: "Inbox", icone: Inbox },
       { href: "/aprovacao", rotulo: "Aprovação", icone: ClipboardCheck },
       { href: "/tarefas", rotulo: "Tarefas", icone: PenLine },
@@ -33,22 +35,30 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
   {
     titulo: "Prospecção",
     itens: [
-      { href: "/campanhas", rotulo: "Campanhas", icone: Megaphone },
-      { href: "/triagem", rotulo: "Triagem", icone: ListFilter },
-      { href: "/importar", rotulo: "Importar", icone: FileUp },
+      { href: "/campanhas", rotulo: "Campanhas", icone: Megaphone, guiado: true },
+      { href: "/triagem", rotulo: "Triagem", icone: ListFilter, guiado: true },
+      { href: "/importar", rotulo: "Importar", icone: FileUp, guiado: true },
     ],
   },
   {
     titulo: "Gestão",
     itens: [
       { href: "/metricas", rotulo: "Métricas", icone: ChartColumn },
-      { href: "/perfis", rotulo: "Perfis", icone: Users },
+      { href: "/perfis", rotulo: "Perfis", icone: Users, guiado: true },
       { href: "/integracoes", rotulo: "Integrações", icone: Plug, soAdmin: true },
     ],
   },
 ];
 
-export function Navegacao({ admin, aoNavegar }: { admin: boolean; aoNavegar?: () => void }) {
+export function Navegacao({
+  admin,
+  emPrimeirosPassos = false,
+  aoNavegar,
+}: {
+  admin: boolean;
+  emPrimeirosPassos?: boolean;
+  aoNavegar?: () => void;
+}) {
   const caminho = usePathname();
   const [recolhidos, setRecolhidos] = useState<ReadonlySet<string>>(new Set());
 
@@ -83,6 +93,17 @@ export function Navegacao({ admin, aoNavegar }: { admin: boolean; aoNavegar?: ()
                 .map((item) => {
                   const ativo = item.href === "/" ? caminho === "/" : caminho.startsWith(item.href);
                   const Icone = item.icone;
+                  if (emPrimeirosPassos && !item.guiado) {
+                    return (
+                      <li key={item.href}>
+                        <span className="item-nav cursor-not-allowed opacity-50" title="Libera depois dos primeiros passos">
+                          <Lock aria-hidden />
+                          {item.rotulo}
+                          <span className="sr-only"> (libera depois dos primeiros passos)</span>
+                        </span>
+                      </li>
+                    );
+                  }
                   return (
                     <li key={item.href}>
                       <Link

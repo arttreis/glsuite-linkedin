@@ -6,7 +6,7 @@ import { Cabecalho } from "@/components/cabecalho";
 import { lerConfiguracao } from "@/server/configuracoes";
 import { obterDb } from "@/server/db";
 import { obterClienteRd } from "@/server/dependencias";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperadorLiberado } from "@/server/supabase/servidor";
 import { salvarConfiguracaoRd } from "./acoes";
 
 async function descobrirNoRd() {
@@ -26,7 +26,7 @@ async function descobrirNoRd() {
 }
 
 export default async function IntegracoesPage({ searchParams }: PageProps<"/integracoes">) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorLiberado();
   if (operador.papel !== "admin") redirect("/");
   const { msg, descobrir } = await searchParams;
   const db = obterDb();

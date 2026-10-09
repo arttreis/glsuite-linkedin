@@ -7,7 +7,7 @@ import { Cabecalho } from "@/components/cabecalho";
 import { rotuloDoToque } from "@/domain/rotulos";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperadorLiberado } from "@/server/supabase/servidor";
 import { listarTarefas } from "@/server/tarefas/tarefas";
 import { enviarPeloPainel, marcarComoFeita } from "./acoes";
 
@@ -15,7 +15,7 @@ const data = (valor: Date) =>
   new Date(valor).toLocaleString("pt-BR", { timeZone: "Europe/Madrid", dateStyle: "short", timeStyle: "short" });
 
 export default async function TarefasPage({ searchParams }: PageProps<"/tarefas">) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorLiberado();
   const { msg } = await searchParams;
   const tarefas = await comOperador(obterDb(), operador.id, (tx) => listarTarefas(tx, new Date()));
 

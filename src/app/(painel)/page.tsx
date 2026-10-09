@@ -8,6 +8,8 @@ import { resumoDaRampa } from "@/domain/ativacao";
 import type { EtapaDaRampa } from "@/domain/rampa";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
+import { avaliarPrimeirosPassos, type Passo } from "@/server/onboarding/primeiros-passos";
+import { proximosPassos, type ProximoPasso } from "@/server/painel/proximos";
 import { saudeDosPerfis, type SaudeDoPerfil } from "@/server/painel/saude";
 import { exigirOperador } from "@/server/supabase/servidor";
 import { despausarPerfilDoPainel, pausarPerfilDoPainel } from "./acoes";
@@ -234,10 +236,100 @@ function CartaoDoPerfil({ perfil }: { perfil: SaudeDoPerfil }) {
   );
 }
 
+/** Enquanto não há campanha pronta (§4.10): o que falta, na ordem, com o próximo passo em destaque. */
+function PrimeirosPassos({ passos }: { passos: Passo[] }) {
+  const atual = passos.find((passo) => !passo.feito);
+  const feitos = passos.filter((passo) => passo.feito).length;
+  return (
+    <section className="cartao mb-6 p-5" aria-labelledby="titulo-primeiros-passos">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="titulo-primeiros-passos" className="text-[15px] font-semibold">
+          Primeiros passos
+        </h2>
+        <span className="text-xs tabular-nums text-tinta-fraca">
+          {feitos} de {passos.length} feitos
+        </span>
+      </div>
+      <p className="mt-1 text-[13px] text-tinta-suave">
+        Inbox, Aprovação, Tarefas e Métricas liberam quando a sua primeira campanha estiver rodando: campanha ativa, perfil
+        ativo e pelo menos uma pessoa aprovada na triagem.
+      </p>
+      <ol className="mt-4 flex flex-col gap-1">
+        {passos.map((passo, indice) => {
+          const eAtual = passo === atual;
+          return (
+            <li
+              key={passo.id}
+              aria-current={eAtual ? "step" : undefined}
+              className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl px-3 py-2.5 ${eAtual ? "bg-superficie-alta" : ""}`}
+            >
+              {passo.feito ? (
+                <CircleCheck className="size-5 shrink-0 text-ok" aria-label="Feito" />
+              ) : (
+                <span className="grid size-5 shrink-0 place-items-center rounded-full border border-linha text-[11px] tabular-nums text-tinta-suave">
+                  {indice + 1}
+                </span>
+              )}
+              <div className="min-w-0 flex-1 basis-60">
+                <p className={`text-sm ${passo.feito ? "text-tinta-suave" : "font-medium"}`}>{passo.titulo}</p>
+                {eAtual && <p className="mt-0.5 text-[13px] text-tinta-suave">{passo.explicacao}</p>}
+              </div>
+              {!passo.feito &&
+                (eAtual ? (
+                  <Link href={passo.href} className="botao botao-primario botao-pequeno">
+                    {passo.acao}
+                    <ArrowRight aria-hidden />
+                  </Link>
+                ) : (
+                  <Link href={passo.href} className="link text-[13px]">
+                    {passo.acao}
+                  </Link>
+                ))}
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
+function ParaAgora({ itens }: { itens: ProximoPasso[] }) {
+  return (
+    <section className="mb-6" aria-labelledby="titulo-para-agora">
+      <h2 id="titulo-para-agora" className="text-[15px] font-semibold">
+        Para agora
+      </h2>
+      {itens.length === 0 ? (
+        <p className="mt-2 text-[13px] text-tinta-suave">Nada esperando por você. Os envios seguem sozinhos dentro dos limites de cada perfil.</p>
+      ) : (
+        <ul className="mt-3 grid gap-2 md:grid-cols-2">
+          {itens.map((item) => (
+            <li key={item.id} className="cartao flex items-center justify-between gap-3 px-4 py-3">
+              <p className="text-sm">
+                <span className="mr-1.5 text-lg font-medium tabular-nums">{item.quantidade}</span>
+                {item.texto}
+              </p>
+              <Link href={item.href} className="botao botao-pequeno shrink-0">
+                {item.acao}
+                <ArrowRight aria-hidden />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export default async function InicioPage({ searchParams }: PageProps<"/">) {
   const operador = await exigirOperador();
   const { msg } = await searchParams;
-  const perfis = await comOperador(obterDb(), operador.id, (tx) => saudeDosPerfis(tx, new Date()));
+  const agora = new Date();
+  const primeirosPassos = await avaliarPrimeirosPassos(obterDb(), operador.id, agora);
+  const { perfis, proximos } = await comOperador(obterDb(), operador.id, async (tx) => ({
+    perfis: await saudeDosPerfis(tx, agora),
+    proximos: primeirosPassos.concluido ? await proximosPassos(tx, agora) : [],
+  }));
 
   const detalhes = perfis.flatMap((perfil) => (perfil.detalhes ? [perfil.detalhes] : []));
   const somar = (campo: (d: (typeof detalhes)[number]) => number) => detalhes.reduce((total, d) => total + campo(d), 0);
@@ -246,11 +338,20 @@ export default async function InicioPage({ searchParams }: PageProps<"/">) {
   return (
     <>
       <Cabecalho
-        titulo="Saúde dos perfis"
-        descricao="Situação e volume de cada perfil do LinkedIn. Qualquer operador pode pausar um perfil; ativar e despausar ficam registrados com o seu nome."
+        titulo="Início"
+        descricao="O que precisa de você agora e a situação de cada perfil do LinkedIn."
       />
       <div className="max-w-6xl">
         {typeof msg === "string" && <Aviso className="mb-5">{msg}</Aviso>}
+
+        {primeirosPassos.concluido ? <ParaAgora itens={proximos} /> : <PrimeirosPassos passos={primeirosPassos.passos} />}
+
+        <h2 id="perfis" className="mb-1 scroll-mt-6 text-[15px] font-semibold">
+          Perfis
+        </h2>
+        <p className="mb-4 text-[13px] text-tinta-suave">
+          Qualquer operador pode pausar um perfil; ativar e despausar ficam registrados com o seu nome.
+        </p>
 
         <dl className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <Resumo rotulo="Perfis ativos" valor={ativos} complemento={`de ${perfis.length}`} />
