@@ -31,3 +31,11 @@ create policy fluxos_por_perfil on public.fluxos
   using (exists (select 1 from public.campanhas c where c.id = campanha_id and public.pode_ver_perfil(c.perfil_id)))
   with check (exists (select 1 from public.campanhas c where c.id = campanha_id and public.pode_ver_perfil(c.perfil_id)));
 
+
+-- Banco dividido com o GL Suite: o papel do app só ganha direito na tabela nova.
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'sdr_servidor') then
+    grant select, insert, update, delete on public.fluxos to sdr_servidor;
+  end if;
+end $$;

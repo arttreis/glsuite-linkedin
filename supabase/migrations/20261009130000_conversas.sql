@@ -31,3 +31,11 @@ drop policy if exists conversas_por_perfil on public.conversas;
 create policy conversas_por_perfil on public.conversas
   for all to authenticated
   using (public.pode_ver_perfil(perfil_id)) with check (public.pode_ver_perfil(perfil_id));
+
+-- Banco dividido com o GL Suite: o papel do app só ganha direito na tabela nova.
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'sdr_servidor') then
+    grant select, insert, update, delete on public.conversas to sdr_servidor;
+  end if;
+end $$;
