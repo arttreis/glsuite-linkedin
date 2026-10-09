@@ -1,3 +1,4 @@
+import { Cabecalho } from "@/components/cabecalho";
 import { exigirOperador } from "@/server/supabase/servidor";
 import { dadosDoEditor } from "../dados";
 import { EditorDeCampanha } from "../editor";
@@ -7,13 +8,19 @@ export default async function NovaCampanhaPage() {
   const { perfis, angulos, exemplo } = await dadosDoEditor(operador.id);
 
   return (
-    <section className="max-w-4xl">
-      <h1 className="mb-5 text-xl font-semibold">Nova campanha</h1>
-      {perfis.length === 0 ? (
-        <p className="text-sm text-neutral-600">Você não opera nenhum perfil.</p>
-      ) : (
-        <EditorDeCampanha perfis={perfis} angulos={angulos} exemplo={exemplo} />
-      )}
-    </section>
+    <>
+      <Cabecalho
+        titulo="Nova campanha"
+        descricao="Os textos passam pelo validador enquanto você escreve. A campanha nasce como rascunho."
+        voltar={{ href: "/campanhas", rotulo: "Campanhas" }}
+      />
+      <div className="max-w-4xl">
+        {perfis.length === 0 ? (
+          <p className="vazio">Você não opera nenhum perfil. Peça acesso a um perfil para criar campanhas.</p>
+        ) : (
+          <EditorDeCampanha perfis={perfis} angulos={angulos} exemplo={exemplo} />
+        )}
+      </div>
+    </>
   );
 }

@@ -1,3 +1,9 @@
+import { Check, FileJson, Link2, Plug, RefreshCw, TriangleAlert, Webhook } from "lucide-react";
+import Link from "next/link";
+import { Aviso } from "@/components/aviso";
+import { Avatar } from "@/components/avatar";
+import { Cabecalho } from "@/components/cabecalho";
+import { EtiquetaDoPerfil } from "@/components/etiquetas";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { avaliarGate, type Gate } from "@/server/perfis/modo";
@@ -25,15 +31,29 @@ type LinhaPerfil = {
 
 const PRACAS: Record<string, string> = { domestico: "Brasil", canada: "Canadá", espanha: "Espanha" };
 
-const MODOS = ["manual", "aprovacao", "automatico"] as const;
+const MODOS = [
+  { valor: "manual", rotulo: "Manual" },
+  { valor: "aprovacao", rotulo: "Aprovação" },
+  { valor: "automatico", rotulo: "Automático" },
+] as const;
 
 /** O que falta para ligar o automático (gate da §7.1). */
 function GateDoAutomatico({ gate }: { gate: Gate }) {
-  if (gate.liberado) return <span className="text-emerald-700">Gate do automático cumprido.</span>;
+  if (gate.liberado) {
+    return (
+      <span className="flex items-center gap-1.5 text-[13px] text-ok">
+        <Check className="size-4" aria-hidden />
+        Gate do automático cumprido
+      </span>
+    );
+  }
   return (
-    <details className="text-neutral-600">
-      <summary className="cursor-pointer">Automático bloqueado ({gate.motivos.length})</summary>
-      <ul className="mt-1 list-disc pl-5">
+    <details className="text-[13px] text-tinta-suave">
+      <summary className="inline-flex items-center gap-1.5">
+        <TriangleAlert className="size-3.5 text-atencao" aria-hidden />
+        Automático bloqueado ({gate.motivos.length})
+      </summary>
+      <ul className="mt-2 list-disc pl-5 marker:text-tinta-fraca">
         {gate.motivos.map((motivo) => (
           <li key={motivo}>{motivo}</li>
         ))}
@@ -42,9 +62,9 @@ function GateDoAutomatico({ gate }: { gate: Gate }) {
   );
 }
 
-const AVISOS: Record<string, string> = {
-  ok: "Conta conectada. O perfil segue pausado até alguém ativar.",
-  falhou: "A conexão não foi concluída na Unipile. Tente de novo.",
+const AVISOS: Record<string, { tom: "ok" | "erro"; texto: string }> = {
+  ok: { tom: "ok", texto: "Conta conectada. O perfil segue pausado até alguém ativar." },
+  falhou: { tom: "erro", texto: "A conexão não foi concluída na Unipile. Tente de novo." },
 };
 
 export default async function PerfisPage({ searchParams }: PageProps<"/perfis">) {
@@ -66,125 +86,127 @@ export default async function PerfisPage({ searchParams }: PageProps<"/perfis">)
   const aviso = typeof params.conexao === "string" ? AVISOS[params.conexao] : undefined;
 
   return (
-    <section className="max-w-4xl">
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-xl font-semibold">Perfis</h1>
+    <>
+      <Cabecalho titulo="Perfis" descricao="Conexão com o LinkedIn e modo de resposta de cada perfil da casa.">
         <form action={atualizarStatusDasContas}>
-          <button type="submit" className="text-sm text-neutral-700 underline underline-offset-2">
+          <button type="submit" className="botao">
+            <RefreshCw aria-hidden />
             Atualizar status das contas
           </button>
         </form>
-      </div>
-      {aviso && <p className="mt-3 rounded-md bg-neutral-100 px-3 py-2 text-sm">{aviso}</p>}
-      {bloqueios.length > 0 && (
-        <div className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          <p className="font-medium">Não foi possível:</p>
-          <ul className="mt-1 list-disc pl-5">
-            {bloqueios.map((motivo) => (
-              <li key={motivo}>{motivo}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {typeof params.eval === "string" && (
-        <p className="mt-3 rounded-md bg-neutral-100 px-3 py-2 text-sm">Eval registrado ({params.eval}).</p>
-      )}
-      {typeof params.webhooks === "string" && (
-        <p className="mt-3 rounded-md bg-neutral-100 px-3 py-2 text-sm">
-          Webhooks conferidos na Unipile ({params.webhooks} criados agora).
-        </p>
-      )}
+      </Cabecalho>
+      <div className="flex max-w-4xl flex-col gap-4">
+        {aviso && <Aviso tom={aviso.tom}>{aviso.texto}</Aviso>}
+        {bloqueios.length > 0 && (
+          <Aviso tom="atencao">
+            <p className="font-medium">Não foi possível:</p>
+            <ul className="mt-1 list-disc pl-5">
+              {bloqueios.map((motivo) => (
+                <li key={motivo}>{motivo}</li>
+              ))}
+            </ul>
+          </Aviso>
+        )}
+        {typeof params.eval === "string" && <Aviso tom="ok">Eval registrado ({params.eval}).</Aviso>}
+        {typeof params.webhooks === "string" && (
+          <Aviso tom="ok">Webhooks conferidos na Unipile ({params.webhooks} criados agora).</Aviso>
+        )}
 
-      <ul className="mt-5 flex flex-col gap-3">
-        {perfis.map((perfil) => (
-          <li key={perfil.id} className="rounded-lg border border-neutral-200 bg-white p-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="font-medium">
-                  {perfil.nome}{" "}
-                  <span className="text-sm font-normal text-neutral-500">· {PRACAS[perfil.praca]}</span>
-                </p>
-                <p className="mt-0.5 text-xs text-neutral-500">
-                  {perfil.conectado
-                    ? `LinkedIn conectado (${perfil.unipile_status ?? "status desconhecido"}, conta ${perfil.tipo_conta})`
-                    : "LinkedIn não conectado"}{" "}
-                  · modo {perfil.modo_resposta}
-                </p>
+        <ul className="flex flex-col gap-4">
+          {perfis.map((perfil) => (
+            <li key={perfil.id} className="cartao p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar nome={perfil.nome} />
+                  <div className="min-w-0">
+                    <p className="font-medium">
+                      {perfil.nome} <span className="ml-1 text-sm font-normal text-tinta-fraca">{PRACAS[perfil.praca]}</span>
+                    </p>
+                    <p className="text-xs text-tinta-suave">
+                      {perfil.conectado
+                        ? `LinkedIn conectado (${perfil.unipile_status ?? "status desconhecido"}, conta ${perfil.tipo_conta})`
+                        : "LinkedIn não conectado"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <EtiquetaDoPerfil status={perfil.status} />
+                  {perfil.acessivel && (
+                    <form action={conectarLinkedIn}>
+                      <input type="hidden" name="perfilId" value={perfil.id} />
+                      <button type="submit" className="botao botao-pequeno">
+                        <Link2 aria-hidden />
+                        {perfil.conectado ? "Reconectar LinkedIn" : "Conectar LinkedIn"}
+                      </button>
+                    </form>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                    perfil.status === "ativo" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
-                  }`}
-                >
-                  {perfil.status}
-                </span>
-                {perfil.acessivel && (
-                  <form action={conectarLinkedIn}>
+              {perfil.status === "pausado" && perfil.motivo_pausa && <p className="recuo mt-4">{perfil.motivo_pausa}</p>}
+              {perfil.acessivel && (
+                <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-linha pt-4">
+                  <form action={trocarModoDoPerfil} className="flex items-center gap-2">
                     <input type="hidden" name="perfilId" value={perfil.id} />
-                    <button type="submit" className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-50">
-                      {perfil.conectado ? "Reconectar LinkedIn" : "Conectar LinkedIn"}
+                    <label htmlFor={`modo-${perfil.id}`} className="text-[13px] text-tinta-suave">
+                      Modo de resposta
+                    </label>
+                    <select
+                      id={`modo-${perfil.id}`}
+                      name="modo"
+                      defaultValue={perfil.modo_resposta}
+                      className="campo campo-pequeno"
+                    >
+                      {MODOS.filter((modo) => modo.valor !== "automatico" || perfil.praca !== "espanha").map((modo) => (
+                        <option key={modo.valor} value={modo.valor}>
+                          {modo.rotulo}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="submit" className="botao botao-pequeno">
+                      Trocar
                     </button>
                   </form>
-                )}
-              </div>
-            </div>
-            {perfil.status === "pausado" && perfil.motivo_pausa && (
-              <p className="mt-2 text-sm text-neutral-600">{perfil.motivo_pausa}</p>
-            )}
-            {perfil.acessivel && (
-              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-neutral-100 pt-3 text-sm">
-                <form action={trocarModoDoPerfil} className="flex items-center gap-2">
-                  <input type="hidden" name="perfilId" value={perfil.id} />
-                  <label htmlFor={`modo-${perfil.id}`} className="text-neutral-600">
-                    Modo de resposta
-                  </label>
-                  <select
-                    id={`modo-${perfil.id}`}
-                    name="modo"
-                    defaultValue={perfil.modo_resposta}
-                    className="rounded-md border border-neutral-300 px-2 py-1"
-                  >
-                    {MODOS.filter((modo) => modo !== "automatico" || perfil.praca !== "espanha").map((modo) => (
-                      <option key={modo} value={modo}>
-                        {modo}
-                      </option>
-                    ))}
-                  </select>
-                  <button type="submit" className="rounded-md border border-neutral-300 px-3 py-1 hover:bg-neutral-50">
-                    Trocar
-                  </button>
-                </form>
-                {gates.has(perfil.id) && <GateDoAutomatico gate={gates.get(perfil.id)!} />}
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
+                  {gates.has(perfil.id) && <GateDoAutomatico gate={gates.get(perfil.id)!} />}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
 
-      {operador.papel === "admin" && (
-        <div className="mt-6 flex items-center gap-4 text-sm">
-          <form action={registrarWebhooksNaUnipile}>
-            <button type="submit" className="text-neutral-700 underline underline-offset-2">
-              Registrar webhooks na Unipile
-            </button>
-          </form>
-          <a href="/integracoes" className="text-neutral-700 underline underline-offset-2">
-            Integrações (RD Station)
-          </a>
-        </div>
-      )}
-      {operador.papel === "admin" && (
-        <form action={registrarResultadoDoEval} className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-          <label htmlFor="relatorio" className="text-neutral-600">
-            Resultado do eval (relatorio.json da rodada)
-          </label>
-          <input id="relatorio" name="relatorio" type="file" accept="application/json,.json" className="text-sm" />
-          <button type="submit" className="rounded-md border border-neutral-300 px-3 py-1 hover:bg-neutral-50">
-            Registrar eval
-          </button>
-        </form>
-      )}
-    </section>
+        {operador.papel === "admin" && (
+          <section className="cartao mt-2 p-5">
+            <h2 className="text-[15px] font-semibold">Administração</h2>
+            <p className="mt-1 text-[13px] text-tinta-suave">Vale para todos os perfis.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <form action={registrarWebhooksNaUnipile}>
+                <button type="submit" className="botao">
+                  <Webhook aria-hidden />
+                  Registrar webhooks na Unipile
+                </button>
+              </form>
+              <Link href="/integracoes" className="botao">
+                <Plug aria-hidden />
+                Integrações (RD Station)
+              </Link>
+            </div>
+            <form action={registrarResultadoDoEval} className="mt-5 flex flex-col gap-2 border-t border-linha pt-5">
+              <label htmlFor="relatorio" className="text-sm font-medium">
+                Resultado do eval
+              </label>
+              <p className="text-[13px] text-tinta-suave">
+                Suba o relatorio.json da rodada. O veredito da praça entra no gate do modo automático.
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-3">
+                <input id="relatorio" name="relatorio" type="file" accept="application/json,.json" className="campo-arquivo" />
+                <button type="submit" className="botao botao-pequeno">
+                  <FileJson aria-hidden />
+                  Registrar eval
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
+      </div>
+    </>
   );
 }

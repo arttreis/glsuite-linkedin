@@ -624,3 +624,35 @@ Anotadas durante a execução, por ticket.
 - Sem cron (pg_cron) por enquanto: nada sai sozinho.
 - Na saída do GL Suite, o caminho é um projeto próprio em São Paulo (§5):
   aplicar as migrations e trocar as variáveis na Vercel.
+
+### Painel · tema visual (09/10/2026)
+- O tema é escuro, com um só destaque laranja (`--color-destaque`). O
+  laranja aparece em dois lugares: no item ativo do menu e na ação principal
+  da tela, e no máximo uma ação principal por tela ou por cartão. Os status
+  (ok, atenção, erro, info) ficam só em etiquetas e avisos.
+- Os tokens ficam em `src/app/globals.css` (`@theme`) e viram utilitários do
+  Tailwind: `bg-superficie`, `border-linha`, `text-tinta-suave` e assim por
+  diante. Uma tela nova não usa cor fixa (`neutral-*`, `bg-white`).
+- As peças repetidas são classes em `@layer components`, para os utilitários
+  poderem ajustar caso a caso:
+  - `.cartao`, `.recuo` e `.vazio`;
+  - `.botao`, com as variantes `-primario`, `-perigo` e `-pequeno`;
+  - `.campo`, com a variante `-pequeno`, e mais `.campo-arquivo` e `.rotulo`;
+  - `.etiqueta`, com os tons `-ok`, `-atencao`, `-erro`, `-info`, `-destaque`
+    e o modificador `-ponto`;
+  - `.aviso`, `.segmentos`/`.segmento` e `.tabela-moldura`/`.tabela`.
+- O estado ativo de menus e filtros sai de `aria-current="page"`, não de uma
+  classe condicional.
+- Componentes em `src/components/`:
+  - `Estrutura`: a moldura, com a barra lateral e o menu do celular;
+  - `Navegacao`: grupos recolhíveis com linhas de árvore;
+  - `Cabecalho`: título, descrição e ações. A linha de baixo atravessa a área
+    principal pelo `--respiro`;
+  - `Aviso`, `Avatar`, `Marca` e as etiquetas de estado, de campanha e de
+    perfil.
+- Os estados do lead aparecem com o texto de `ROTULO_DO_ESTADO`
+  (`src/domain/estados.ts`), nunca com o valor cru do banco.
+- Os ícones são do `lucide-react`.
+- Contraste mínimo de 4,5:1 nos textos pequenos. Por isso o texto fraco é
+  `#85858d`, e o botão principal usa um laranja um pouco mais fundo que o da
+  referência.

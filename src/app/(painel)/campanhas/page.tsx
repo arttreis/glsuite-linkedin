@@ -1,4 +1,8 @@
+import { Download, Plus } from "lucide-react";
 import Link from "next/link";
+import { Cabecalho } from "@/components/cabecalho";
+import { EtiquetaDaCampanha } from "@/components/etiquetas";
+import type { StatusDaCampanha } from "@/server/campanhas/campanhas";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { exigirOperador } from "@/server/supabase/servidor";
@@ -8,11 +12,17 @@ type LinhaDaCampanha = {
   nome: string;
   perfil: string;
   angulo: string;
-  status: string;
+  status: StatusDaCampanha;
   em_triagem: number;
   na_regua: number;
   em_conversa: number;
 };
+
+const PLANILHAS = [
+  { praca: "domestico", rotulo: "Brasil" },
+  { praca: "canada", rotulo: "Canadá" },
+  { praca: "espanha", rotulo: "Espanha" },
+];
 
 export default async function CampanhasPage() {
   const operador = await exigirOperador();
@@ -30,52 +40,68 @@ export default async function CampanhasPage() {
   );
 
   return (
-    <section className="max-w-5xl">
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-xl font-semibold">Campanhas</h1>
-        <Link href="/campanhas/nova" className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm text-white">
+    <>
+      <Cabecalho titulo="Campanhas" descricao="Cada campanha tem a própria sequência, mas o teto de envios é do perfil.">
+        <Link href="/campanhas/nova" className="botao botao-primario">
+          <Plus aria-hidden />
           Nova campanha
         </Link>
+      </Cabecalho>
+      <div className="max-w-5xl">
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-[13px] text-tinta-suave">Planilha-espelho (CSV)</span>
+          {PLANILHAS.map((planilha) => (
+            <a key={planilha.praca} href={`/api/exportar/planilha?praca=${planilha.praca}`} className="botao botao-pequeno">
+              <Download aria-hidden />
+              {planilha.rotulo}
+            </a>
+          ))}
+        </div>
+
+        {campanhas.length === 0 ? (
+          <div className="vazio">
+            <p>Nenhuma campanha ainda. A campanha define o ângulo e os textos de T1 a T4.</p>
+            <Link href="/campanhas/nova" className="botao botao-primario">
+              <Plus aria-hidden />
+              Nova campanha
+            </Link>
+          </div>
+        ) : (
+          <div className="tabela-moldura">
+            <table className="tabela">
+              <thead>
+                <tr>
+                  <th>Campanha</th>
+                  <th>Ângulo</th>
+                  <th>Status</th>
+                  <th className="numero">Triagem</th>
+                  <th className="numero">Na régua</th>
+                  <th className="numero">Em conversa</th>
+                </tr>
+              </thead>
+              <tbody>
+                {campanhas.map((c) => (
+                  <tr key={c.id}>
+                    <td>
+                      <Link href={`/campanhas/${c.id}`} className="link font-medium">
+                        {c.nome}
+                      </Link>
+                      <p className="mt-0.5 text-xs text-tinta-fraca">{c.perfil}</p>
+                    </td>
+                    <td className="text-tinta-suave">{c.angulo}</td>
+                    <td>
+                      <EtiquetaDaCampanha status={c.status} />
+                    </td>
+                    <td className="numero">{c.em_triagem}</td>
+                    <td className="numero">{c.na_regua}</td>
+                    <td className="numero">{c.em_conversa}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-      <p className="mt-2 text-xs text-neutral-500">
-        Planilha-espelho (CSV):{" "}
-        <a href="/api/exportar/planilha?praca=domestico" className="underline underline-offset-2">Brasil</a> ·{" "}
-        <a href="/api/exportar/planilha?praca=canada" className="underline underline-offset-2">Canadá</a> ·{" "}
-        <a href="/api/exportar/planilha?praca=espanha" className="underline underline-offset-2">Espanha</a>
-      </p>
-      {campanhas.length === 0 ? (
-        <p className="mt-6 text-sm text-neutral-500">Nenhuma campanha ainda.</p>
-      ) : (
-        <table className="mt-5 w-full border-collapse bg-white text-sm">
-          <thead>
-            <tr className="border-b border-neutral-200 text-left text-xs uppercase tracking-wide text-neutral-500">
-              <th className="p-2">Campanha</th>
-              <th className="p-2">Ângulo</th>
-              <th className="p-2">Status</th>
-              <th className="p-2 text-right">Triagem</th>
-              <th className="p-2 text-right">Na régua</th>
-              <th className="p-2 text-right">Em conversa</th>
-            </tr>
-          </thead>
-          <tbody>
-            {campanhas.map((c) => (
-              <tr key={c.id} className="border-b border-neutral-100">
-                <td className="p-2">
-                  <Link href={`/campanhas/${c.id}`} className="font-medium underline-offset-2 hover:underline">
-                    {c.nome}
-                  </Link>
-                  <span className="ml-2 text-xs text-neutral-500">{c.perfil}</span>
-                </td>
-                <td className="p-2 text-neutral-600">{c.angulo}</td>
-                <td className="p-2">{c.status}</td>
-                <td className="p-2 text-right tabular-nums">{c.em_triagem}</td>
-                <td className="p-2 text-right tabular-nums">{c.na_regua}</td>
-                <td className="p-2 text-right tabular-nums">{c.em_conversa}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
+    </>
   );
 }

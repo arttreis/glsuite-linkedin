@@ -1,3 +1,4 @@
+import { Cabecalho } from "@/components/cabecalho";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { exigirOperador } from "@/server/supabase/servidor";
@@ -14,13 +15,14 @@ export default async function ImportarPage() {
   );
 
   return (
-    <section className="max-w-3xl">
-      <h1 className="text-xl font-semibold">Importar lista</h1>
-      <p className="mb-5 mt-1 text-sm text-neutral-600">
-        A lista entra na triagem da campanha. Quem tem opt-out não entra; quem é de outro perfil aparece bloqueado com o
-        motivo.
-      </p>
-      <FormularioImportacao campanhas={campanhas} />
-    </section>
+    <>
+      <Cabecalho
+        titulo="Importar lista"
+        descricao="A lista entra na triagem da campanha. Quem tem opt-out não entra; quem é de outro perfil aparece bloqueado com o motivo."
+      />
+      <div className="max-w-3xl">
+        <FormularioImportacao campanhas={campanhas} />
+      </div>
+    </>
   );
 }

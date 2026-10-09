@@ -1,4 +1,7 @@
+import { Check, CircleAlert, TriangleAlert, Upload } from "lucide-react";
 import Link from "next/link";
+import { Aviso } from "@/components/aviso";
+import { Cabecalho } from "@/components/cabecalho";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { exigirOperador } from "@/server/supabase/servidor";
@@ -51,104 +54,123 @@ export default async function TriagemPage({ searchParams }: PageProps<"/triagem"
   }));
 
   return (
-    <section className="max-w-6xl">
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-xl font-semibold">Triagem</h1>
-        <Link href="/importar" className="text-sm underline underline-offset-2">
+    <>
+      <Cabecalho
+        titulo="Triagem"
+        descricao="A personalização real é a triagem humana da lista. Aprovar manda o lead para a fila da campanha."
+      >
+        <Link href="/importar" className="botao">
+          <Upload aria-hidden />
           Importar lista
         </Link>
-      </div>
-      <p className="mt-1 text-sm text-neutral-600">
-        A personalização real é a triagem humana da lista. Aprovar manda o lead para a fila da campanha.
-      </p>
-
-      <nav className="mt-4 flex flex-wrap gap-2 text-sm">
-        <Link
-          href="/triagem"
-          className={`rounded-full border px-3 py-1 ${campanhaId ? "border-neutral-300" : "border-neutral-900 bg-neutral-900 text-white"}`}
-        >
-          Todas
-        </Link>
-        {campanhas.map((c) => (
-          <Link
-            key={c.id}
-            href={`/triagem?campanha=${c.id}`}
-            className={`rounded-full border px-3 py-1 ${
-              campanhaId === c.id ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300"
-            }`}
-          >
-            {c.perfil} · {c.nome} ({c.em_triagem})
+      </Cabecalho>
+      <div className="max-w-6xl">
+        <nav aria-label="Campanha" className="segmentos">
+          <Link href="/triagem" className="segmento" aria-current={campanhaId ? undefined : "page"}>
+            Todas
           </Link>
-        ))}
-      </nav>
+          {campanhas.map((c) => (
+            <Link
+              key={c.id}
+              href={`/triagem?campanha=${c.id}`}
+              className="segmento"
+              aria-current={campanhaId === c.id ? "page" : undefined}
+            >
+              <span className="text-tinta-fraca">{c.perfil}</span>
+              {c.nome}
+              <span className="segmento-contagem">{c.em_triagem}</span>
+            </Link>
+          ))}
+        </nav>
 
-      {mensagem && <p className="mt-4 rounded-md bg-neutral-100 px-3 py-2 text-sm">{mensagem}</p>}
+        {mensagem && <Aviso className="mt-5">{mensagem}</Aviso>}
 
-      {leads.length === 0 ? (
-        <p className="mt-6 text-sm text-neutral-500">Nada em triagem aqui.</p>
-      ) : (
-        <form className="mt-4">
-          {campanhaId && <input type="hidden" name="campanha" value={campanhaId} />}
-          <div className="mb-3 flex gap-2">
-            <button formAction={aprovarSelecionados} className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm text-white">
-              Aprovar selecionados
-            </button>
-            <button formAction={rejeitarSelecionados} className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm">
-              Rejeitar selecionados
-            </button>
+        {leads.length === 0 ? (
+          <div className="vazio mt-6">
+            <p>Nada em triagem aqui. Importe uma lista para começar.</p>
+            <Link href="/importar" className="botao">
+              <Upload aria-hidden />
+              Importar lista
+            </Link>
           </div>
-          <table className="w-full border-collapse bg-white text-sm">
-            <thead>
-              <tr className="border-b border-neutral-200 text-left text-xs uppercase tracking-wide text-neutral-500">
-                <th className="w-8 p-2" />
-                <th className="p-2">Pessoa</th>
-                <th className="p-2">Empresa</th>
-                <th className="p-2">Campanha</th>
-                <th className="p-2">Situação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leads.map((lead) => (
-                <tr key={lead.id} className="border-b border-neutral-100 align-top">
-                  <td className="p-2">
-                    <input
-                      type="checkbox"
-                      name="leadIds"
-                      value={lead.id}
-                      disabled={Boolean(lead.bloqueio_motivo)}
-                      aria-label={`Selecionar ${lead.nome}`}
-                    />
-                  </td>
-                  <td className="p-2">
-                    <details>
-                      <summary className="cursor-pointer font-medium">{lead.nome}</summary>
-                      <div className="mt-1 flex flex-col gap-0.5 text-xs text-neutral-600">
-                        <span>{lead.localizacao ?? "sem localização"}</span>
-                        <span>
-                          Fonte {lead.fonte}, coletado em {data(lead.coletado_em)}
-                        </span>
-                        <a href={lead.url_publica} target="_blank" rel="noreferrer" className="underline underline-offset-2">
-                          Abrir no LinkedIn
-                        </a>
-                      </div>
-                    </details>
-                    <span className="text-xs text-neutral-500">{lead.cargo ?? "sem cargo"}</span>
-                  </td>
-                  <td className="p-2">{lead.empresa ?? "—"}</td>
-                  <td className="p-2 text-xs text-neutral-600">
-                    {lead.perfil} · {lead.campanha}
-                  </td>
-                  <td className="p-2 text-xs">
-                    {lead.bloqueio_motivo && <p className="text-red-700">Bloqueado: {lead.bloqueio_motivo}</p>}
-                    {lead.alerta_triagem && <p className="text-amber-700">{lead.alerta_triagem}</p>}
-                    {!lead.bloqueio_motivo && !lead.alerta_triagem && <span className="text-neutral-400">ok</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </form>
-      )}
-    </section>
+        ) : (
+          <form className="mt-6">
+            {campanhaId && <input type="hidden" name="campanha" value={campanhaId} />}
+            <div className="mb-3 flex flex-wrap gap-2">
+              <button formAction={aprovarSelecionados} className="botao botao-primario">
+                <Check aria-hidden />
+                Aprovar selecionados
+              </button>
+              <button formAction={rejeitarSelecionados} className="botao">
+                Rejeitar selecionados
+              </button>
+            </div>
+            <div className="tabela-moldura">
+              <table className="tabela">
+                <thead>
+                  <tr>
+                    <th className="w-10" />
+                    <th>Pessoa</th>
+                    <th>Empresa</th>
+                    <th>Campanha</th>
+                    <th>Situação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leads.map((lead) => (
+                    <tr key={lead.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          name="leadIds"
+                          value={lead.id}
+                          disabled={Boolean(lead.bloqueio_motivo)}
+                          aria-label={`Selecionar ${lead.nome}`}
+                          className="mt-0.5 size-4"
+                        />
+                      </td>
+                      <td>
+                        <details>
+                          <summary className="font-medium">{lead.nome}</summary>
+                          <div className="mt-1.5 flex flex-col gap-0.5 text-xs text-tinta-suave">
+                            <span>{lead.localizacao ?? "sem localização"}</span>
+                            <span>
+                              Fonte {lead.fonte}, coletado em {data(lead.coletado_em)}
+                            </span>
+                            <a href={lead.url_publica} target="_blank" rel="noreferrer" className="link w-fit">
+                              Abrir no LinkedIn
+                            </a>
+                          </div>
+                        </details>
+                        <span className="text-xs text-tinta-fraca">{lead.cargo ?? "sem cargo"}</span>
+                      </td>
+                      <td>{lead.empresa ?? "—"}</td>
+                      <td className="text-xs text-tinta-suave">
+                        {lead.perfil}, {lead.campanha}
+                      </td>
+                      <td className="text-xs">
+                        {lead.bloqueio_motivo && (
+                          <p className="flex items-start gap-1.5 text-erro">
+                            <CircleAlert className="mt-px size-3.5 shrink-0" aria-hidden />
+                            Bloqueado: {lead.bloqueio_motivo}
+                          </p>
+                        )}
+                        {lead.alerta_triagem && (
+                          <p className="flex items-start gap-1.5 text-atencao">
+                            <TriangleAlert className="mt-px size-3.5 shrink-0" aria-hidden />
+                            {lead.alerta_triagem}
+                          </p>
+                        )}
+                        {!lead.bloqueio_motivo && !lead.alerta_triagem && <span className="etiqueta etiqueta-ok">Ok</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </form>
+        )}
+      </div>
+    </>
   );
 }

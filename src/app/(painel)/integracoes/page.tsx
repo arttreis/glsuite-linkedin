@@ -1,5 +1,8 @@
+import { Search } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Aviso } from "@/components/aviso";
+import { Cabecalho } from "@/components/cabecalho";
 import { lerConfiguracao } from "@/server/configuracoes";
 import { obterDb } from "@/server/db";
 import { obterClienteRd } from "@/server/dependencias";
@@ -38,87 +41,114 @@ export default async function IntegracoesPage({ searchParams }: PageProps<"/inte
       where e.status = 'erro' order by e.criado_em desc limit 10`,
   );
   const descoberta = descobrir === "1" ? await descobrirNoRd() : null;
+  const temToken = Boolean(obterClienteRd());
 
   return (
-    <section className="max-w-4xl">
-      <h1 className="text-xl font-semibold">Integrações</h1>
-      {typeof msg === "string" && <p className="mt-3 rounded-md bg-neutral-100 px-3 py-2 text-sm">{msg}</p>}
+    <>
+      <Cabecalho titulo="Integrações" descricao="RD Station CRM, funil Comercial · Serviço. Só leads da praça Doméstico entram (§4.9)." />
+      <div className="flex max-w-4xl flex-col gap-5">
+        {typeof msg === "string" && <Aviso>{msg}</Aviso>}
 
-      <h2 className="mt-6 font-medium">RD Station CRM (§4.9, só praça Doméstico)</h2>
-      <p className="mt-1 text-sm text-neutral-600">
-        {config.ativo ? "Sincronização ligada." : "Sincronização desligada: os eventos acumulam na fila até ligar."}{" "}
-        {obterClienteRd() ? "Token configurado." : "Falta RD_STATION_TOKEN."} Fila:{" "}
-        {contagem.length === 0 ? "vazia" : contagem.map((c) => `${c.total} ${c.status}`).join(" · ")}.
-      </p>
-      {erros.length > 0 && (
-        <ul className="mt-2 text-sm text-red-700">
-          {erros.map((e, i) => (
-            <li key={i}>
-              {e.empresa ?? "sem empresa"} · etapa {e.etapa} · {e.tentativas} tentativas: {e.erro}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <form action={salvarConfiguracaoRd} className="mt-4 flex flex-col gap-2">
-        <label className="text-sm font-medium" htmlFor="configuracao">
-          Mapeamento de ids (etapas 01 a 05, campos personalizados, usuários por slug do perfil ou e-mail)
-        </label>
-        <textarea
-          id="configuracao"
-          name="configuracao"
-          rows={18}
-          defaultValue={JSON.stringify(config, null, 2)}
-          className="rounded-md border border-neutral-300 px-3 py-2 font-mono text-xs"
-        />
-        <div className="flex gap-3">
-          <button type="submit" className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm text-white">
-            Salvar
-          </button>
-          <Link href="/integracoes?descobrir=1" className="self-center text-sm underline underline-offset-2">
-            Descobrir ids no RD
-          </Link>
-        </div>
-      </form>
-
-      {descoberta && (
-        <div className="mt-6 rounded-lg border border-neutral-200 bg-white p-4 text-sm">
-          {"erro" in descoberta ? (
-            <p className="text-red-700">{descoberta.erro}</p>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div>
-                <h3 className="font-medium">Funis e etapas</h3>
-                {descoberta.funis.map((f) => (
-                  <p key={f.id} className="font-mono text-xs">
-                    {f.nome} ({f.id}): {f.etapas.map((e) => `${e.ordem}. ${e.nome} (${e.id})`).join(" · ")}
-                  </p>
-                ))}
-              </div>
-              <div>
-                <h3 className="font-medium">Campos de negociação</h3>
-                {descoberta.campos.map((c) => (
-                  <p key={c.id} className="font-mono text-xs">
-                    {c.rotulo} ({c.id}, {c.tipo}){c.opcoes.length ? `: ${c.opcoes.join(", ")}` : ""}
-                  </p>
-                ))}
-              </div>
-              <div>
-                <h3 className="font-medium">Usuários</h3>
-                {descoberta.usuarios.map((u) => (
-                  <p key={u.id} className="font-mono text-xs">
-                    {u.nome} &lt;{u.email}&gt; ({u.id})
-                  </p>
-                ))}
-              </div>
-              <div>
-                <h3 className="font-medium">Fontes</h3>
-                <p className="font-mono text-xs">{descoberta.fontes.map((f) => `${f.nome} (${f.id})`).join(" · ")}</p>
-              </div>
+        <section className="cartao p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-[15px] font-semibold">RD Station CRM</h2>
+            <span className={`etiqueta etiqueta-ponto ${config.ativo ? "etiqueta-ok" : ""}`}>
+              {config.ativo ? "Sincronização ligada" : "Sincronização desligada"}
+            </span>
+          </div>
+          <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-xs text-tinta-fraca">Token</dt>
+              <dd className="mt-1">{temToken ? "Configurado" : "Falta RD_STATION_TOKEN"}</dd>
             </div>
+            <div>
+              <dt className="text-xs text-tinta-fraca">Fila de eventos</dt>
+              <dd className="mt-1">{contagem.length === 0 ? "vazia" : contagem.map((c) => `${c.total} ${c.status}`).join(", ")}</dd>
+            </div>
+          </dl>
+          {!config.ativo && (
+            <p className="mt-4 text-[13px] text-tinta-suave">Os eventos acumulam na fila até a sincronização ser ligada.</p>
           )}
-        </div>
-      )}
-    </section>
+          {erros.length > 0 && (
+            <Aviso tom="erro" className="mt-4">
+              <ul className="flex flex-col gap-1">
+                {erros.map((e, i) => (
+                  <li key={i}>
+                    {e.empresa ?? "sem empresa"}, etapa {e.etapa}, {e.tentativas} tentativas: {e.erro}
+                  </li>
+                ))}
+              </ul>
+            </Aviso>
+          )}
+        </section>
+
+        <form action={salvarConfiguracaoRd} className="cartao flex flex-col gap-3 p-5">
+          <label className="text-[15px] font-semibold" htmlFor="configuracao">
+            Mapeamento de ids
+          </label>
+          <p className="text-[13px] text-tinta-suave">
+            Etapas 01 a 05, campos personalizados e usuários por slug do perfil ou e-mail. Marque &quot;ativo&quot;: true para ligar.
+          </p>
+          <textarea
+            id="configuracao"
+            name="configuracao"
+            rows={18}
+            defaultValue={JSON.stringify(config, null, 2)}
+            spellCheck={false}
+            className="campo w-full font-mono text-xs"
+          />
+          <div className="flex flex-wrap gap-2">
+            <button type="submit" className="botao botao-primario">
+              Salvar
+            </button>
+            <Link href="/integracoes?descobrir=1" className="botao">
+              <Search aria-hidden />
+              Descobrir ids no RD
+            </Link>
+          </div>
+        </form>
+
+        {descoberta && (
+          <section className="cartao p-5 text-sm">
+            {"erro" in descoberta ? (
+              <Aviso tom="erro">{descoberta.erro}</Aviso>
+            ) : (
+              <div className="flex flex-col gap-5">
+                <div>
+                  <h3 className="font-medium">Funis e etapas</h3>
+                  {descoberta.funis.map((f) => (
+                    <p key={f.id} className="mt-1 font-mono text-xs text-tinta-suave">
+                      {f.nome} ({f.id}): {f.etapas.map((e) => `${e.ordem}. ${e.nome} (${e.id})`).join(", ")}
+                    </p>
+                  ))}
+                </div>
+                <div>
+                  <h3 className="font-medium">Campos de negociação</h3>
+                  {descoberta.campos.map((c) => (
+                    <p key={c.id} className="mt-1 font-mono text-xs text-tinta-suave">
+                      {c.rotulo} ({c.id}, {c.tipo}){c.opcoes.length ? `: ${c.opcoes.join(", ")}` : ""}
+                    </p>
+                  ))}
+                </div>
+                <div>
+                  <h3 className="font-medium">Usuários</h3>
+                  {descoberta.usuarios.map((u) => (
+                    <p key={u.id} className="mt-1 font-mono text-xs text-tinta-suave">
+                      {u.nome} &lt;{u.email}&gt; ({u.id})
+                    </p>
+                  ))}
+                </div>
+                <div>
+                  <h3 className="font-medium">Fontes</h3>
+                  <p className="mt-1 font-mono text-xs text-tinta-suave">
+                    {descoberta.fontes.map((f) => `${f.nome} (${f.id})`).join(", ")}
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+      </div>
+    </>
   );
 }

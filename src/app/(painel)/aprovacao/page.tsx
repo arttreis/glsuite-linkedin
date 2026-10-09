@@ -1,4 +1,9 @@
+import { Check, X } from "lucide-react";
 import Link from "next/link";
+import { Aviso } from "@/components/aviso";
+import { Avatar } from "@/components/avatar";
+import { Cabecalho } from "@/components/cabecalho";
+import { ROTULO_DO_ESTADO, type EstadoDoLead } from "@/domain/estados";
 import { listarFila, taxaDeEdicao } from "@/server/aprovacao/fila";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
@@ -23,83 +28,110 @@ export default async function AprovacaoPage({ searchParams }: PageProps<"/aprova
   }));
 
   return (
-    <section className="max-w-4xl">
-      <h1 className="text-xl font-semibold">Fila de aprovação</h1>
-      <p className="mt-1 text-sm text-neutral-600">
-        No modo aprovação, nada da IA sai sem passar por aqui. A edição guarda o texto original e o final.
-      </p>
-
-      <div className="mt-4 flex flex-wrap gap-2 text-xs">
-        {taxas.map((t) => (
-          <span key={t.perfilId} className="rounded-full border border-neutral-300 bg-white px-3 py-1">
-            {t.perfil}: {t.taxa === null ? "sem decisões em 14 dias" : `${Math.round(t.taxa * 100)}% editados ou rejeitados`}
-            {t.decididas > 0 && ` (${t.editadas} editados, ${t.rejeitadas} rejeitados de ${t.decididas})`}
-          </span>
-        ))}
-      </div>
-
-      {typeof msg === "string" && <p className="mt-4 rounded-md bg-neutral-100 px-3 py-2 text-sm">{msg}</p>}
-
-      {itens.length === 0 ? (
-        <p className="mt-6 text-sm text-neutral-500">Fila vazia.</p>
-      ) : (
-        <ul className="mt-5 flex flex-col gap-4">
-          {itens.map((item) => (
-            <li key={item.acaoId} className="rounded-lg border border-neutral-200 bg-white p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <Link href={`/inbox/${item.leadId}`} className="font-medium underline-offset-2 hover:underline">
-                    {item.pessoa}
-                  </Link>
-                  <span className="ml-2 text-xs text-neutral-500">
-                    {item.empresa ?? "sem empresa"} · {item.perfil} · {item.estadoLead}
-                  </span>
-                </div>
-                <span className="text-xs text-neutral-500">
-                  {item.toque
-                    ? item.toque === "T1" && item.origem === "ia"
-                      ? "T1 personalizado"
-                      : `${item.toque} da régua (${item.origem})`
-                    : "resposta da IA"}
-                  {item.acaoSugerida && ` · ${SUGESTOES[item.acaoSugerida] ?? item.acaoSugerida}`}
-                  {item.confianca !== null && ` · confiança ${Math.round(item.confianca * 100)}%`}
-                </span>
-              </div>
-
-              {item.ultimaEntrada && (
-                <p className="mt-2 rounded bg-neutral-50 px-3 py-2 text-sm text-neutral-700">
-                  <span className="text-xs text-neutral-400">A pessoa, {hora(item.ultimaEntradaEm)}: </span>
-                  {item.ultimaEntrada}
-                </p>
-              )}
-              {item.motivoRevisao && <p className="mt-2 text-sm text-red-700">Atenção: {item.motivoRevisao}</p>}
-              {item.motivoDoAgente && <p className="mt-1 text-xs text-neutral-500">Motivo do agente: {item.motivoDoAgente}</p>}
-              {item.gancho && <p className="mt-1 text-xs text-neutral-500">Gancho da pesquisa: {item.gancho}</p>}
-
-              <form className="mt-3 flex flex-col gap-2">
-                <input type="hidden" name="acaoId" value={item.acaoId} />
-                <textarea
-                  name="texto"
-                  defaultValue={item.textoFinal ?? item.textoGerado ?? ""}
-                  rows={4}
-                  className="rounded-md border border-neutral-300 px-3 py-2 text-sm"
-                />
-                <div className="flex flex-wrap gap-2">
-                  <button formAction={aprovarComoEsta} className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm text-white">
-                    Aprovar como está
-                  </button>
-                  <button formAction={aprovarComEdicao} className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm">
-                    Aprovar com a edição
-                  </button>
-                  <button formAction={rejeitar} className="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-700">
-                    Rejeitar
-                  </button>
-                </div>
-              </form>
-            </li>
+    <>
+      <Cabecalho
+        titulo="Fila de aprovação"
+        descricao="No modo aprovação, nada da IA sai sem passar por aqui. A edição guarda o texto original e o final."
+      />
+      <div className="max-w-4xl">
+        <h2 className="text-[13px] font-medium text-tinta-suave">Edição ou rejeição nos últimos 14 dias</h2>
+        <dl className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {taxas.map((t) => (
+            <div key={t.perfilId} className="cartao px-4 py-3">
+              <dt className="text-xs text-tinta-suave">{t.perfil}</dt>
+              <dd className="mt-1.5 text-lg leading-none tabular-nums">{t.taxa === null ? "—" : `${Math.round(t.taxa * 100)}%`}</dd>
+              <dd className="mt-1.5 text-xs text-tinta-fraca">
+                {t.decididas > 0
+                  ? `${t.editadas} editados e ${t.rejeitadas} rejeitados de ${t.decididas}`
+                  : "sem decisões no período"}
+              </dd>
+            </div>
           ))}
-        </ul>
-      )}
-    </section>
+        </dl>
+
+        {typeof msg === "string" && <Aviso className="mt-6">{msg}</Aviso>}
+
+        {itens.length === 0 ? (
+          <p className="vazio mt-8">A fila está vazia. Os rascunhos da IA aparecem aqui quando alguém responder.</p>
+        ) : (
+          <ul className="mt-8 flex flex-col gap-4">
+            {itens.map((item) => (
+              <li key={item.acaoId} className="cartao p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar nome={item.pessoa} />
+                    <div className="min-w-0">
+                      <Link href={`/inbox/${item.leadId}`} className="link font-medium">
+                        {item.pessoa}
+                      </Link>
+                      <p className="text-xs text-tinta-fraca">
+                        {item.empresa ?? "sem empresa"}, {item.perfil}, {ROTULO_DO_ESTADO[item.estadoLead as EstadoDoLead] ?? item.estadoLead}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="etiqueta">
+                      {item.toque
+                        ? item.toque === "T1" && item.origem === "ia"
+                          ? "T1 personalizado"
+                          : `${item.toque} da régua (${item.origem})`
+                        : "Resposta da IA"}
+                    </span>
+                    {item.acaoSugerida && <span className="etiqueta">{SUGESTOES[item.acaoSugerida] ?? item.acaoSugerida}</span>}
+                    {item.confianca !== null && <span className="etiqueta tabular-nums">confiança {Math.round(item.confianca * 100)}%</span>}
+                  </div>
+                </div>
+
+                {item.ultimaEntrada && (
+                  <div className="recuo mt-4">
+                    <p className="text-xs text-tinta-fraca">A pessoa, {hora(item.ultimaEntradaEm)}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-tinta">{item.ultimaEntrada}</p>
+                  </div>
+                )}
+                {item.motivoRevisao && (
+                  <Aviso tom="atencao" className="mt-3">
+                    {item.motivoRevisao}
+                  </Aviso>
+                )}
+                {item.motivoDoAgente && (
+                  <p className="mt-3 text-xs text-tinta-suave">
+                    <span className="text-tinta-fraca">Motivo do agente:</span> {item.motivoDoAgente}
+                  </p>
+                )}
+                {item.gancho && (
+                  <p className="mt-1.5 text-xs text-tinta-suave">
+                    <span className="text-tinta-fraca">Gancho da pesquisa:</span> {item.gancho}
+                  </p>
+                )}
+
+                <form className="mt-4 flex flex-col gap-3">
+                  <input type="hidden" name="acaoId" value={item.acaoId} />
+                  <textarea
+                    name="texto"
+                    defaultValue={item.textoFinal ?? item.textoGerado ?? ""}
+                    rows={4}
+                    aria-label={`Texto para ${item.pessoa}`}
+                    className="campo w-full"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <button formAction={aprovarComoEsta} className="botao botao-primario">
+                      <Check aria-hidden />
+                      Aprovar como está
+                    </button>
+                    <button formAction={aprovarComEdicao} className="botao">
+                      Aprovar com a edição
+                    </button>
+                    <button formAction={rejeitar} className="botao botao-perigo">
+                      <X aria-hidden />
+                      Rejeitar
+                    </button>
+                  </div>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </>
   );
 }

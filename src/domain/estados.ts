@@ -19,6 +19,25 @@ export const ESTADOS_DO_LEAD = [
 
 export type EstadoDoLead = (typeof ESTADOS_DO_LEAD)[number];
 
+/** Como cada estado aparece no painel. */
+export const ROTULO_DO_ESTADO: Record<EstadoDoLead, string> = {
+  importado: "Importado",
+  triagem: "Em triagem",
+  rejeitado: "Rejeitado",
+  na_fila: "Na fila",
+  convite_enviado: "Convite enviado",
+  aceito: "Aceitou o convite",
+  em_sequencia: "Na sequência",
+  sem_resposta: "Sem resposta",
+  convite_retirado: "Convite retirado",
+  em_conversa: "Em conversa",
+  qualificado: "Qualificado",
+  reuniao_marcada: "Reunião marcada",
+  encerrado_nao: "Disse não",
+  optout: "Opt-out",
+  escalado_humano: "Com humano",
+};
+
 /** Estados em que a pessoa está numa régua ativa (mesmo índice parcial do banco). */
 export const ESTADOS_ATIVOS: readonly EstadoDoLead[] = [
   "na_fila",

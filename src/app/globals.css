@@ -1,19 +1,553 @@
 @import "tailwindcss";
 
-:root {
-  --background: #f7f7f5;
-  --foreground: #1c1c1a;
+/*
+ * Tema do painel: fundo quase preto, superfícies em degraus de cinza e um só
+ * destaque laranja, reservado ao item ativo do menu e à ação principal de cada
+ * tela. Status (ok, atenção, erro) só aparece em etiquetas e avisos.
+ */
+@theme {
+  --color-fundo: #0c0c0d;
+  --color-superficie: #141416;
+  --color-superficie-alta: #1b1b1e;
+  --color-linha: #242428;
+  --color-linha-forte: #323238;
+  --color-tinta: #f1f1f2;
+  --color-tinta-suave: #a2a2aa;
+  --color-tinta-fraca: #85858d;
+  --color-destaque: #ff6a1a;
+  --color-ok: #3ecf8e;
+  --color-atencao: #f5b544;
+  --color-erro: #f26461;
+  --color-info: #6aa8ff;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-fundo);
+    background-image: radial-gradient(1100px 520px at 0% -8%, rgb(255 255 255 / 0.045), transparent 65%);
+    background-repeat: no-repeat;
+    color: var(--color-tinta);
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-destaque) 35%, transparent);
+  }
+
+  * {
+    scrollbar-color: var(--color-linha-forte) transparent;
+    scrollbar-width: thin;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-destaque);
+    outline-offset: 2px;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--color-destaque);
+  }
+
+  summary {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  /* Superfícies */
+
+  .cartao {
+    border: 1px solid var(--color-linha);
+    border-radius: 1rem;
+    background: var(--color-superficie);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
+  }
+
+  /* Trecho recuado dentro de um cartão: citação, prévia, roteiro. */
+  .recuo {
+    border: 1px solid var(--color-linha);
+    border-radius: 0.75rem;
+    background: var(--color-fundo);
+    padding: 0.75rem 0.875rem;
+    font-size: 0.875rem;
+    color: var(--color-tinta-suave);
+  }
+
+  .vazio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.875rem;
+    border: 1px dashed var(--color-linha-forte);
+    border-radius: 1rem;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--color-tinta-suave);
+  }
+
+  /* Cabeçalho da página: a linha de baixo atravessa a área principal inteira. */
+  .cabecalho {
+    margin-inline: calc(var(--respiro) * -1);
+    margin-bottom: 1.75rem;
+    border-bottom: 1px solid var(--color-linha);
+    padding: 1.75rem var(--respiro) 1.25rem;
+  }
+
+  /* Botões */
+
+  .botao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 2.25rem;
+    border: 1px solid var(--color-linha-forte);
+    border-radius: 0.625rem;
+    background: linear-gradient(180deg, #202023, #19191c);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.05),
+      0 1px 2px rgb(0 0 0 / 0.4);
+    padding: 0 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    color: var(--color-tinta);
+    cursor: pointer;
+    transition:
+      border-color 0.15s,
+      background 0.15s,
+      color 0.15s;
+  }
+  .botao:hover {
+    border-color: #45454c;
+    background: linear-gradient(180deg, #26262a, #1e1e21);
+  }
+  .botao:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .botao svg {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    color: var(--color-tinta-suave);
+  }
+
+  .botao-primario {
+    border-color: rgb(255 140 77 / 0.55);
+    background: linear-gradient(180deg, #f26a1f, #d9530a);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.25),
+      0 1px 2px rgb(0 0 0 / 0.4),
+      0 8px 24px -10px rgb(255 106 26 / 0.7);
+    font-weight: 600;
+    color: #fff;
+  }
+  .botao-primario:hover {
+    border-color: rgb(255 160 110 / 0.75);
+    background: linear-gradient(180deg, #ff7a2e, #e85d0d);
+  }
+  .botao-primario svg {
+    color: #fff;
+  }
+
+  .botao-perigo {
+    color: var(--color-erro);
+  }
+  .botao-perigo:hover {
+    border-color: color-mix(in oklab, var(--color-erro) 55%, transparent);
+  }
+  .botao-perigo svg {
+    color: var(--color-erro);
+  }
+
+  .botao-pequeno {
+    height: 2rem;
+    border-radius: 0.5rem;
+    padding: 0 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .link {
+    color: var(--color-tinta);
+    text-decoration: underline;
+    text-decoration-color: var(--color-linha-forte);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 0.15s;
+  }
+  .link:hover {
+    text-decoration-color: var(--color-tinta-suave);
+  }
+
+  /* Formulários */
+
+  .rotulo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-tinta-suave);
+  }
+
+  .campo {
+    border: 1px solid var(--color-linha);
+    border-radius: 0.625rem;
+    background-color: #101012;
+    padding: 0.4375rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--color-tinta);
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+  .campo::placeholder {
+    color: var(--color-tinta-fraca);
+  }
+  .campo:hover {
+    border-color: var(--color-linha-forte);
+  }
+  .campo:focus {
+    outline: none;
+    border-color: color-mix(in oklab, var(--color-destaque) 70%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-destaque) 18%, transparent);
+  }
+  .campo:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  select.campo {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a8a92' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 0.625rem center;
+    background-repeat: no-repeat;
+    background-size: 1rem;
+    padding-right: 2.25rem;
+  }
+  textarea.campo {
+    line-height: 1.55;
+    resize: vertical;
+  }
+
+  .campo-pequeno {
+    border-radius: 0.5rem;
+    padding: 0.3125rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+  select.campo-pequeno {
+    padding-right: 1.875rem;
+  }
+
+  .campo-arquivo {
+    font-size: 0.8125rem;
+    color: var(--color-tinta-suave);
+  }
+  .campo-arquivo::file-selector-button {
+    margin-right: 0.75rem;
+    border: 1px solid var(--color-linha-forte);
+    border-radius: 0.5rem;
+    background: linear-gradient(180deg, #202023, #19191c);
+    padding: 0.4375rem 0.75rem;
+    font: inherit;
+    font-weight: 500;
+    color: var(--color-tinta);
+    cursor: pointer;
+  }
+
+  /* Etiquetas (status) e avisos */
+
+  .etiqueta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    height: 1.5rem;
+    border: 1px solid var(--color-linha-forte);
+    border-radius: 999px;
+    background: var(--color-superficie-alta);
+    padding: 0 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--color-tinta-suave);
+  }
+  .etiqueta svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    flex-shrink: 0;
+  }
+  .etiqueta-ponto::before {
+    content: "";
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 999px;
+    background: currentColor;
+  }
+  .etiqueta-ok {
+    border-color: color-mix(in oklab, var(--color-ok) 28%, transparent);
+    background: color-mix(in oklab, var(--color-ok) 10%, transparent);
+    color: var(--color-ok);
+  }
+  .etiqueta-atencao {
+    border-color: color-mix(in oklab, var(--color-atencao) 28%, transparent);
+    background: color-mix(in oklab, var(--color-atencao) 10%, transparent);
+    color: var(--color-atencao);
+  }
+  .etiqueta-erro {
+    border-color: color-mix(in oklab, var(--color-erro) 30%, transparent);
+    background: color-mix(in oklab, var(--color-erro) 10%, transparent);
+    color: var(--color-erro);
+  }
+  .etiqueta-info {
+    border-color: color-mix(in oklab, var(--color-info) 28%, transparent);
+    background: color-mix(in oklab, var(--color-info) 10%, transparent);
+    color: var(--color-info);
+  }
+  .etiqueta-destaque {
+    border-color: color-mix(in oklab, var(--color-destaque) 35%, transparent);
+    background: color-mix(in oklab, var(--color-destaque) 12%, transparent);
+    color: #ffb48a;
+  }
+
+  .aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    border: 1px solid var(--color-linha-forte);
+    border-radius: 0.75rem;
+    background: var(--color-superficie-alta);
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    color: var(--color-tinta);
+  }
+  .aviso svg {
+    margin-top: 0.125rem;
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+  }
+  .aviso-ok {
+    border-color: color-mix(in oklab, var(--color-ok) 30%, transparent);
+    background: color-mix(in oklab, var(--color-ok) 8%, var(--color-fundo));
+  }
+  .aviso-ok svg {
+    color: var(--color-ok);
+  }
+  .aviso-atencao {
+    border-color: color-mix(in oklab, var(--color-atencao) 30%, transparent);
+    background: color-mix(in oklab, var(--color-atencao) 8%, var(--color-fundo));
+  }
+  .aviso-atencao svg {
+    color: var(--color-atencao);
+  }
+  .aviso-erro {
+    border-color: color-mix(in oklab, var(--color-erro) 32%, transparent);
+    background: color-mix(in oklab, var(--color-erro) 8%, var(--color-fundo));
+  }
+  .aviso-erro svg {
+    color: var(--color-erro);
+  }
+
+  /* Abas segmentadas (filtros) */
+
+  .segmentos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+  .segmento {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    height: 2rem;
+    border: 1px solid var(--color-linha);
+    border-radius: 0.625rem;
+    padding: 0 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--color-tinta-suave);
+    transition:
+      color 0.15s,
+      border-color 0.15s,
+      background 0.15s;
+  }
+  .segmento:hover {
+    border-color: var(--color-linha-forte);
+    color: var(--color-tinta);
+  }
+  .segmento[aria-current="page"] {
+    border-color: #3d3d44;
+    background: linear-gradient(180deg, #232327, #1b1b1e);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+    color: var(--color-tinta);
+  }
+  .segmento-contagem {
+    font-variant-numeric: tabular-nums;
+    color: var(--color-tinta-fraca);
+  }
+
+  /* Tabelas */
+
+  .tabela-moldura {
+    overflow-x: auto;
+    border: 1px solid var(--color-linha);
+    border-radius: 1rem;
+    background: var(--color-superficie);
+  }
+  .tabela {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+  }
+  .tabela th {
+    background: var(--color-superficie-alta);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--color-tinta-suave);
+  }
+  .tabela td {
+    border-top: 1px solid var(--color-linha);
+    padding: 0.75rem 1rem;
+    vertical-align: top;
+  }
+  .tabela tbody tr:hover td {
+    background: rgb(255 255 255 / 0.015);
+  }
+  .tabela .numero {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Navegação lateral */
+
+  .grupo-nav-titulo {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 0.5rem;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-tinta-fraca);
+    cursor: pointer;
+  }
+  .grupo-nav-titulo:hover {
+    color: var(--color-tinta-suave);
+  }
+  .grupo-nav-titulo svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    transition: transform 0.2s;
+  }
+  .grupo-nav-titulo[aria-expanded="false"] svg {
+    transform: rotate(-90deg);
+  }
+
+  /* Linhas de árvore: tronco contínuo e um galho curvo para cada item. */
+  .arvore {
+    margin: 0.25rem 0 0 0.875rem;
+    padding-left: 0.875rem;
+  }
+  .arvore > li {
+    position: relative;
+    padding: 0.125rem 0;
+  }
+  .arvore > li::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -0.875rem;
+    width: 0.625rem;
+    height: 50%;
+    border-bottom: 1px solid var(--color-linha-forte);
+    border-left: 1px solid var(--color-linha-forte);
+    border-bottom-left-radius: 0.5rem;
+  }
+  .arvore > li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    bottom: 0;
+    left: -0.875rem;
+    border-left: 1px solid var(--color-linha-forte);
+  }
+
+  .item-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    height: 2.5rem;
+    border: 1px solid transparent;
+    border-radius: 0.75rem;
+    padding: 0 0.75rem;
+    font-size: 0.875rem;
+    color: var(--color-tinta-suave);
+    transition:
+      color 0.15s,
+      background 0.15s;
+  }
+  .item-nav svg {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    color: var(--color-tinta-fraca);
+    transition: color 0.15s;
+  }
+  .item-nav:hover {
+    background: rgb(255 255 255 / 0.03);
+    color: var(--color-tinta);
+  }
+  .item-nav:hover svg {
+    color: var(--color-tinta-suave);
+  }
+  .item-nav[aria-current="page"] {
+    border-color: rgb(255 255 255 / 0.07);
+    background:
+      radial-gradient(90% 170% at 0% 100%, rgb(255 106 26 / 0.4), transparent 62%),
+      linear-gradient(180deg, #242427, #1b1b1e);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.07),
+      0 10px 28px -14px rgb(255 106 26 / 0.55);
+    color: #fff;
+  }
+  .item-nav[aria-current="page"] svg {
+    color: #fff;
+  }
+
+  /* Área principal: o respiro lateral é o mesmo do cabeçalho. */
+  .area-principal {
+    --respiro: 1.25rem;
+    padding-inline: var(--respiro);
+  }
+  @media (min-width: 1024px) {
+    .area-principal {
+      --respiro: 2.25rem;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0s !important;
+  }
 }
