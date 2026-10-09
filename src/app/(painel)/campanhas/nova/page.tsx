@@ -14,7 +14,7 @@ export default async function NovaCampanhaPage() {
         descricao="Os textos passam pelo validador enquanto você escreve. A campanha nasce como rascunho."
         voltar={{ href: "/campanhas", rotulo: "Campanhas" }}
       />
-      <div className="max-w-4xl">
+      <div className="max-w-6xl">
         {perfis.length === 0 ? (
           <p className="vazio">Você não opera nenhum perfil. Peça acesso a um perfil para criar campanhas.</p>
         ) : (

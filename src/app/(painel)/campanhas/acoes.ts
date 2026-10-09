@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect, RedirectType } from "next/navigation";
 import { z } from "zod";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import {
+  ErroDeStatus,
   mudarStatusDaCampanha,
   salvarCampanha,
   type EntradaDeCampanha,
@@ -41,9 +43,20 @@ export async function alterarStatusDaCampanha(formData: FormData) {
     status: formData.get("status"),
   });
   await exigirCampanhaDoOperador(operador.id, campanhaId);
-  await mudarStatusDaCampanha(obterDb(), { campanhaId, status, operadorId: operador.id, agora: new Date() });
+  // O motivo de não ativar (fluxo incompleto, campanha encerrada) volta para a
+  // tela da campanha. redirect lança, então fica fora do try.
+  let recusa: string | null = null;
+  try {
+    await mudarStatusDaCampanha(obterDb(), { campanhaId, status, operadorId: operador.id, agora: new Date() });
+  } catch (erro) {
+    if (!(erro instanceof ErroDeStatus)) throw erro;
+    recusa = erro.message;
+  }
+  if (recusa !== null) redirect(`/campanhas/${campanhaId}?msg=${encodeURIComponent(recusa)}`, RedirectType.replace);
   revalidatePath(`/campanhas/${campanhaId}`);
   revalidatePath("/campanhas");
   // Ativar a campanha pode concluir os primeiros passos: o menu destranca.
   revalidatePath("/", "layout");
+  // Sai da URL com o erro de uma tentativa anterior, se houver.
+  redirect(`/campanhas/${campanhaId}`, RedirectType.replace);
 }

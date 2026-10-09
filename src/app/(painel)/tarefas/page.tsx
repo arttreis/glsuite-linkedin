@@ -22,15 +22,15 @@ export default async function TarefasPage({ searchParams }: PageProps<"/tarefas"
   return (
     <>
       <Cabecalho
-        titulo="Tarefas manuais (Espanha)"
-        descricao="Mensagens que a lei espanhola não deixa automatizar. Depois que a pessoa aceita o convite, cada mensagem da sequência vira uma tarefa aqui, no dia certo. Use o roteiro como base e escreva com as suas palavras."
+        titulo="Tarefas manuais"
+        descricao="Mensagens que alguém escreve à mão, no dia certo: na Espanha a lei não deixa automatizar as mensagens, e qualquer campanha pode ter um bloco de tarefa manual no fluxo. Use o roteiro como base e escreva com as suas palavras."
       />
       <div className="max-w-3xl">
         {typeof msg === "string" && <Aviso className="mb-5">{msg}</Aviso>}
 
         {tarefas.length === 0 ? (
           <p className="vazio">
-            Nenhuma tarefa agora. Só o perfil da Espanha gera tarefas: elas aparecem quando alguém aceita o convite.
+            Nenhuma tarefa agora. Elas aparecem quando um lead chega num bloco de tarefa manual, ou numa mensagem do perfil da Espanha.
           </p>
         ) : (
           <ul className="flex flex-col gap-4">
@@ -52,7 +52,7 @@ export default async function TarefasPage({ searchParams }: PageProps<"/tarefas"
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="etiqueta">{rotuloDoToque(t.toque)}</span>
+                    <span className="etiqueta">{rotuloDoToque(t.toque, null, "tarefa_manual")}</span>
                     {t.vencida ? (
                       <span className="etiqueta etiqueta-ponto etiqueta-atencao">Já pode enviar</span>
                     ) : (

@@ -724,3 +724,45 @@ Anotadas durante a execução, por ticket.
 - Resposta numa conversa externa passa pelo validador como texto humano e
   exige perfil ativo, igual à resposta de lead. A idempotência é pela chave do
   formulário, gravada no evento `resposta_externa`.
+
+### SDR-21 · Fluxo de campanha com blocos
+
+- O fluxo é um grafo em `fluxos.grafo` (schema em `src/domain/fluxo.ts`),
+  versionado por campanha. `leads.fluxo_id` guarda a versão em que o lead
+  entrou. Salvar reescreve a versão atual se nenhum lead entrou nela; senão
+  cria outra (`salvarFluxo`).
+- Compatibilidade: campanha ou lead sem versão segue `campanhas.sequencia`,
+  convertida por `sequenciaParaFluxo` para o grafo equivalente (convite →
+  "aceitou?" → esperas e mensagens → fim do pós-T4). Os ids dos blocos de
+  texto convertidos são T1 a T4, então as ações gravadas continuam apontando
+  para eles. Com isso o motor é um só, e os testes antigos da régua rodam por
+  ele sem mudança.
+- `acoes.toque` e `leads.passo_atual` passam a guardar o id do bloco (as
+  checagens T1–T4 do banco caíram). A chave de idempotência continua
+  `lead:<id>:<toque>`: cada bloco roda no máximo uma vez por lead, e o
+  validador do fluxo proíbe ciclos.
+- Motor (`src/server/fluxo/motor.ts`): anda do evento até o próximo bloco que
+  espera alguém. "Esperar" não vira ação; empurra o relógio para a abertura
+  da janela do perfil N dias úteis depois. Entradas: aprovação na triagem
+  (`entrarNoFluxo`), mensagem enviada ou tarefa feita (`aposAcao`), aceite
+  (`aoAceitar`) e convite retirado (`aoRetirarConvite`).
+- Regras de forma (`validarFluxo`): um Início; condição com "sim" e "não";
+  convite seguido direto de "Aceitou o convite?"; "Já é conexão?" só logo
+  depois do Início; mensagem só em caminho que passou por um "sim"; um
+  convite por caminho; sem ciclos nem blocos soltos. A análise visita cada
+  combinação (bloco, já é conexão, convites) uma vez, sem enumerar caminhos.
+  Fluxo com problema de forma salva como rascunho, mas não ativa
+  (`mudarStatusDaCampanha` lança `ErroDeStatus`). Problema de copy não salva.
+- "Já é conexão?" é decidida na aprovação da triagem: só quando o fluxo começa
+  por ela, a triagem pergunta à Unipile (`obterPerfil().ehConexao`) fora da
+  transação. Sem Unipile ou com erro, conta como não e a pessoa recebe
+  convite.
+- Prazo do aceite: o da condição, em dias úteis; sem prazo, o padrão da casa
+  (`convite_expira_dias`, dias corridos), como antes.
+- Tarefa manual existe como bloco em qualquer praça; na Espanha, toda mensagem
+  continua virando tarefa (§4.5).
+- O modo de copy (template ou personalizada pela IA) continua sendo da
+  campanha e vale para os blocos de convite.
+- Editor visual com React Flow (`@xyflow/react`): blocos, setas com saída
+  "sim"/"não" nas condições, painel do bloco com prévia e violações, e a
+  lista de problemas do fluxo.

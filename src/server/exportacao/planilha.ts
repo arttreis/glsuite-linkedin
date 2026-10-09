@@ -77,7 +77,8 @@ export async function gerarPlanilhaEspelho(db: Db, praca: Praca): Promise<string
 
   const corpo = linhas.map((l) => {
     const proximo = l.proxima_acao
-      ? `${[PASSOS[l.proxima_acao] ?? l.proxima_acao, l.proxima_acao_toque].filter(Boolean).join(" ")} em ${data(l.proxima_acao_em)}`
+      ? // Bloco de fluxo montado no editor tem id livre: só os toques padrão vão para a planilha.
+        `${[PASSOS[l.proxima_acao] ?? l.proxima_acao, /^T[1-4]$/.test(l.proxima_acao_toque ?? "") ? l.proxima_acao_toque : null].filter(Boolean).join(" ")} em ${data(l.proxima_acao_em)}`
       : l.proximo_passo
         ? `${l.proximo_passo}${l.proximo_passo_em ? ` até ${data(l.proximo_passo_em)}` : ""}`
         : "";

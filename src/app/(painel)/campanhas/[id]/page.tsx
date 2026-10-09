@@ -2,9 +2,9 @@ import { notFound } from "next/navigation";
 import { Aviso } from "@/components/aviso";
 import { Cabecalho } from "@/components/cabecalho";
 import { EtiquetaDaCampanha } from "@/components/etiquetas";
-import type { Sequencia } from "@/domain/sequencia";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
+import { fluxoDaCampanha } from "@/server/fluxo/fluxos";
 import { exigirOperador } from "@/server/supabase/servidor";
 import { alterarStatusDaCampanha } from "../acoes";
 import { dadosDoEditor } from "../dados";
@@ -18,9 +18,7 @@ type Campanha = {
   nicho: string | null;
   modo_copy: "template" | "personalizada";
   max_leads: number | null;
-  sequencia: Sequencia;
   status: "rascunho" | "ativa" | "pausada" | "encerrada";
-  pos_t4: string;
 };
 
 const PROXIMOS_STATUS: Record<Campanha["status"], { status: string; rotulo: string; estilo: string }[]> = {
@@ -39,24 +37,25 @@ const PROXIMOS_STATUS: Record<Campanha["status"], { status: string; rotulo: stri
 export default async function CampanhaPage({ params, searchParams }: PageProps<"/campanhas/[id]">) {
   const operador = await exigirOperador();
   const { id } = await params;
-  const { salva } = await searchParams;
-  const [campanha] = await comOperador(obterDb(), operador.id, (tx) =>
-    tx.query<Campanha>(
-      `select id, perfil_id, nome, angulo, nicho, modo_copy, max_leads, sequencia, status, pos_t4
+  const { salva, msg } = await searchParams;
+  const { campanha, fluxo } = await comOperador(obterDb(), operador.id, async (tx) => {
+    const [campanha] = await tx.query<Campanha>(
+      `select id, perfil_id, nome, angulo, nicho, modo_copy, max_leads, status
          from public.campanhas where id = $1::uuid`,
       [id],
-    ),
-  );
-  if (!campanha) notFound();
+    );
+    return { campanha, fluxo: campanha ? await fluxoDaCampanha(tx, id) : null };
+  });
+  if (!campanha || !fluxo) notFound();
+  // Erro de ativação volta pela URL (acoes.ts).
+  const erroDeStatus = typeof msg === "string" ? msg : undefined;
   const { perfis, angulos, exemplo } = await dadosDoEditor(operador.id);
 
   return (
     <>
       <Cabecalho
         titulo={campanha.nome}
-        descricao={`Sem resposta até o T4: ${
-          campanha.pos_t4 === "conexao" ? "fica como conexão" : "pausa de 60 dias e volta com ângulo diferente"
-        }.`}
+        descricao="Edite os dados e o fluxo da campanha. Cada bloco Fim decide o que acontece com quem não responde."
         voltar={{ href: "/campanhas", rotulo: "Campanhas" }}
       >
         <EtiquetaDaCampanha status={campanha.status} />
@@ -70,8 +69,13 @@ export default async function CampanhaPage({ params, searchParams }: PageProps<"
           </form>
         ))}
       </Cabecalho>
-      <div className="max-w-4xl">
-        {salva && (
+      <div className="max-w-6xl">
+        {erroDeStatus && (
+          <Aviso tom="erro" className="mb-5">
+            {erroDeStatus}
+          </Aviso>
+        )}
+        {salva && !erroDeStatus && (
           <Aviso tom="ok" className="mb-5">
             Campanha salva.
           </Aviso>
@@ -88,7 +92,7 @@ export default async function CampanhaPage({ params, searchParams }: PageProps<"
             nicho: campanha.nicho,
             modoCopy: campanha.modo_copy,
             maxLeads: campanha.max_leads,
-            sequencia: campanha.sequencia,
+            fluxo,
           }}
         />
       </div>

@@ -1,13 +1,14 @@
 "use client";
 
-import { CircleAlert, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Aviso } from "@/components/aviso";
-import { validarCopyDaSequencia, type ContextoDoPerfil } from "@/domain/campanha";
-import { sequenciaPadrao, tetoDoPasso, type Sequencia } from "@/domain/sequencia";
+import type { ContextoDoPerfil } from "@/domain/campanha";
+import { fluxoPadrao, validarCopyDoFluxo, validarFluxo, type Fluxo } from "@/domain/fluxo";
 import type { ValoresDoTemplate } from "@/domain/template";
 import { salvarCampanhaDoPainel } from "./acoes";
+import { EditorDeFluxo } from "./editor-de-fluxo";
 
 export type PerfilDoEditor = { id: string; nome: string; contexto: ContextoDoPerfil };
 
@@ -19,10 +20,8 @@ export type CampanhaDoEditor = {
   nicho: string | null;
   modoCopy: "template" | "personalizada";
   maxLeads: number | null;
-  sequencia: Sequencia;
+  fluxo: Fluxo;
 };
-
-const QUANDO: Record<string, string> = { inicio: "da aprovação", aceite: "do aceite", anterior: "do toque anterior" };
 
 export function EditorDeCampanha({
   perfis,
@@ -44,28 +43,36 @@ export function EditorDeCampanha({
       nicho: null,
       modoCopy: "template",
       maxLeads: null,
-      sequencia: sequenciaPadrao(),
+      fluxo: fluxoPadrao(perfis[0]?.contexto.praca ?? "domestico"),
     },
   );
+  // Campanha nova acompanha a praça do perfil escolhido até o operador mexer no fluxo.
+  const [fluxoMexido, setFluxoMexido] = useState(false);
   const [erros, setErros] = useState<string[]>([]);
   const [salvando, iniciar] = useTransition();
 
   const perfil = perfis.find((p) => p.id === campanha.perfilId);
-  const manualNaEspanha = perfil?.contexto.praca === "espanha";
-  const problemas = useMemo(
-    () =>
-      perfil
-        ? validarCopyDaSequencia(campanha.sequencia, perfil.contexto, exemplo, { t1PelaIa: campanha.modoCopy === "personalizada" })
-        : [],
-    [campanha.sequencia, campanha.modoCopy, perfil, exemplo],
+  const espanha = perfil?.contexto.praca === "espanha";
+  const problemasDeCopy = useMemo(
+    () => (perfil ? validarCopyDoFluxo(campanha.fluxo, perfil.contexto, exemplo) : []),
+    [campanha.fluxo, perfil, exemplo],
   );
-  const temProblema = problemas.some((p) => p.violacoes.length > 0);
+  const problemasDoFluxo = useMemo(() => validarFluxo(campanha.fluxo), [campanha.fluxo]);
+  const temProblemaDeCopy = problemasDeCopy.some((p) => p.violacoes.length > 0);
 
-  const atualizarPasso = (indice: number, mudanca: Partial<Sequencia[number]>) =>
+  function trocarPerfil(perfilId: string) {
+    const novo = perfis.find((p) => p.id === perfilId);
     setCampanha((atual) => ({
       ...atual,
-      sequencia: atual.sequencia.map((passo, i) => (i === indice ? { ...passo, ...mudanca } : passo)),
+      perfilId,
+      fluxo: !atual.id && !fluxoMexido && novo ? fluxoPadrao(novo.contexto.praca) : atual.fluxo,
     }));
+  }
+
+  function mudarFluxo(fluxo: Fluxo) {
+    setFluxoMexido(true);
+    setCampanha((atual) => ({ ...atual, fluxo }));
+  }
 
   function salvar() {
     setErros([]);
@@ -90,7 +97,7 @@ export function EditorDeCampanha({
             <select
               value={campanha.perfilId}
               disabled={Boolean(campanha.id)}
-              onChange={(e) => setCampanha({ ...campanha, perfilId: e.target.value })}
+              onChange={(e) => trocarPerfil(e.target.value)}
               className="campo"
             >
               {perfis.map((p) => (
@@ -123,15 +130,21 @@ export function EditorDeCampanha({
             />
           </label>
           <label className="rotulo">
-            Copy do T1
+            Texto do convite
             <select
               value={campanha.modoCopy}
               onChange={(e) => setCampanha({ ...campanha, modoCopy: e.target.value as CampanhaDoEditor["modoCopy"] })}
               className="campo"
             >
-              <option value="template">Template</option>
-              <option value="personalizada">Personalizada pela IA (com aprovação)</option>
+              <option value="template">O texto do bloco Convite</option>
+              <option value="personalizada">Personalizado pela IA (com aprovação)</option>
             </select>
+            {campanha.modoCopy === "personalizada" && (
+              <span className="text-xs font-normal text-tinta-fraca">
+                Parte dos leads recebe o texto do bloco Convite (vazio = sem nota) e a outra parte, uma nota escrita pela IA
+                no mesmo estilo. Você aprova cada nota da IA antes de sair.
+              </span>
+            )}
           </label>
           <label className="rotulo">
             Máximo de leads (opcional)
@@ -146,83 +159,31 @@ export function EditorDeCampanha({
         </div>
       </section>
 
-      <p className="flex items-start gap-2 text-[13px] text-tinta-suave">
-        <Info className="mt-0.5 size-4 shrink-0 text-tinta-fraca" aria-hidden />
-        <span>
-          Use só {"{{first_name}}"} e {"{{company}}"}. A prévia usa valores longos de exemplo ({exemplo.first_name},{" "}
-          {exemplo.company}).
-          {manualNaEspanha && " Na Espanha, T2 a T4 viram tarefa manual: o texto é o roteiro de apoio do JP."}
-        </span>
-      </p>
-
-      {campanha.sequencia.map((passo, indice) => {
-        const problema = problemas[indice];
-        const texto = passo.template;
-        return (
-          <section key={passo.toque} className="cartao p-5">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-              <h3 className="flex items-center gap-2.5 font-medium">
-                <span className="etiqueta font-semibold text-tinta">{passo.toque}</span>
-                {passo.tipo === "convite" ? "Convite" : manualNaEspanha ? "Roteiro (manual)" : "DM"}
-              </h3>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-tinta-suave sm:ml-auto">
-                {indice > 0 && (
-                  <label className="flex items-center gap-1.5">
-                    +
-                    <input
-                      type="number"
-                      min={0}
-                      max={30}
-                      value={passo.offset_dias_uteis}
-                      onChange={(e) => atualizarPasso(indice, { offset_dias_uteis: Number(e.target.value) })}
-                      className="campo campo-pequeno w-16 tabular-nums"
-                    />
-                    dias úteis {QUANDO[passo.ancora]}
-                  </label>
-                )}
-                <label className="flex items-center gap-1.5">
-                  teto
-                  <input
-                    type="number"
-                    min={1}
-                    max={passo.tipo === "convite" ? 300 : 2000}
-                    value={tetoDoPasso(passo)}
-                    onChange={(e) => atualizarPasso(indice, { max_caracteres: Number(e.target.value) })}
-                    className="campo campo-pequeno w-20 tabular-nums"
-                  />
-                  caracteres
-                </label>
-              </div>
-            </div>
-            <textarea
-              value={texto}
-              onChange={(e) => atualizarPasso(indice, { template: e.target.value })}
-              rows={3}
-              aria-label={`Texto do ${passo.toque}`}
-              placeholder={
-                passo.tipo === "convite"
-                  ? campanha.modoCopy === "personalizada"
-                    ? "Braço de controle do A/B: parte dos leads recebe este texto (vazio = convite sem nota); a outra recebe o T1 escrito pela IA. Também serve de base de estilo."
-                    : "Nota curta, sem oferta, sem link. Vazio = convite sem nota."
-                  : ""
-              }
-              className="campo mt-4 w-full"
-            />
-            {problema?.previa && (
-              <div className="recuo mt-3">
-                <p className="text-xs text-tinta-fraca tabular-nums">Prévia, {problema.previa.length} caracteres</p>
-                <p className="mt-1 whitespace-pre-wrap text-tinta">{problema.previa}</p>
-              </div>
-            )}
-            {problema?.violacoes.map((violacao) => (
-              <p key={violacao.regra} className="mt-2 flex items-start gap-1.5 text-sm text-erro">
-                <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-                {violacao.mensagem}
-              </p>
-            ))}
-          </section>
-        );
-      })}
+      <section className="cartao flex flex-col gap-4 p-5">
+        <div>
+          <h2 className="text-[15px] font-semibold">Fluxo</h2>
+          <p className="mt-1 flex items-start gap-2 text-[13px] text-tinta-suave">
+            <Info className="mt-0.5 size-4 shrink-0 text-tinta-fraca" aria-hidden />
+            <span>
+              O caminho de cada lead, do Início até um Fim. Nos textos, use só {"{{first_name}}"} e {"{{company}}"}; a prévia
+              usa valores longos de exemplo ({exemplo.first_name}, {exemplo.company}).
+              {espanha && " Na Espanha, cada Mensagem vira tarefa manual: o texto é o roteiro de apoio do JP."}
+            </span>
+          </p>
+        </div>
+        {problemasDoFluxo.length > 0 && (
+          <Aviso tom="atencao">
+            O fluxo ainda está incompleto: dá para salvar como rascunho, mas a campanha só ativa com o fluxo completo.
+          </Aviso>
+        )}
+        <EditorDeFluxo
+          fluxo={campanha.fluxo}
+          onChange={mudarFluxo}
+          problemasDeCopy={problemasDeCopy}
+          problemasDoFluxo={problemasDoFluxo}
+          espanha={espanha}
+        />
+      </section>
 
       {erros.length > 0 && (
         <Aviso tom="erro">
@@ -235,10 +196,10 @@ export function EditorDeCampanha({
         <button
           type="button"
           onClick={salvar}
-          disabled={salvando || temProblema || !campanha.nome.trim()}
+          disabled={salvando || temProblemaDeCopy || !campanha.nome.trim()}
           className="botao botao-primario"
         >
-          {salvando ? "Salvando..." : temProblema ? "Corrija a copy para salvar" : "Salvar campanha"}
+          {salvando ? "Salvando..." : temProblemaDeCopy ? "Corrija os textos para salvar" : "Salvar campanha"}
         </button>
       </div>
     </div>

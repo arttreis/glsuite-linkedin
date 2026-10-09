@@ -64,9 +64,11 @@ const TRANSICOES: Record<EstadoDoLead, readonly EstadoDoLead[]> = {
   importado: ["triagem", "rejeitado"],
   triagem: ["na_fila", "rejeitado"],
   rejeitado: ["triagem"],
-  na_fila: ["convite_enviado", "rejeitado", "em_conversa", "escalado_humano"],
+  // na_fila → aceito: o fluxo pergunta "Já é conexão?" e a resposta é sim (SDR-21).
+  na_fila: ["convite_enviado", "aceito", "rejeitado", "em_conversa", "escalado_humano"],
   convite_enviado: ["aceito", "convite_retirado", "em_conversa", "escalado_humano"],
-  aceito: ["em_sequencia", "em_conversa", "escalado_humano"],
+  // aceito → sem_resposta: o fluxo pode terminar logo depois do aceite (SDR-21).
+  aceito: ["em_sequencia", "sem_resposta", "em_conversa", "escalado_humano"],
   em_sequencia: ["sem_resposta", "em_conversa", "escalado_humano"],
   sem_resposta: ["em_conversa"],
   convite_retirado: ["aceito", "em_conversa"],

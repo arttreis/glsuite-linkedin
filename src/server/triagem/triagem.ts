@@ -1,9 +1,13 @@
-import { agendarAcao, chaveDoToque } from "@/server/acoes/agendar";
+import type { Janela } from "@/domain/calendario";
+import type { Praca } from "@/domain/validador";
 import { lerConfiguracao } from "@/server/configuracoes";
 import type { Db } from "@/server/db/tipos";
+import { fluxoDaCampanha } from "@/server/fluxo/fluxos";
+import { entrarNoFluxo, perguntaSeEConexao } from "@/server/fluxo/motor";
 import { transicionarLead } from "@/server/leads/transicoes";
 import { sortearVariante } from "@/server/pesquisa/variante";
 import { enfileirarEventoRd } from "@/server/rd/sincronizar";
+import type { ClienteUnipile } from "@/server/unipile/cliente";
 import { motivoDeBloqueio, temOptout } from "./regras";
 
 export type ResultadoDaTriagem = { aprovados: string[]; recusados: { leadId: string; motivo: string }[] };
@@ -20,7 +24,31 @@ type LeadEmTriagem = {
   pessoa_id: string;
   provider_id: string;
   dono_perfil_id: string;
+  fuso: string;
+  janela: Janela;
+  praca: Praca;
+  account_id: string | null;
 };
+
+/**
+ * "Já é conexão?" (SDR-21): só pergunta à Unipile quando o fluxo da campanha
+ * começa por essa condição. Sem Unipile ou com erro, conta como não, e a
+ * pessoa recebe convite.
+ */
+async function jaEConexao(
+  db: Db,
+  unipile: ClienteUnipile | undefined,
+  lead: { campanha_id: string; provider_id: string; account_id: string | null },
+): Promise<boolean> {
+  if (!unipile || !lead.account_id) return false;
+  const fluxo = await fluxoDaCampanha(db, lead.campanha_id);
+  if (!fluxo || !perguntaSeEConexao(fluxo)) return false;
+  try {
+    return (await unipile.obterPerfil(lead.account_id, lead.provider_id)).ehConexao;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Aprova leads da triagem: revalida os bloqueios (a situação pode ter mudado
@@ -28,23 +56,35 @@ type LeadEmTriagem = {
  * pessoa quando o dono anterior só a rejeitou e manda o lead para a fila.
  * Na campanha personalizada, o lead é sorteado para o braço do A/B do T1
  * (SDR-15): template da campanha ou nota escrita pela IA sobre a pesquisa.
+ * Aprovado, o lead entra no fluxo da campanha (SDR-21).
  */
 export async function aprovarLeads(
   db: Db,
-  p: { leadIds: string[]; operadorId: string; agora: Date },
+  p: { leadIds: string[]; operadorId: string; agora: Date; unipile?: ClienteUnipile },
 ): Promise<ResultadoDaTriagem> {
   const resultado: ResultadoDaTriagem = { aprovados: [], recusados: [] };
   const hoje = p.agora.toISOString().slice(0, 10);
   const { proporcao_personalizada } = await lerConfiguracao(db, "pesquisa");
 
   for (const leadId of p.leadIds) {
+    // A consulta à Unipile fica fora da transação: rede não segura trava de banco.
+    const [previa] = await db.query<{ campanha_id: string; provider_id: string; account_id: string | null }>(
+      `select l.campanha_id, pe.provider_id, pf.unipile_account_id as account_id
+         from public.leads l join public.pessoas pe on pe.id = l.pessoa_id join public.perfis pf on pf.id = l.perfil_id
+        where l.id = $1::uuid`,
+      [leadId],
+    );
+    const jaConectado = previa ? await jaEConexao(db, p.unipile, previa) : false;
+
     const motivo = await db.transacao(async (tx): Promise<string | null> => {
       const [lead] = await tx.query<LeadEmTriagem>(
         `select l.id, l.estado, l.bloqueio_motivo, l.perfil_id, l.campanha_id, c.angulo, c.modo_copy, c.max_leads,
-                pe.id as pessoa_id, pe.provider_id, pe.dono_perfil_id
+                pe.id as pessoa_id, pe.provider_id, pe.dono_perfil_id,
+                pf.fuso, pf.janela, pf.praca, pf.unipile_account_id as account_id
            from public.leads l
            join public.campanhas c on c.id = l.campanha_id
            join public.pessoas pe on pe.id = l.pessoa_id
+           join public.perfis pf on pf.id = l.perfil_id
           where l.id = $1::uuid
           for update of l, pe`,
         [leadId],
@@ -87,16 +127,14 @@ export async function aprovarLeads(
       );
       const mudou = await transicionarLead(tx, { leadId: lead.id, para: "na_fila", ator: p.operadorId, agora: p.agora });
       if (!mudou) return "Transição recusada";
-      // T1 no dia 0 (§4.1). O despachante é quem respeita janela, teto e cooldown.
-      // No braço personalizado o texto vem da pesquisa, e só sai depois de aprovado.
-      await agendarAcao(tx, {
+      // O lead entra no fluxo (§4.1): no padrão, o convite no dia 0. O despachante
+      // é quem respeita janela, teto e cooldown.
+      await entrarNoFluxo(tx, {
+        perfil: { id: lead.perfil_id, fuso: lead.fuso, janela: lead.janela, praca: lead.praca },
         leadId: lead.id,
-        perfilId: lead.perfil_id,
-        tipo: "convite",
-        toque: "T1",
-        origem: variante === "personalizada" ? "ia" : "template",
-        agendadaPara: p.agora,
-        chave: chaveDoToque(lead.id, "T1"),
+        agora: p.agora,
+        ator: p.operadorId,
+        jaConectado,
       });
       await enfileirarEventoRd(tx, { leadId: lead.id, etapa: "01" });
       return null;

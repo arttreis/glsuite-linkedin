@@ -544,6 +544,54 @@
   }
 }
 
+/*
+ * Editor de fluxo (React Flow). Fica fora das camadas: o CSS da biblioteca não
+ * tem camada e ganharia de qualquer regra dentro de @layer. As variáveis --xy-*
+ * sem "-default" são as que a biblioteca deixa para o tema.
+ */
+.fluxo {
+  --xy-background-color: var(--color-fundo);
+  --xy-background-pattern-color: #2a2a2f;
+  --xy-edge-stroke: #5a5a62;
+  --xy-edge-stroke-width: 1.5;
+  --xy-edge-stroke-selected: var(--color-destaque);
+  --xy-connectionline-stroke: var(--color-destaque);
+  --xy-connectionline-stroke-width: 1.5;
+  --xy-edge-label-background-color: var(--color-superficie-alta);
+  --xy-edge-label-color: var(--color-tinta-suave);
+  --xy-handle-background-color: var(--color-tinta-fraca);
+  --xy-handle-border-color: var(--color-superficie-alta);
+  --xy-minimap-background-color: var(--color-superficie);
+  --xy-minimap-mask-background-color: rgb(12 12 13 / 0.6);
+  --xy-minimap-node-background-color: var(--color-linha-forte);
+  --xy-controls-button-background-color: var(--color-superficie-alta);
+  --xy-controls-button-background-color-hover: #26262a;
+  --xy-controls-button-color: var(--color-tinta-suave);
+  --xy-controls-button-color-hover: var(--color-tinta);
+  --xy-controls-button-border-color: var(--color-linha);
+  --xy-controls-box-shadow: none;
+  --xy-attribution-background-color: transparent;
+}
+.fluxo .react-flow__handle {
+  width: 9px;
+  height: 9px;
+}
+.fluxo .react-flow__handle:hover {
+  background: var(--color-destaque);
+}
+.fluxo .react-flow__controls,
+.fluxo .react-flow__minimap {
+  overflow: hidden;
+  border: 1px solid var(--color-linha);
+  border-radius: 0.5rem;
+}
+.fluxo .react-flow__edge-text {
+  font-size: 11px;
+}
+.fluxo .react-flow__attribution a {
+  color: var(--color-tinta-fraca);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

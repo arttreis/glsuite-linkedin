@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { obterDb } from "@/server/db";
+import { obterUnipileSeConfigurada } from "@/server/dependencias";
 import { leadsVisiveis } from "@/server/painel/autorizacao";
 import { exigirOperador } from "@/server/supabase/servidor";
 import { aprovarLeads, rejeitarLeads } from "@/server/triagem/triagem";
@@ -26,6 +27,7 @@ export async function aprovarSelecionados(formData: FormData) {
     leadIds: selecionados,
     operadorId: operador.id,
     agora: new Date(),
+    unipile: obterUnipileSeConfigurada(),
   });
   const motivos = [...new Set(recusados.map((r) => r.motivo))];
   const detalhe = recusados.length > 0 ? ` ${recusados.length} não aprovados: ${motivos.join("; ")}.` : "";

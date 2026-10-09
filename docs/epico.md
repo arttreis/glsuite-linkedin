@@ -306,21 +306,23 @@ perfis (
 campanhas (
   id, perfil_id, nome, angulo, nicho,
   modo_copy,                                      -- 'template' | 'personalizada'
-  sequencia jsonb,                                -- [{toque:'T1', tipo:'convite', offset_dias_uteis:0, ancora:'inicio', template:'...'}, ...]
-  pos_t4,                                         -- 'conexao' | 'pausa_60_novo_angulo'
+  sequencia jsonb,                                -- legado: [{toque:'T1', tipo:'convite', offset_dias_uteis:0, ancora:'inicio', template:'...'}, ...]
+  fluxo_id,                                       -- versão atual do fluxo de blocos (§4.1)
+  pos_t4,                                         -- 'conexao' | 'pausa_60_novo_angulo' (padrão do bloco Fim)
   max_leads, status
 )
+fluxos (id, campanha_id, versao, grafo jsonb)     -- {nodes:[{id, tipo, ...}], arestas:[{de, para, saida}]}
 pessoas (
   id, provider_id unique, url_publica, nome, cargo, empresa, empresa_dominio,
   localizacao, fonte, coletado_em, dono_perfil_id, optout_em, praca
 )
 leads (
-  id, pessoa_id, campanha_id, estado, angulo, passo_atual,
+  id, pessoa_id, campanha_id, fluxo_id, estado, angulo, passo_atual,
   pesquisa jsonb, rd_deal_id, criado_em, atualizado_em
 )
 acoes (
   id, lead_id, perfil_id, tipo,                   -- 'convite' | 'dm' | 'retirar_convite' | 'tarefa_manual'
-  toque, texto_gerado, texto_final, origem,       -- 'template' | 'ia' | 'humano'
+  toque, texto_gerado, texto_final, origem,       -- toque = id do bloco do fluxo; origem 'template' | 'ia' | 'humano'
   status,                                         -- 'pendente' | 'aguardando_aprovacao' | 'enviada' | 'falhou' | 'cancelada'
   agendada_para, idempotency_key unique, tentativas, erro,
   enviada_em, provider_message_id, aprovada_por, validacao jsonb
@@ -355,6 +357,11 @@ Regra somada na implementação (SDR-07 e SDR-13): se o dono do perfil escreve
 direto no LinkedIn para quem ainda está na régua, a régua para (pendentes
 canceladas) e o lead vai para `escalado_humano`. Na Espanha, onde T2–T4 são
 tarefas manuais, a mensagem do JP conclui a tarefa do toque e a régua segue.
+
+Somado no SDR-21 (fluxo com blocos): `na_fila → aceito` quando o fluxo pergunta
+"Já é conexão?" e a resposta é sim; `aceito → sem_resposta` quando o fluxo
+termina logo depois do aceite. Convite retirado segue pela saída "não" da
+condição de aceite; um Fim depois disso mantém o lead em `convite_retirado`.
 
 Toda transição grava um evento. Todo `em_conversa` cancela as ações pendentes
 na mesma transação.

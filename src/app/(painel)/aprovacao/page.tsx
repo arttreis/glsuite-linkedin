@@ -45,7 +45,7 @@ function ItemParaAprovar({ item }: { item: ItemDaFila }) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="etiqueta">{rotuloDoToque(item.toque, item.origem)}</span>
+          <span className="etiqueta">{rotuloDoToque(item.toque, item.origem, item.tipo)}</span>
           {item.acaoSugerida && <span className="etiqueta">{SUGESTOES[item.acaoSugerida] ?? item.acaoSugerida}</span>}
           {item.confianca !== null && item.confianca < CONFIANCA_BAIXA && (
             <span className="etiqueta etiqueta-atencao tabular-nums">IA pouco segura ({Math.round(item.confianca * 100)}%)</span>

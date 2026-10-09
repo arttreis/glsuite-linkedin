@@ -1,4 +1,7 @@
 import { tetoDoPasso, type PassoDaSequencia } from "./sequencia";
+
+/** O que do passo (toque da sequência ou bloco do fluxo) entra na validação. */
+export type PassoValidavel = { toque: string; tipo: "convite" | "dm"; max_caracteres?: number };
 import { renderizarTemplate, type ValoresDoTemplate } from "./template";
 import { validarMensagem, type ContextoDeValidacao, type Praca, type Violacao } from "./validador";
 
@@ -13,7 +16,7 @@ export type ContextoDoPerfil = {
 
 export function contextoDeValidacao(
   perfil: ContextoDoPerfil,
-  passo: PassoDaSequencia | null,
+  passo: PassoValidavel | null,
   origem: ContextoDeValidacao["origem"],
 ): ContextoDeValidacao {
   return {
