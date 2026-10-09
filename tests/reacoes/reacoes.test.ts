@@ -122,7 +122,12 @@ describe("reações a eventos (SDR-07)", () => {
     async function t3NaFila() {
       const campanha = await criarCampanha(banco.db);
       const [leadId] = await leadsComAcao(banco.db, { campanhaId: campanha, quantidade: 1, estado: "em_sequencia", toque: "T3", desde: SEGUNDA_10H });
-      await banco.db.query("update public.leads set chat_id = 'chat-corrida' where id = $1::uuid", [leadId]);
+      // O convite saiu antes da simulação. Sem isso, a checagem conta só o que
+      // veio depois de `criado_em`, que é o relógio real, e não o simulado.
+      await banco.db.query("update public.leads set chat_id = 'chat-corrida', convite_enviado_em = $2 where id = $1::uuid", [
+        leadId,
+        new Date(SEGUNDA_10H.getTime() - 7 * 86_400_000),
+      ]);
       return leadId!;
     }
     const resposta = mensagemRecebida({ chat_id: "chat-corrida", message_id: "resp-corrida", message: "Pode parar, tá? Brincadeira, fala." });

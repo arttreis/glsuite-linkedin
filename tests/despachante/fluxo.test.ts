@@ -258,10 +258,14 @@ describe("despachante: régua, revalidação e erros", () => {
         toque: tipo === "convite" ? "T1" : "T2",
         desde: SEGUNDA_10H,
       });
+      // O trigger de `atualizada_em` grava o relógio real; aqui a ação precisa
+      // parecer parada há 20 min no relógio simulado.
+      await banco.db.query("alter table public.acoes disable trigger acoes_atualizada_em");
       await banco.db.query(
         `update public.acoes set status = 'enviando', texto_final = 'Oi Pessoa', atualizada_em = $2 where lead_id = $1::uuid`,
         [leadId, new Date(SEGUNDA_10H.getTime() - 20 * 60_000)],
       );
+      await banco.db.query("alter table public.acoes enable trigger acoes_atualizada_em");
       const [pessoa] = await banco.db.query<{ provider_id: string }>(
         "select pe.provider_id from public.leads l join public.pessoas pe on pe.id = l.pessoa_id where l.id = $1::uuid",
         [leadId],
