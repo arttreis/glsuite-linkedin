@@ -1,14 +1,15 @@
 # Roadmap · guessless-sdr
 
-Atualizado em 08/10/2026. Fonte da verdade do escopo: `docs/epico.md` (§9).
+Atualizado em 09/10/2026. Fonte da verdade do escopo: `docs/epico.md` (§9).
 Decisões de cada ticket: `specs/2026-09-29-sdr-linkedin-guessless.md`.
 
-**Onde estamos:** os 17 tickets têm código pronto e testado. Do SDR-01 ao
-SDR-16, tudo foi mergeado na `main` pelo PR #1. O SDR-17 está na branch
-`feature/sdr-17-modo-automatico`. O painel está no ar para teste em
-https://guessless-sdr.vercel.app, com o banco dividido com o GL Suite. Faltam
-as chaves das integrações, a migration do SDR-17 no banco e as travas da §8.
-Detalhes em `docs/handoff-2026-09-30.md`.
+**Onde estamos:** os 21 tickets têm código pronto e testado. Do SDR-01 ao
+SDR-16, tudo foi mergeado na `main` pelo PR #1; do SDR-17 ao SDR-21 (Marco 5:
+painel guiado, inbox completa e fluxo com blocos), pelo PR #2. Todas as
+migrations, até `20261009140000_fluxos`, estão aplicadas no banco por SQL
+(09/10). O painel está no ar para teste em https://guessless-sdr.vercel.app,
+com o banco dividido com o GL Suite. Faltam as chaves das integrações e as
+travas da §8. Detalhes em `docs/handoff-2026-09-30.md`.
 
 ## 1 · Código (tickets da §9)
 
@@ -30,7 +31,11 @@ Detalhes em `docs/handoff-2026-09-30.md`.
 | M3 | SDR-14 Métricas | ✅ | ✅ #1 | — |
 | M4 · Personalização | SDR-15 T1 personalizado (A/B) | ✅ | ✅ #1 | ⛔ chave da Anthropic |
 | M4 | SDR-16 Eval de conversas | ✅ | ✅ #1 | ⛔ chave da Anthropic (1ª rodada real + revisão humana) |
-| M4 | SDR-17 Modo automático por perfil | ✅ | ⏳ branch, PR não aberto | ⛔ migration no banco + 1º eval real |
+| M4 | SDR-17 Modo automático por perfil | ✅ | ✅ #2 | ⛔ 1º eval real |
+| M5 · Painel guiado e fluxo livre | SDR-18 Clareza das telas de operação | ✅ | ✅ #2 | — |
+| M5 | SDR-19 Primeiros passos obrigatórios | ✅ | ✅ #2 | — |
+| M5 | SDR-20 Inbox com todas as conversas | ✅ | ✅ #2 | ⛔ Unipile: conferir `GET /chats/{id}/attendees` com conta real |
+| M5 | SDR-21 Fluxo de campanha com blocos | ✅ | ✅ #2 | ⛔ testar o editor no navegador |
 
 Legenda: ✅ feito · 🔜 a fazer · ⏳ aguardando · ⛔ bloqueado por algo externo.
 
@@ -42,8 +47,8 @@ Legenda: ✅ feito · 🔜 a fazer · ⏳ aguardando · ⛔ bloqueado por algo e
 | 2 | Testar o painel com arthur@ (operador) e midia@ (admin) | Arthur | ⏳ |
 | 3 | Chaves na Vercel: Unipile, Anthropic, Resend, RD | Arthur passa, Claude cadastra | ⏳ |
 | 4 | 1ª rodada real do eval (`pnpm eval`) e revisão humana do `revisao.json` | Claude + Arthur | depende da chave da Anthropic |
-| 5 | SDR-17 · Modo automático por perfil | Claude | ✅ código na branch; falta abrir o PR |
-| 6 | Aplicar `20261008120000_modo_automatico.sql` por SQL no GL Suite | Claude | depois do merge do SDR-17 |
+| 5 | ~~SDR-17 a SDR-21~~ | — | ✅ PR #2 |
+| 6 | ~~Migrations do SDR-17 ao SDR-21 por SQL no GL Suite~~ | — | ✅ 09/10, sem tocar no histórico do GL Suite |
 | 7 | ~~Abrir e mergear os PRs do SDR-01 ao SDR-16~~ | — | ✅ PR #1 |
 | 8 | Ligar o tick (pg_cron ou Vercel Cron) | Claude | depois da Unipile e do teste |
 | 9 | Conectar o LinkedIn do Arthur e rodar a 1ª campanha de template | Arthur + Claude | T-1, D3 |
