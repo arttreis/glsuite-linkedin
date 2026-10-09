@@ -3,13 +3,16 @@
 Atualizado em 09/10/2026. Fonte da verdade do escopo: `docs/epico.md` (§9).
 Decisões de cada ticket: `specs/2026-09-29-sdr-linkedin-guessless.md`.
 
-**Onde estamos:** os 21 tickets têm código pronto e testado. Do SDR-01 ao
-SDR-16, tudo foi mergeado na `main` pelo PR #1; do SDR-17 ao SDR-21 (Marco 5:
-painel guiado, inbox completa e fluxo com blocos), pelo PR #2. Todas as
-migrations, até `20261009140000_fluxos`, estão aplicadas no banco por SQL
-(09/10). O painel está no ar para teste em https://guessless-sdr.vercel.app,
-com o banco dividido com o GL Suite. Faltam as chaves das integrações e as
-travas da §8. Detalhes em `docs/handoff-2026-09-30.md`.
+**Onde estamos:** do SDR-01 ao SDR-16, tudo foi mergeado na `main` pelo PR #1;
+do SDR-17 ao SDR-21 (Marco 5: painel guiado, inbox completa e fluxo com
+blocos), pelo PR #2. O Marco 6 (jornada do Kakou: site → dossiê → públicos →
+busca com nota → fluxo gerado) começou: SDR-22 e SDR-23 têm código pronto e
+testado, no PR da branch `feature/sdr-23-dossie-da-oferta`. Todas as
+migrations, até `20261010120000_ofertas`, estão aplicadas no banco por SQL
+(conferido em 09/10). O painel está no ar para teste em
+https://guessless-sdr.vercel.app, com o banco dividido com o GL Suite. Faltam
+as chaves das integrações e as travas da §8. Detalhes em
+`docs/handoff-2026-09-30.md`.
 
 ## 1 · Código (tickets da §9)
 
@@ -36,6 +39,16 @@ travas da §8. Detalhes em `docs/handoff-2026-09-30.md`.
 | M5 | SDR-19 Primeiros passos obrigatórios | ✅ | ✅ #2 | — |
 | M5 | SDR-20 Inbox com todas as conversas | ✅ | ✅ #2 | ⛔ Unipile: conferir `GET /chats/{id}/attendees` com conta real |
 | M5 | SDR-21 Fluxo de campanha com blocos | ✅ | ✅ #2 | ⛔ testar o editor no navegador |
+| M6 · Jornada do Kakou | SDR-22 Organização como raiz | ✅ | ⏳ PR aberto | — |
+| M6 | SDR-23 Dossiê da oferta a partir do site | ✅ | ⏳ PR aberto | ⛔ chave da Anthropic |
+| M6 | SDR-24 Dossiê editável e confirmado | 🔜 próximo | — | — |
+| M6 | SDR-25 Públicos sugeridos a partir do dossiê | 🔜 | — | ⛔ chave da Anthropic |
+| M6 | SDR-26 Campanha nasce do público | 🔜 | — | — |
+| M6 | SDR-27 Busca a partir do público | 🔜 | — | ⛔ Unipile: filtros da busca clássica e limite de uso comercial |
+| M6 | SDR-28 Nota de aderência | 🔜 | — | ⛔ chave da Anthropic |
+| M6 | SDR-29 Fluxo gerado pelo público | 🔜 | — | ⛔ chave da Anthropic |
+| M6 | SDR-30 Jornada no lugar dos primeiros passos | 🔜 | — | — |
+| M6 | SDR-31 a SDR-34 Início com ação direta, opt-out e regras por organização, dossiê no agente | 🔜 depois do caminho principal | — | — |
 
 Legenda: ✅ feito · 🔜 a fazer · ⏳ aguardando · ⛔ bloqueado por algo externo.
 
@@ -48,6 +61,8 @@ Legenda: ✅ feito · 🔜 a fazer · ⏳ aguardando · ⛔ bloqueado por algo e
 | 3 | Chaves na Vercel: Unipile, Anthropic, Resend, RD | Arthur passa, Claude cadastra | ⏳ |
 | 4 | 1ª rodada real do eval (`pnpm eval`) e revisão humana do `revisao.json` | Claude + Arthur | depende da chave da Anthropic |
 | 5 | ~~SDR-17 a SDR-21~~ | — | ✅ PR #2 |
+| 5a | Mergear o PR do SDR-22 e SDR-23 e depois o da jornada revisada (docs) | Arthur | ⏳ |
+| 5b | SDR-24 a SDR-30, um por vez, na ordem do Marco 6 | Claude | depois do 5a |
 | 6 | ~~Migrations do SDR-17 ao SDR-21 por SQL no GL Suite~~ | — | ✅ 09/10, sem tocar no histórico do GL Suite |
 | 7 | ~~Abrir e mergear os PRs do SDR-01 ao SDR-16~~ | — | ✅ PR #1 |
 | 8 | Ligar o tick (pg_cron ou Vercel Cron) | Claude | depois da Unipile e do teste |
@@ -68,10 +83,12 @@ Legenda: ✅ feito · 🔜 a fazer · ⏳ aguardando · ⛔ bloqueado por algo e
 | T-6 | Token do RD e funil Comercial · Serviço | M3 | Arthur | aberta |
 | D3 | Rampa e teto do perfil do Arthur | ativar Arthur | Arthur | padrão: igual ao Juliano, 75/semana |
 | D1, D2, D4–D7 | Link de agenda, rascunho pro JP, cooldown, alerta, limiar, triagem | — | vários | rodando com o padrão do épico, muda por configuração |
+| D8–D10 | Teto de busca, nota de corte, opt-out por organização | SDR-27, 28, 32 | Arthur | padrão do épico: 100/dia, 70, só na organização |
 
 ## 4 · Como vai ficar
 
 - **Saída do M1:** perfil do Arthur rodando uma campanha de template, igual ao PRIME SDR.
 - **Saída do M3:** Arthur e Juliano rodando com RD; Luiz e JP prontos para ativar quando T-3, T-4 e T-5 caírem.
 - **Saída do M4:** T1 personalizado em A/B e modo automático ligado por perfil, só depois do eval e de 2 semanas com edição < 10%.
+- **Saída do M6 (caminho principal):** a empresa cola o site e chega a uma campanha ativa sem sair da jornada: dossiê confirmado, público escolhido, lista buscada e aprovada pela nota, fluxo gerado e aprovado.
 - **Custo mensal previsto:** Unipile €49 + Claude ~US$ 20–40 por perfil ativo + planos que a casa já tem.

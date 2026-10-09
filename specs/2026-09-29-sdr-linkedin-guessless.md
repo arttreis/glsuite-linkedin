@@ -766,19 +766,66 @@ Anotadas durante a execução, por ticket.
 - Editor visual com React Flow (`@xyflow/react`): blocos, setas com saída
   "sim"/"não" nas condições, painel do bloco com prévia e violações, e a
   lista de problemas do fluxo.
-## Jornada do Kakou (10/10/2026)
+## Jornada do Kakou (09/10/2026)
 
-Decidido com o Arthur: o app vira uma jornada guiada (site → oferta → públicos
-→ leads com nota → mensagens geradas → motor atual), para uso interno primeiro
-e pronto para virar produto. Sem tickets no ClickUp: desenvolvido direto no
-repo, na ordem do grafo. Sem Sales Navigator por enquanto. Ângulo é sempre
-texto livre, nascido no público; no RD, "Ângulo de abertura" deve ser campo de
-texto.
+Decidido com o Arthur e revisto no mesmo dia: o app vira uma jornada guiada,
+com o público no centro (site → dossiê → públicos → conta → busca → nota →
+lista aprovada → fluxo gerado → motor atual), para uso interno primeiro e
+pronto para virar produto. Regras no épico (§1, §4.10 a §4.14), tickets no
+Marco 6 (§9). Sem tickets no ClickUp: desenvolvido direto no repo, na ordem do
+Marco 6.
 
-Ordem: 18 organização · 19 Hoje · 20 campanha em abas → 21 opt-out por
-organização · 22 dossiê do site · 23 públicos · 24 regras da organização · 31
-Hoje com ação direta → 26 dossiê no agente · 27 sugerir públicos · 28 busca ·
-29 nota de aderência · 30 sequência gerada → 32 progresso da jornada.
+- Dossiê é fato, público é hipótese. O "como a oferta ajuda" (dor, gatilho,
+  resultado) mora no público. O dossiê continua só com o que o site diz.
+- O público é o centro e a campanha sai do menu: campanha = público × conta do
+  LinkedIn, e a conta sai da praça do público, o que mantém as regras da §4.5
+  sem o usuário pensar nelas. As abas que iam para a campanha (o antigo
+  "campanha em abas") vão para o público.
+- Nota em dois estágios. A nota rápida usa só o que a busca devolve e roda em
+  todo resultado. A pesquisa a fundo visita o perfil, tem teto de 20 por dia, e
+  por isso fica para quem foi aprovado, como o T1 personalizado já faz. A
+  triagem humana continua (§4.1), só que mais rápida.
+- O fluxo gerado é o fluxo de blocos do SDR-21, não a sequência T1–T4, que lá
+  virou legado. Ele é aprovado uma vez por campanha.
+- A jornada substitui os seis primeiros passos do SDR-19, não soma. O bloco
+  "Para agora" do Início (SDR-19) já é o "Hoje" que estava planejado.
+- Sem Sales Navigator por enquanto: porte de empresa e senioridade viram
+  critério da nota. A busca gasta a conta, então ganha teto próprio (§4.3, D8).
+- Ângulo é sempre texto livre, nascido no público. No RD, "Ângulo de
+  abertura" deve ser campo de texto (T-6).
+- Caminho principal primeiro (SDR-24 a SDR-30), depois o que apoia (SDR-31 a
+  SDR-34): é o fluxo inteiro que se quer testar. O opt-out por organização só
+  faz diferença quando existir a segunda organização.
+
+**Numeração.** Esta linha começou em paralelo ao Marco 5 (PR #2) e usava os
+números 18 a 32, que colidiam com os dele. Depois do merge do #2, o Kakou foi
+renumerado a partir do 22:
+
+| Antes | Agora |
+|---|---|
+| 18 organização | SDR-22 |
+| 22 dossiê do site | SDR-23 |
+| 26 dossiê no agente (a parte de editar e confirmar) | SDR-24 |
+| 23 públicos + 27 sugerir públicos | SDR-25 (tabela sozinha não entrega nada a quem usa) |
+| 20 campanha em abas | SDR-26 (as abas ficam no público) |
+| 28 busca | SDR-27 |
+| 29 nota de aderência | SDR-28 |
+| 30 sequência gerada | SDR-29 (gera o fluxo de blocos) |
+| 32 progresso da jornada | SDR-30 (no lugar dos primeiros passos) |
+| 31 Hoje com ação direta | SDR-31 |
+| 21 opt-out por organização | SDR-32 |
+| 24 regras da organização | SDR-33 |
+| 26 dossiê no agente (a parte do agente) | SDR-34 |
+| 19 Hoje | já feito: bloco "Para agora" do Início (SDR-19 do Marco 5) |
+
+**Juntando com o Marco 5.** Conflitos no épico, no spec, no menu, no layout
+do painel e no login. O tema do Marco 5 venceu: a marca Kakou e o nome da
+organização entram no componente `Marca`; Configurações entra no grupo Gestão
+no lugar de Perfis e Integrações; Oferta entra no grupo Prospecção; as telas
+do Kakou (Configurações, Organização e Oferta) passaram para os componentes e
+classes do tema. As tabelas novas do Marco 5 (`conversas`, `fluxos`) usam
+`pode_ver_perfil` e herdam o recorte por organização sem mudança. Todas as
+migrations das duas linhas já estão no banco (conferido em 09/10).
 
 ### SDR-22 · Organização como raiz
 
@@ -818,4 +865,5 @@ Hoje com ação direta → 26 dossiê no agente · 27 sugerir públicos · 28 bu
 - A ação grava "lendo" e roda a IA com `after()`; a página tem
   `maxDuration = 300` e se atualiza sozinha enquanto lê. O tick continua
   desligado, então nada depende dele.
-- Fica para depois: editar e confirmar o dossiê e o agente passar a usá-lo.
+- Fica para o SDR-24 editar e confirmar o dossiê, e para o SDR-34 o agente
+  passar a usá-lo.

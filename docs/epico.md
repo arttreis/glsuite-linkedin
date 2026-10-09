@@ -18,13 +18,29 @@ pronta entregava: regras por praça (Brasil, Canadá, Espanha), aprovação
 humana antes de a IA falar em nome de alguém e registro nativo no RD com
 o campo de ângulo.
 
-**Atualização de 10/10/2026 (Kakou).** O sistema passa a se chamar Kakou e vira
-uma jornada guiada: a empresa cola o site, o Kakou monta a oferta, sugere os
-públicos e o ângulo de cada um, busca os leads no LinkedIn, dá nota de
-aderência e escreve as mensagens para um humano aprovar. A GuessLess usa
-primeiro, mas a **organização** é a raiz de todos os dados desde já: cada
-organização tem os próprios perfis, operadores e prospecção, e o admin é admin
-da sua organização, não do banco. Decisões e ordem em
+**Atualização de 09/10/2026 (Kakou).** O sistema passa a se chamar Kakou e vira
+uma jornada guiada, com o **público** no centro:
+
+```text
+Oferta ─────► Públicos ─────► [um público]  Quem · Leads · Abordagem · Resultados ─────► Conversas
+site → dossiê  quem precisa    conta do LinkedIn → busca → nota → lista aprovada →
+[confirma]     e por quê       fluxo gerado [aprova] → motor das §4.1 a §4.9
+               [escolhe]
+```
+
+1. A empresa cola o site e o Kakou monta o dossiê da oferta: produtos,
+   diferenciais, provas, dores. Um humano corrige e confirma (§4.11).
+2. A partir do dossiê confirmado, o Kakou sugere os públicos: quem precisa da
+   solução, por que, com que ângulo e com que prova. O humano escolhe (§4.12).
+3. Em cada público, o humano escolhe a conta do LinkedIn; o Kakou busca as
+   pessoas e dá nota de aderência a cada uma; o humano aprova a lista (§4.13).
+4. O Kakou gera o fluxo da abordagem para aquele público; o humano aprova, e o
+   motor que já existe (fluxo, validador, teto, praça, conversa, RD) faz o
+   resto (§4.14).
+
+A GuessLess usa primeiro, mas a **organização** é a raiz de todos os dados desde
+já: cada organização tem os próprios perfis, operadores e prospecção, e o admin
+é admin da sua organização, não do banco. Tickets no Marco 6 (§9); decisões em
 `specs/2026-09-29-sdr-linkedin-guessless.md`, seção "Jornada do Kakou".
 
 ## 2 · Por que construir e não comprar
@@ -43,7 +59,11 @@ rodando, depois ~2–4 h/semana de manutenção.
 
 - E-mail (a régua D de e-mail roda em outra infraestrutura), WhatsApp, InMail.
 - Busca automática de leads por sinal (quem comentou post, troca de emprego) —
-  fase 2. Nesta versão a lista vem importada ou da busca da Unipile.
+  fase 2. Nesta versão a lista vem da busca montada a partir do público
+  (§4.13) ou de arquivo importado.
+- Sales Navigator. A busca é a clássica do LinkedIn, pela conta do perfil. O que
+  só o Sales Navigator filtra (porte da empresa, senioridade) entra como
+  critério da nota de aderência, não como filtro.
 - Cobrança, cadastro self-service e termos de uso do produto multi-cliente. A
   organização como raiz já existe (§6); o resto do produto, não.
 - Scraping de Sales Navigator fora do que a Unipile expõe.
@@ -139,6 +159,13 @@ perfil faz.
   ações (jitter configurável, default 3–12 min).
 - DM só para conexão de 1º grau.
 - Convite pendente há mais de 21 dias é retirado [verificar endpoint na Unipile].
+- Busca e visita de perfil também são atividade da conta e têm teto próprio por
+  perfil: só na janela e em dia útil, até `busca.max_resultados_dia` resultados
+  de busca (padrão 100, decisão aberta D8) e `pesquisa.max_por_dia` visitas
+  (padrão 20) por dia. [verificar na Unipile o limite de uso comercial da busca
+  em conta grátis do LinkedIn]
+- Erro de limite na busca suspende só a busca daquele perfil até o dia útil
+  seguinte e avisa o dono. Não pausa os envios.
 
 ### 4.4 · Parada automática
 
@@ -219,39 +246,49 @@ Só leads da praça Doméstico.
 
 | Evento no sistema | Estágio no RD | Campos |
 |---|---|---|
-| Lead aprovado na triagem | 01 · Alvo | empresa (nome da negociação = `<Empresa>` e nada mais) · decisor (nome e cargo) · Nicho · Fonte = LinkedIn · Praça = Doméstico · Originador = dono do perfil |
-| Convite enviado | 02 · Tocado | Ângulo de abertura (lista fechada) · próximo passo com data |
+| Lead aprovado na triagem | 01 · Alvo | empresa (nome da negociação = `<Empresa>` e nada mais) · decisor (nome e cargo) · Nicho (= nome do público) · Fonte = LinkedIn · Praça = Doméstico · Originador = dono do perfil |
+| Convite enviado | 02 · Tocado | Ângulo de abertura (texto, vem do público) · próximo passo com data |
 | Respondeu | 03 · Conversa | dono da conversa · próximo passo |
 | Qualificado na conversa (humano marca) | 04 · Qualificado | — |
 | Reunião marcada | 05 · Discovery | data da reunião |
 
 O ângulo é o único dado que ensina alguma coisa. Toque sem ângulo registrado
-é bug. Lista fechada de ângulos: Refém do marketplace · Margem invisível · O
-número não bate · Cliente que é seu · ROAS de verdade · Engenharia, não achismo,
-mais os ângulos das campanhas de indústria e parceria. É configuração, não código.
+é bug. O ângulo é texto livre e nasce no público (§4.12): a campanha herda o
+do público. Os ângulos das campanhas antigas da GuessLess (Refém do
+marketplace · Margem invisível · O número não bate · Cliente que é seu · ROAS
+de verdade · Engenharia, não achismo) continuam valendo para as campanhas que
+já os usam. No RD, "Ângulo de abertura" passa a ser campo de texto (T-6).
 
-### 4.10 · Primeiros passos obrigatórios
+### 4.10 · Primeiros passos obrigatórios: a jornada
 
 Enquanto o operador não tem uma campanha pronta, o Início vira a página de
 primeiros passos, e só ficam abertas as telas necessárias para cumpri-los
-(Início, Perfis, Campanhas, Importar, Triagem). As outras aparecem trancadas
-no menu e redirecionam para o Início. Depois, o mesmo espaço do Início mostra
-o que está esperando alguém agora (conversas, aprovação, leads parados,
-tarefas, triagem). Os passos, nesta ordem:
+(Início, Oferta, Públicos e Configurações). As outras aparecem trancadas no
+menu e redirecionam para o Início. Depois, o mesmo espaço do Início mostra o
+que está esperando alguém agora (conversas, aprovação, leads parados, tarefas,
+triagem). Os passos, nesta ordem:
 
-1. Conectar o LinkedIn de um perfil que o operador opera.
-2. Ativar esse perfil (checklist da §8).
-3. Criar uma campanha com fluxo válido (§4.1).
-4. Importar uma lista para a campanha.
-5. Aprovar pelo menos um lead na triagem.
-6. Ativar a campanha.
+1. Colar o site e confirmar o dossiê da oferta (§4.11).
+2. Escolher pelo menos um público (§4.12).
+3. No público, escolher a conta do LinkedIn, conectando e ativando o perfil se
+   preciso (checklist da §8).
+4. Buscar pessoas e aprovar pelo menos um lead da lista (§4.13).
+5. Aprovar o fluxo gerado e ativar a abordagem (§4.14).
+
+Organização sem dossiê confirmado cai no passo 1. Estes passos substituem os
+seis do SDR-19 (conectar, ativar, criar campanha, importar, triar, ativar);
+até o SDR-30, valem os seis.
+
+O menu segue a jornada: Início · Oferta · Públicos · Conversas · Resultados ·
+Configurações. Campanha, triagem e importação de arquivo viram abas do
+público; inbox, aprovação de conversa e tarefas manuais ficam em Conversas.
 
 "Campanha pronta" = campanha ativa, num perfil ativo que o operador opera, com
 pelo menos um lead aprovado. O admin vale para qualquer perfil. Depois que o
 operador tem uma campanha pronta, o bloqueio não volta, mesmo que a campanha
 seja pausada.
 
-### 4.11 · Oferta: dossiê a partir do site (Kakou)
+### 4.11 · Oferta: dossiê a partir do site
 
 - A organização cola o endereço do site. A IA abre a página inicial e as de
   sobre, produtos, preços e cases (até `dossie.max_paginas`, padrão 8), só no
@@ -265,6 +302,81 @@ seja pausada.
 - Recusa antes de chamar a IA: endereço que não é site público (IP,
   localhost, outro esquema, usuário e senha na URL).
 - Kill switch: configuração `dossie.ativo`.
+- O humano corrige e confirma o dossiê. Edição humana vale como fato. Os
+  públicos só são sugeridos a partir do dossiê confirmado.
+- Uma leitura nova do site gera um rascunho, que só substitui o dossiê
+  confirmado depois de confirmado. Público já escolhido não muda sozinho; o
+  Kakou avisa que ele pode ter ficado desatualizado.
+
+### 4.12 · Públicos
+
+O dossiê é fato do site; o público é hipótese de venda: quem compra e por quê.
+O "como a oferta ajuda" mora aqui, não no dossiê.
+
+| Campo | O que é |
+|---|---|
+| Nome | curto, ex.: "Diretores de e-commerce de varejo de moda" |
+| Quem | cargos e senioridade |
+| Empresa | setor, porte e região |
+| Por que precisa | a dor, o gatilho (o que faz ser a hora) e o resultado esperado |
+| Ângulo | texto livre, a ideia da abordagem (§4.9) |
+| Provas | quais provas do dossiê conversam com esse público |
+| Quem não é | sinais de que a pessoa não serve, mesmo parecendo servir |
+| Praça | sai da região; define idioma, regras da §4.5 e que contas trabalham o público |
+
+- O público pode dizer o que o site não diz (por que alguém precisa), mas não
+  inventa prova: prova só vem do dossiê.
+- A IA sugere de 3 a 5 públicos a partir do dossiê confirmado, inclusive
+  empresas parecidas com os clientes que o site cita. Sugestão não vale até o
+  humano escolher. O humano edita tudo, cria público do zero e arquiva o que
+  não quer.
+- Um público, uma praça. "CTOs no Brasil e no Canadá" são dois públicos.
+- As métricas ganham a visão por público: é ela que diz se a hipótese vale.
+
+### 4.13 · Busca e nota de aderência
+
+- Campanha = público × conta do LinkedIn. Ela nasce quando o humano escolhe a
+  conta no público, e só aparecem contas da praça do público. Um público pode
+  rodar em mais de uma conta; um alvo, um dono e o cooldown de empresa (§4.7)
+  valem entre elas.
+- A busca é montada a partir do público: cargos viram palavras do cargo;
+  região e setor viram filtros. [verificar na Unipile os filtros da busca
+  clássica e de onde vêm os ids de região e setor] O humano vê e edita a busca
+  antes de rodar. Ela roda pela conta da campanha, dentro do teto de busca
+  (§4.3).
+- Todo resultado passa pelas regras de importação antes de qualquer outra
+  coisa: opt-out nunca entra, um alvo um dono, cooldown de empresa, URL, fonte e
+  data da coleta (§4.7).
+- Nota de aderência de 0 a 100, com o motivo numa linha, feita só com o que a
+  busca devolve (nome, headline, cargo, empresa, local), sem visitar o perfil.
+  Porte e o resto que a busca clássica não filtra entram aqui, e o "quem não
+  é" do público tira nota.
+- A triagem humana continua (§4.1: a personalização real é a triagem). A
+  lista vem ordenada pela nota; o humano aprova em lote quem está acima da
+  nota de corte (`busca.nota_de_corte`, padrão 70, D9) e olha o meio. Nenhum
+  lead entra no fluxo sem aprovação humana.
+- A pesquisa a fundo (visita de perfil e posts, SDR-15) só acontece depois da
+  aprovação, para o convite personalizado.
+- Arquivo importado (CSV, Apify) continua como segunda fonte, dentro do
+  público, e também ganha nota.
+
+### 4.14 · Fluxo gerado pelo público
+
+- Quando a campanha nasce, o Kakou gera o fluxo dela (§4.1) a partir do
+  público, do dossiê e da praça: a forma do fluxo padrão de 4 toques, com os
+  textos escritos para aquele público e aquele ângulo, no idioma da praça.
+- Os textos usam só `{{first_name}}` e `{{company}}` (§4.1), citam só prova do
+  dossiê e passam no validador (§4.2) antes de chegar ao humano. Texto barrado
+  ganha uma reescrita com os problemas apontados. Se falhar de novo, chega
+  marcado, e o fluxo não ativa até alguém corrigir. Nunca corrige em silêncio.
+- As regras da praça já entram no fluxo gerado: no Canadá, toda mensagem com a
+  saída; na Espanha, tarefa manual no lugar das mensagens, com o texto gerado
+  como roteiro.
+- O humano aprova o fluxo uma vez por campanha, no editor de blocos, antes de
+  ativar. Pode editar e gerar de novo. Depois de ativo, mudar segue a regra de
+  versão da §4.1.
+- O convite personalizado por lead (A/B do SDR-15) continua igual, por cima do
+  fluxo gerado.
 
 ## 5 · Arquitetura
 
@@ -297,7 +409,7 @@ seja pausada.
 | Banco e auth | Supabase (Postgres + Auth + RLS) | idem; login dos 4 operadores |
 | LinkedIn | Unipile (hosted auth, API REST, webhooks) | busca, perfil, convite, DM, histórico e webhooks prontos. Não gerencia sequência nem protege a conta: as duas coisas são nossas |
 | Agendamento | tabela `acoes` + tick de cron a cada 5 min (Vercel Cron ou pg_cron [verificar frequência permitida no plano]) | o teto é global por perfil. Um despachante central que olha a fila inteira modela isso melhor que um workflow durável por lead |
-| IA | Claude API, SDK oficial `@anthropic-ai/sdk`. `claude-haiku-4-5` classifica a resposta; `claude-sonnet-5` rascunha e pesquisa | 30 palavras não pedem modelo de topo. O modelo fica em variável de ambiente, e a troca é decidida pelo eval (§7) |
+| IA | Claude API, SDK oficial `@anthropic-ai/sdk`. `claude-haiku-4-5` classifica a resposta e dá a nota de aderência; `claude-sonnet-5` rascunha, pesquisa, lê o site, sugere públicos e escreve o fluxo | 30 palavras não pedem modelo de topo. O modelo fica em variável de ambiente, e a troca é decidida pelo eval (§7) |
 | Alertas | e-mail (Resend) (decisão aberta D5: e-mail, Slack ou WhatsApp) | SLA de 4 h precisa de aviso ativo |
 
 ### 5.1 · Por que um despachante central
@@ -321,6 +433,17 @@ revisão.
 ```text
 organizacoes (id, slug unique, nome)               -- raiz: tudo abaixo pertence a uma
 operadores (id, nome, email, papel, ativo, organizacao_id)
+ofertas (                                          -- §4.11, uma por organização
+  id, organizacao_id unique, url, status, dossie jsonb, fontes jsonb,
+  dossie_confirmado jsonb, confirmado_em, confirmado_por
+)
+publicos (                                         -- §4.12
+  id, organizacao_id, nome, quem jsonb, empresa jsonb,  -- cargos e senioridade · setor, porte, região
+  por_que jsonb,                                  -- {dor, gatilho, resultado}
+  angulo, provas jsonb, quem_nao_e, praca,
+  origem,                                         -- 'ia' | 'humano'
+  status                                          -- 'sugerido' | 'ativo' | 'arquivado'
+)
 perfis (
   id, organizacao_id, nome, unipile_account_id, praca,            -- 'domestico' | 'canada' | 'espanha'
   fuso, idioma, modo_resposta,                    -- 'manual' | 'aprovacao' | 'automatico'
@@ -330,7 +453,8 @@ perfis (
   link_agenda, voz_md, regras_md, rodape_obrigatorio
 )
 campanhas (
-  id, perfil_id, nome, angulo, nicho,
+  id, perfil_id, publico_id, nome, angulo, nicho, -- angulo e nicho vêm do público
+  busca jsonb,                                    -- a busca montada do público, editável (§4.13)
   modo_copy,                                      -- 'template' | 'personalizada'
   sequencia jsonb,                                -- legado: [{toque:'T1', tipo:'convite', offset_dias_uteis:0, ancora:'inicio', template:'...'}, ...]
   fluxo_id,                                       -- versão atual do fluxo de blocos (§4.1)
@@ -344,6 +468,7 @@ pessoas (
 )
 leads (
   id, pessoa_id, campanha_id, fluxo_id, estado, angulo, passo_atual,
+  nota, nota_motivo,                              -- aderência ao público (§4.13)
   pesquisa jsonb, rd_deal_id, criado_em, atualizado_em
 )
 acoes (
@@ -444,7 +569,7 @@ real, idioma do prospect. Prompt de sistema estável por perfil, com
 | T-3 | Acordo de parceria com cláusula de automação assinado com Luiz e JP | perfis Luiz e JP | Arthur |
 | T-4 | DPA assinado antes de gravar nome europeu | perfil JP | Arthur |
 | T-5 | Postura CASL e LSSI confirmada com fonte local | perfis Luiz e JP | Luiz, JP |
-| T-6 | Token da API do RD Station e funil Comercial · Serviço configurado conforme §4.9 | M3 (RD) | Arthur |
+| T-6 | Token da API do RD Station e funil Comercial · Serviço configurado conforme §4.9, com "Ângulo de abertura" como campo de texto | M3 (RD) | Arthur |
 
 Os perfis do Brasil não esperam nenhuma das travas internacionais. Ordem de
 ativação: Arthur → Juliano → Luiz → JP.
@@ -635,6 +760,101 @@ ativar assim que T-3/T-4/T-5 caírem.
   fluxo com desvio por aceite, esperas e mensagens arbitrárias roda no relógio
   simulado; fluxo inválido não ativa.
 
+### Marco 6 · Jornada do Kakou (decidido em 09/10/2026)
+
+Ordem: primeiro o caminho principal, de ponta a ponta (SDR-22 a SDR-30);
+depois o que apoia (SDR-31 a SDR-34). A campanha nasce do público (SDR-26)
+antes da busca porque a busca roda pela conta da campanha.
+
+**SDR-22 · Organização como raiz** ✅
+
+- Tabela `organizacoes`, RLS por organização, admin da própria organização,
+  marca Kakou e Configurações › Organização (§1, §6).
+- ✅ Aceite: membros e dados de uma organização não aparecem para outra; só o
+  admin renomeia a própria organização; com mais de uma organização, operador
+  novo precisa dizer qual.
+
+**SDR-23 · Dossiê da oferta a partir do site** ✅
+
+- Leitura do site e dossiê (§4.11, até o kill switch).
+- ✅ Aceite: localhost e IP são recusados antes de chamar a IA; leitura que
+  falha guarda o motivo e preserva o dossiê anterior; uma leitura por vez,
+  com a parada depois de 5 minutos; outra organização não lê a oferta.
+
+**SDR-24 · Dossiê editável e confirmado**
+
+- Editar cada parte do dossiê, confirmar, e leitura nova como rascunho
+  (§4.11).
+- ✅ Aceite: sem dossiê confirmado, públicos não são sugeridos; ler o site de
+  novo não muda o confirmado até nova confirmação; a edição grava quem e quando.
+
+**SDR-25 · Públicos sugeridos a partir do dossiê**
+
+- Tabela `publicos`, sugestão de 3 a 5 pela IA com saída estruturada, e a tela
+  Públicos para escolher, editar, criar e arquivar (§4.12).
+- ✅ Aceite: toda prova de um público existe no dossiê; público tem uma praça
+  só; público sugerido não vira campanha sem escolha humana.
+
+**SDR-26 · Campanha nasce do público**
+
+- Página do público com as abas Quem · Leads · Abordagem · Resultados.
+  "Começar a abordar" escolhe a conta (só da praça do público; conectar e
+  ativar se preciso) e cria a campanha com `publico_id`, nome, nicho e ângulo
+  do público, com o fluxo padrão de 4 toques até o SDR-29. Triagem e
+  importação de arquivo passam para a aba Leads; a aprovação do convite
+  personalizado, para a aba Abordagem.
+- ✅ Aceite: conta de outra praça não aparece para o público; o ângulo da
+  campanha e do RD é o texto do público; a mesma pessoa não entra por duas
+  contas (§4.7).
+
+**SDR-27 · Busca a partir do público**
+
+- Monta a busca clássica da Unipile a partir do público, mostra para o humano
+  editar, roda pela conta da campanha dentro do teto de busca (§4.3) e passa
+  cada resultado pelas regras de importação (§4.13). Antes de codar:
+  [verificar filtros e ids de região e setor na Unipile].
+- ✅ Aceite (relógio simulado): a busca não roda fora da janela nem acima do
+  teto; erro de limite na busca suspende só a busca do perfil; opt-out e
+  pessoa de outro dono nunca entram.
+
+**SDR-28 · Nota de aderência**
+
+- Nota de 0 a 100 com motivo, só com os dados da busca, para todo lead em
+  triagem do público (da busca ou de arquivo); lista ordenada pela nota;
+  aprovar em lote acima da nota de corte (§4.13).
+- ✅ Aceite: dar nota nunca visita perfil; aprovar em lote só aprova quem está
+  acima do corte e passa nas regras; nenhum lead entra no fluxo sem aprovação
+  humana.
+
+**SDR-29 · Fluxo gerado pelo público**
+
+- Gera o fluxo da campanha a partir do público, do dossiê e da praça, valida,
+  reescreve uma vez o que for barrado e abre no editor para aprovação
+  (§4.14).
+- ✅ Aceite: o fluxo gerado passa no validador ou chega marcado e não ativa;
+  nenhuma prova fora do dossiê; no Canadá, toda mensagem com a saída; na
+  Espanha, nenhuma mensagem automática.
+
+**SDR-30 · Jornada no lugar dos primeiros passos**
+
+- Os passos da §4.10 no lugar dos seis do SDR-19; o menu da §4.10; Conversas
+  junta inbox, aprovação de conversa e tarefas; Campanhas, Triagem e Importar
+  saem do menu; as métricas ganham a visão por público.
+- ✅ Aceite: organização sem dossiê confirmado cai no passo 1; cumprir o passo
+  5 destranca o menu e o bloqueio não volta; operador que já tinha campanha
+  pronta não volta para a jornada.
+
+Depois do caminho principal (detalhar o aceite antes de começar):
+
+- **SDR-31 · Início com ação direta.** Aprovar, responder e concluir tarefa
+  direto no bloco "Para agora" do Início, sem trocar de tela.
+- **SDR-32 · Opt-out por organização.** O opt-out da §4.6 passa a valer para
+  todos os perfis da organização (D10).
+- **SDR-33 · Regras da organização.** As palavras proibidas e as regras de copy
+  da §4.2 passam a ser da organização. Hoje são as da GuessLess para todos.
+- **SDR-34 · Dossiê no agente de conversa.** O agente (§7) usa o dossiê
+  confirmado e o público do lead como "oferta vigente".
+
 ## 10 · Decisões abertas
 
 | # | Decisão | Sugestão | Dono |
@@ -646,6 +866,9 @@ ativar assim que T-3/T-4/T-5 caírem.
 | D5 | Canal de alerta de SLA e de pausa | e-mail no M1, WhatsApp depois | Arthur |
 | D6 | Limiar de edição para liberar o automático | < 10% em 2 semanas | Arthur |
 | D7 | Quem opera a triagem da lista (40 h por trimestre estimadas nas campanhas) | — | Arthur |
+| D8 | Teto de resultados de busca por perfil por dia (§4.3) | 100, até confirmar o limite de uso comercial da conta | Arthur |
+| D9 | Nota de corte para aprovar em lote (§4.13) | 70 | Arthur |
+| D10 | Opt-out vale só na organização ou em todas? | só na organização: cada empresa responde pelo próprio contato | Arthur |
 
 ## 11 · Custos de operação
 
@@ -653,6 +876,7 @@ ativar assim que T-3/T-4/T-5 caírem.
 |---|---|
 | Unipile | €49 (até 10 contas) |
 | Claude API | ~US$ 20–40 por perfil ativo (estimativa: ~30k tokens de entrada e ~3k de saída por lead no Sonnet 5, a US$ 2/10 por milhão) |
+| Claude API · jornada | leitura do site: gravada por leitura em `ofertas.custo_usd`. Nota de aderência no Haiku 4.5 (US$ 1/5 por milhão): ~300 resultados por semana por perfil, ~1k tokens cada, dá ~US$ 2/mês por perfil [estimativa] |
 | Vercel, Supabase, Resend | planos que a casa já tem [confirmar o limite de cron] |
 
 ## 12 · Como rodar este épico no repo novo
