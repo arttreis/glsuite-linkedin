@@ -6,13 +6,19 @@ import { Avatar } from "./avatar";
 import { Marca } from "./marca";
 import { Navegacao } from "./navegacao";
 
-export type OperadorDaSessao = { nome: string; email: string; papel: "admin" | "operador"; emPrimeirosPassos: boolean };
+export type OperadorDaSessao = {
+  nome: string;
+  email: string;
+  papel: "admin" | "operador";
+  organizacao: string;
+  emPrimeirosPassos: boolean;
+};
 
 function PainelLateral({ operador, aoFechar }: { operador: OperadorDaSessao; aoFechar?: () => void }) {
   return (
     <div className="cartao flex h-full flex-col p-3">
       <div className="flex items-center justify-between px-2 pb-5 pt-1">
-        <Marca />
+        <Marca organizacao={operador.organizacao} />
         {aoFechar && (
           <button type="button" className="botao botao-pequeno px-2" aria-label="Fechar menu" onClick={aoFechar} autoFocus>
             <X aria-hidden />
@@ -80,7 +86,7 @@ export function Estrutura({ operador, children }: { operador: OperadorDaSessao; 
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="sticky top-0 z-30 flex items-center justify-between border-b border-linha bg-fundo/85 px-5 py-3 backdrop-blur lg:hidden">
-          <Marca />
+          <Marca organizacao={operador.organizacao} />
           <button
             type="button"
             className="botao botao-pequeno px-2"

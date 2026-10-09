@@ -11,6 +11,13 @@ const ROTAS_PUBLICAS = ["/login", "/auth/"];
  * painel e RLS).
  */
 export async function atualizarSessao(request: NextRequest) {
+  // Login desligado (ACESSO_SEM_LOGIN_EMAIL): o painel abre direto e o login some.
+  if (process.env.ACESSO_SEM_LOGIN_EMAIL?.trim()) {
+    if (request.nextUrl.pathname === "/login") return NextResponse.redirect(new URL("/", request.url));
+    const aberta = NextResponse.next({ request });
+    aberta.headers.set("Cache-Control", "private, no-store");
+    return aberta;
+  }
   const env = envPublico();
   let resposta = NextResponse.next({ request });
 

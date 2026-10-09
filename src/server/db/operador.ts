@@ -23,12 +23,16 @@ export type Operador = {
   nome: string;
   email: string;
   papel: "admin" | "operador";
+  organizacaoId: string;
+  organizacaoNome: string;
 };
 
 /** Operador ativo pelo id do usuário do Supabase Auth, ou null. */
 export async function buscarOperadorAtivo(db: Db, userId: string): Promise<Operador | null> {
   const [operador] = await db.query<Operador>(
-    "select id, nome, email, papel from public.operadores where id = $1::uuid and ativo",
+    `select o.id, o.nome, o.email, o.papel, o.organizacao_id as "organizacaoId", g.nome as "organizacaoNome"
+       from public.operadores o join public.organizacoes g on g.id = o.organizacao_id
+      where o.id = $1::uuid and o.ativo`,
     [userId],
   );
   return operador ?? null;

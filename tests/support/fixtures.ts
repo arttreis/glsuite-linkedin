@@ -17,21 +17,63 @@ export async function idDoPerfil(db: Db, slug: SlugPerfil): Promise<string> {
   return perfil.id;
 }
 
+export async function idDaOrganizacaoGuessless(db: Db): Promise<string> {
+  const [organizacao] = await db.query<{ id: string }>("select id from public.organizacoes where slug = 'guessless'");
+  if (!organizacao) throw new Error("organização guessless não existe");
+  return organizacao.id;
+}
+
+/** Organização nova, sem perfis nem operadores. */
+export async function criarOrganizacao(db: Db, opcoes: { slug?: string; nome?: string } = {}): Promise<string> {
+  const slug = opcoes.slug ?? `org-${randomUUID().slice(0, 8)}`;
+  const [organizacao] = await db.query<{ id: string }>(
+    "insert into public.organizacoes (slug, nome) values ($1, $2) returning id",
+    [slug, opcoes.nome ?? "Outra Empresa"],
+  );
+  return organizacao!.id;
+}
+
+/** Perfil pausado numa organização qualquer, com a configuração do perfil do Arthur. */
+export async function criarPerfilNaOrganizacao(
+  db: Db,
+  p: { organizacaoId: string; slug: string; praca?: "domestico" | "canada" | "espanha" },
+): Promise<string> {
+  const [perfil] = await db.query<{ id: string }>(
+    `insert into public.perfis (slug, nome, praca, fuso, idioma, modo_resposta, rampa, teto_convites_semana, janela, motivo_pausa, organizacao_id)
+     select $1, $1, coalesce($3, praca), fuso, idioma, modo_resposta, rampa, teto_convites_semana, janela, motivo_pausa, $2::uuid
+       from public.perfis where slug = 'arthur'
+     returning id`,
+    [p.slug, p.organizacaoId, p.praca ?? null],
+  );
+  return perfil!.id;
+}
+
 export async function criarOperador(
   db: Db,
-  opcoes: { email?: string; nome?: string; papel?: "admin" | "operador"; perfis?: SlugPerfil[]; ativo?: boolean } = {},
+  opcoes: {
+    email?: string;
+    nome?: string;
+    papel?: "admin" | "operador";
+    perfis?: SlugPerfil[];
+    perfilIds?: string[];
+    ativo?: boolean;
+    organizacaoId?: string;
+  } = {},
 ): Promise<string> {
   const id = randomUUID();
   const email = opcoes.email ?? `${id}@guessless.com.br`;
+  const organizacaoId = opcoes.organizacaoId ?? (await idDaOrganizacaoGuessless(db));
   await db.query("insert into auth.users (id, email) values ($1::uuid, $2)", [id, email]);
   await db.query(
-    "insert into public.operadores (id, nome, email, papel, ativo) values ($1::uuid, $2, $3, $4, $5)",
-    [id, opcoes.nome ?? "Operador", email, opcoes.papel ?? "operador", opcoes.ativo ?? true],
+    "insert into public.operadores (id, nome, email, papel, ativo, organizacao_id) values ($1::uuid, $2, $3, $4, $5, $6::uuid)",
+    [id, opcoes.nome ?? "Operador", email, opcoes.papel ?? "operador", opcoes.ativo ?? true, organizacaoId],
   );
-  for (const slug of opcoes.perfis ?? []) {
+  const perfilIds = [...(opcoes.perfilIds ?? [])];
+  for (const slug of opcoes.perfis ?? []) perfilIds.push(await idDoPerfil(db, slug));
+  for (const perfilId of perfilIds) {
     await db.query(
       "insert into public.operador_perfis (operador_id, perfil_id) values ($1::uuid, $2::uuid)",
-      [id, await idDoPerfil(db, slug)],
+      [id, perfilId],
     );
   }
   return id;

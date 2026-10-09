@@ -9,7 +9,15 @@ export default async function PainelLayout({ children }: { children: ReactNode }
   const { concluido } = await avaliarPrimeirosPassos(obterDb(), operador.id, new Date());
 
   return (
-    <Estrutura operador={{ nome: operador.nome, email: operador.email, papel: operador.papel, emPrimeirosPassos: !concluido }}>
+    <Estrutura
+      operador={{
+        nome: operador.nome,
+        email: operador.email,
+        papel: operador.papel,
+        organizacao: operador.organizacaoNome,
+        emPrimeirosPassos: !concluido,
+      }}
+    >
       {children}
     </Estrutura>
   );

@@ -766,3 +766,56 @@ Anotadas durante a execução, por ticket.
 - Editor visual com React Flow (`@xyflow/react`): blocos, setas com saída
   "sim"/"não" nas condições, painel do bloco com prévia e violações, e a
   lista de problemas do fluxo.
+## Jornada do Kakou (10/10/2026)
+
+Decidido com o Arthur: o app vira uma jornada guiada (site → oferta → públicos
+→ leads com nota → mensagens geradas → motor atual), para uso interno primeiro
+e pronto para virar produto. Sem tickets no ClickUp: desenvolvido direto no
+repo, na ordem do grafo. Sem Sales Navigator por enquanto. Ângulo é sempre
+texto livre, nascido no público; no RD, "Ângulo de abertura" deve ser campo de
+texto.
+
+Ordem: 18 organização · 19 Hoje · 20 campanha em abas → 21 opt-out por
+organização · 22 dossiê do site · 23 públicos · 24 regras da organização · 31
+Hoje com ação direta → 26 dossiê no agente · 27 sugerir públicos · 28 busca ·
+29 nota de aderência · 30 sequência gerada → 32 progresso da jornada.
+
+### SDR-22 · Organização como raiz
+
+- Tabela `organizacoes`; `operadores.organizacao_id` e `perfis.organizacao_id`
+  obrigatórios, com backfill na GuessLess. Campanhas, leads, ações, mensagens e
+  o resto herdam a organização pelo perfil.
+- `pode_ver_perfil` passa a exigir o perfil na organização do operador. O admin
+  é admin da própria organização. As policies que liberavam linhas só com
+  `eh_admin()` (opt-outs, eventos, alertas, rd_eventos) passaram a depender só
+  de `pode_ver_perfil`; webhooks brutos ficam sem leitura pelo painel.
+- Insert em `perfis` ou `operadores` sem organização entra na organização única
+  (trigger). Com mais de uma, o insert falha pedindo a organização. Mantém o seed
+  idempotente e o SQL de "operador novo" funcionando.
+- Continuam globais, de propósito, até existir o 2º cliente: `angulos`,
+  `feriados`, `configuracoes` e a página de Integrações (que lê sem RLS e é só
+  para admin).
+- Marca "Kakou" no título, no login e na barra lateral, com o nome da
+  organização embaixo. "Perfis" e "Integrações" saem do menu (grupo Gestão) e
+  viram cartões em Configurações, que fica liberada nos primeiros passos;
+  Configurações › Organização mostra nome (o admin edita) e membros.
+- Aplicar no GL Suite por SQL, nunca por `db push`. Antes, conferir que
+  `public.organizacoes` e `public.organizacao_do_operador()` não existem lá.
+  Depois, `grant select, insert, update, delete on public.organizacoes to
+  sdr_servidor`.
+### SDR-23 · Dossiê da oferta a partir do site
+
+- Leitura pela ferramenta `web_fetch_20260209` da API da Claude (roda no
+  servidor da Anthropic; sem crawler nosso e sem superfície de SSRF na nossa
+  infra), presa a `allowed_domains = [domínio, www.domínio]`, `max_uses` da
+  configuração e ~6 mil tokens por página. Retoma `pause_turn` até 4 vezes.
+- Dois passos: a leitura (com a ferramenta, devolve notas em texto) e a
+  estruturação (saída estruturada com o esquema `dossie`). Separados porque
+  saída estruturada com ferramenta de servidor não foi confirmada, e citações
+  não combinam com o formato fixo.
+- Modelo e esforço: `IA_MODELO_RASCUNHO` e `IA_ESFORCO_RASCUNHO`. Custo gravado
+  por leitura (`ofertas.custo_usd`) e no evento `dossie_gerado`.
+- A ação grava "lendo" e roda a IA com `after()`; a página tem
+  `maxDuration = 300` e se atualiza sozinha enquanto lê. O tick continua
+  desligado, então nada depende dele.
+- Fica para depois: editar e confirmar o dossiê e o agente passar a usá-lo.

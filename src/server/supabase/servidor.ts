@@ -39,8 +39,28 @@ export async function exigirSessao(): Promise<Sessao> {
   return { userId: data.claims.sub, email: typeof data.claims.email === "string" ? data.claims.email : null };
 }
 
+/**
+ * Login desligado: com ACESSO_SEM_LOGIN_EMAIL definida, todo mundo que abre o
+ * painel entra como esse operador, sem link de acesso. Só para teste: qualquer
+ * pessoa com o endereço usa o painel.
+ */
+export function emailDeAcessoSemLogin(): string | null {
+  const email = process.env.ACESSO_SEM_LOGIN_EMAIL?.trim().toLowerCase();
+  return email ? email : null;
+}
+
 /** Sessão de um operador ativo. Usuário logado que não é operador volta ao login. */
 export async function exigirOperador(): Promise<Operador> {
+  const semLogin = emailDeAcessoSemLogin();
+  if (semLogin) {
+    const [linha] = await obterDb().query<{ id: string }>(
+      "select id from public.operadores where lower(email) = $1 and ativo",
+      [semLogin],
+    );
+    const operador = linha ? await buscarOperadorAtivo(obterDb(), linha.id) : null;
+    if (!operador) throw new Error(`ACESSO_SEM_LOGIN_EMAIL aponta para ${semLogin}, que não é operador ativo.`);
+    return operador;
+  }
   const sessao = await exigirSessao();
   const operador = await buscarOperadorAtivo(obterDb(), sessao.userId);
   if (!operador) redirect("/login?erro=acesso");
