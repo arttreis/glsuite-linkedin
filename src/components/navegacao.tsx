@@ -11,16 +11,18 @@ import {
   Lock,
   Megaphone,
   PenLine,
-  Plug,
-  Users,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
-/** `guiado`: liberado durante os primeiros passos (§4.10); os outros ficam trancados até lá. */
-type Item = { href: string; rotulo: string; icone: LucideIcon; soAdmin?: boolean; guiado?: boolean };
+/**
+ * `guiado`: liberado durante os primeiros passos (§4.10); os outros ficam
+ * trancados até lá. `tambem`: outras rotas em que o item aparece ativo.
+ */
+type Item = { href: string; rotulo: string; icone: LucideIcon; soAdmin?: boolean; guiado?: boolean; tambem?: string[] };
 
 const GRUPOS: { titulo: string; itens: Item[] }[] = [
   {
@@ -44,8 +46,7 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
     titulo: "Gestão",
     itens: [
       { href: "/metricas", rotulo: "Métricas", icone: ChartColumn },
-      { href: "/perfis", rotulo: "Perfis", icone: Users, guiado: true },
-      { href: "/integracoes", rotulo: "Integrações", icone: Plug, soAdmin: true },
+      { href: "/configuracoes", rotulo: "Configurações", icone: Settings, guiado: true, tambem: ["/perfis", "/integracoes"] },
     ],
   },
 ];
@@ -91,7 +92,10 @@ export function Navegacao({
               {grupo.itens
                 .filter((item) => admin || !item.soAdmin)
                 .map((item) => {
-                  const ativo = item.href === "/" ? caminho === "/" : caminho.startsWith(item.href);
+                  const ativo =
+                    item.href === "/"
+                      ? caminho === "/"
+                      : [item.href, ...(item.tambem ?? [])].some((prefixo) => caminho.startsWith(prefixo));
                   const Icone = item.icone;
                   if (emPrimeirosPassos && !item.guiado) {
                     return (

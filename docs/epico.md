@@ -18,6 +18,15 @@ pronta entregava: regras por praça (Brasil, Canadá, Espanha), aprovação
 humana antes de a IA falar em nome de alguém e registro nativo no RD com
 o campo de ângulo.
 
+**Atualização de 10/10/2026 (Kakou).** O sistema passa a se chamar Kakou e vira
+uma jornada guiada: a empresa cola o site, o Kakou monta a oferta, sugere os
+públicos e o ângulo de cada um, busca os leads no LinkedIn, dá nota de
+aderência e escreve as mensagens para um humano aprovar. A GuessLess usa
+primeiro, mas a **organização** é a raiz de todos os dados desde já: cada
+organização tem os próprios perfis, operadores e prospecção, e o admin é admin
+da sua organização, não do banco. Decisões e ordem em
+`specs/2026-09-29-sdr-linkedin-guessless.md`, seção "Jornada do Kakou".
+
 ## 2 · Por que construir e não comprar
 
 | | Kakiyo (Conqueror, 4 contas) | Construir |
@@ -35,8 +44,8 @@ rodando, depois ~2–4 h/semana de manutenção.
 - E-mail (a régua D de e-mail roda em outra infraestrutura), WhatsApp, InMail.
 - Busca automática de leads por sinal (quem comentou post, troca de emprego) —
   fase 2. Nesta versão a lista vem importada ou da busca da Unipile.
-- Produto multi-cliente / módulo da GL Suite. O modelo de dados não impede, mas
-  nada é construído para isso agora.
+- Cobrança, cadastro self-service e termos de uso do produto multi-cliente. A
+  organização como raiz já existe (§6); o resto do produto, não.
 - Scraping de Sales Navigator fora do que a Unipile expõe.
 
 ## 4 · As regras de negócio (vêm das campanhas 01, 03, 04 e internacional)
@@ -295,8 +304,10 @@ revisão.
 ## 6 · Modelo de dados (proposta inicial)
 
 ```text
+organizacoes (id, slug unique, nome)               -- raiz: tudo abaixo pertence a uma
+operadores (id, nome, email, papel, ativo, organizacao_id)
 perfis (
-  id, nome, unipile_account_id, praca,            -- 'domestico' | 'canada' | 'espanha'
+  id, organizacao_id, nome, unipile_account_id, praca,            -- 'domestico' | 'canada' | 'espanha'
   fuso, idioma, modo_resposta,                    -- 'manual' | 'aprovacao' | 'automatico'
   rampa jsonb,                                    -- [{semana:1, convites_dia:8, dms_dia:15}, ...]
   teto_convites_semana, janela jsonb,             -- {inicio:'09:00', fim:'18:00', jitter_min:[3,12]}

@@ -44,10 +44,12 @@ supabase db push
 ### Operadores
 
 Depois de convidar a pessoa pelo Supabase Auth, cadastre-a como operador no SQL
-Editor. O admin enxerga todos os perfis; o operador, só os que receber em
-`operador_perfis`.
+Editor. O admin enxerga todos os perfis da organização dele; o operador, só os que
+receber em `operador_perfis`.
 
 ```sql
+-- Com uma organização só, o operador entra nela sozinho. Com mais de uma,
+-- inclua organizacao_id (select id from public.organizacoes where slug = '...').
 insert into public.operadores (id, nome, email, papel)
 select id, 'Arthur', email, 'admin' from auth.users where email = 'arthur@exemplo.com';
 

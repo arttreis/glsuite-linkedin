@@ -1,5 +1,8 @@
-/** Marca do painel: um alvo, porque o SDR mira um decisor por vez. */
-export function Marca() {
+/**
+ * Marca do painel: um alvo, porque o Kakou mira um decisor por vez. Dentro do
+ * painel, o nome da organização fica embaixo.
+ */
+export function Marca({ organizacao }: { organizacao?: string }) {
   return (
     <span className="flex items-center gap-2.5">
       <svg viewBox="0 0 32 32" className="size-8 shrink-0" aria-hidden>
@@ -8,8 +11,8 @@ export function Marca() {
         <circle cx="16" cy="16" r="2.75" className="fill-destaque" />
       </svg>
       <span className="flex flex-col leading-tight">
-        <span className="text-sm font-semibold tracking-tight">SDR</span>
-        <span className="text-[11px] text-tinta-fraca">GuessLess</span>
+        <span className="text-sm font-semibold tracking-tight">Kakou</span>
+        {organizacao && <span className="truncate text-[11px] text-tinta-fraca">{organizacao}</span>}
       </span>
     </span>
   );

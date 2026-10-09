@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SDR · GuessLess",
-  description: "Prospecção no LinkedIn pelos perfis da GuessLess",
+  title: "Kakou",
+  description: "Prospecção e abordagem no LinkedIn",
   robots: { index: false, follow: false },
 };
 
