@@ -11,8 +11,9 @@ import type { AvaliadorDeAderencia } from "@/server/nota/avaliador";
 import { criarEscritorClaude, criarSugeridorClaude } from "@/server/publicos/claude";
 import type { EscritorDeFluxo } from "@/server/publicos/escritor";
 import type { SugeridorDePublicos } from "@/server/publicos/sugeridor";
-import { criarGeradorDeSdrClaude } from "@/server/sdr/claude";
+import { criarAjustadorDeSdrClaude, criarGeradorDeSdrClaude } from "@/server/sdr/claude";
 import type { GeradorDeSdr } from "@/server/sdr/sdr";
+import type { AjustadorDeSdr } from "@/server/sdr/teste";
 import { criarEnviadorResend } from "@/server/alertas/resend";
 import { criarClienteRd, type ClienteRd } from "@/server/rd/cliente";
 import { criarClienteUnipile, type ClienteUnipile } from "@/server/unipile/cliente";
@@ -159,6 +160,19 @@ export function obterGeradorDeSdr(): GeradorDeSdr | null {
       : null;
   }
   return geradorDeSdr;
+}
+
+let ajustadorDeSdr: AjustadorDeSdr | null | undefined;
+
+/** Ajusta o SDR no chat de teste (§4.3), ou null sem ANTHROPIC_API_KEY. */
+export function obterAjustadorDeSdr(): AjustadorDeSdr | null {
+  if (ajustadorDeSdr === undefined) {
+    const env = envIa();
+    ajustadorDeSdr = env.ANTHROPIC_API_KEY
+      ? criarAjustadorDeSdrClaude({ apiKey: env.ANTHROPIC_API_KEY, modelo: env.IA_MODELO_RASCUNHO, esforco: env.IA_ESFORCO_RASCUNHO })
+      : null;
+  }
+  return ajustadorDeSdr;
 }
 
 const envRd = lerEnv(z.object({ RD_STATION_TOKEN: z.string().min(1).optional() }));

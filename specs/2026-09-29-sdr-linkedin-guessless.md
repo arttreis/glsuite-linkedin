@@ -1273,3 +1273,35 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
   pelo coletor de lixo; com os testes novos do agente, a máquina de 8 GB
   estourou. Os clones agora fecham no fim de cada teste
   (`tests/support/setup.ts`).
+
+### SDR-43 · Chat de teste: você no papel de lead
+
+- O SDR passou a nascer na abertura do passo 3, dentro de um `Suspense`
+  ("Montando o seu SDR a partir da análise"), e não mais num `after` da
+  confirmação: os dois juntos geravam o SDR duas vezes. Recarregar no meio
+  ainda pode gerar uma versão a mais; aceito.
+- **O teste usa o caminho da produção.** A resposta é `decidirResposta`, com a
+  mesma `EntradaDoAgente`: o SDR e a análise da organização, um lead fictício
+  (Marina, Sarah ou Lucía, pelo idioma da análise) no segmento escolhido.
+  Sem palavras proibidas de perfil, porque a conta ainda não existe. A
+  abertura usa `abrirConversa`, que monta o mesmo prompt de sistema
+  (`sistemaDoRascunho`) e passa pelo mesmo validador; só a mensagem do
+  usuário muda ("a pessoa acabou de aceitar o convite").
+- O que não é resposta comum vira nota no fio: o SDR chamaria a pessoa (com o
+  motivo), registraria o opt-out, não responderia ausência, encerraria. A
+  ressalva (preço, reclamação, validador, baixa confiança) fica no próprio
+  balão, em âmbar: "na produção, esperaria a sua aprovação".
+- Ajuste: chamada própria (`promptDoAjuste`, `ajuste-1`), com o SDR sem o
+  link, o pedido, a resposta apontada e a conversa. Devolve o SDR inteiro, o
+  resumo e a recusa; recusa não grava versão. O link de agenda é mantido.
+  Depois do ajuste, a última resposta do SDR sai do fio e é escrita de novo
+  com o SDR novo; o resumo fica antes dela. Se a resposta nova falhar, o
+  ajuste continua valendo e o fio fica com o aviso.
+- As regras da casa não moram no SDR, então nenhum ajuste as tira; mesmo um
+  SDR que diga "pode usar travessão" fica abaixo delas no prompt (teste).
+- Desfazer grava como versão nova exatamente o SDR da versão anterior. O
+  botão aparece só no último ajuste, enquanto ele for a última mudança.
+- O teste fica em `sdr_testes` (um por organização) e roda com a conexão do
+  sistema, sempre na organização do operador: as chamadas da IA levam
+  segundos e não devem segurar uma transação aberta.
+- "Ficou bom" grava `sdrs.aprovado_em`, que conclui o passo 3.

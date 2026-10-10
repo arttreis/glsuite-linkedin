@@ -5,6 +5,7 @@ import { validarMensagem, type Praca, type ResultadoDaValidacao } from "@/domain
 import type { Configuracao } from "@/server/configuracoes";
 import type { Classificacao, Decisao, ModeloDeLinguagem, Uso } from "./modelo";
 import {
+  entradaDaAbertura,
   entradaDaClassificacao,
   entradaDoRascunho,
   promptDeClassificacao,
@@ -66,6 +67,63 @@ const somaDeUso = (a: Uso, b: Uso): Uso => ({
   cacheEscrita: a.cacheEscrita + b.cacheEscrita,
 });
 
+/** O prompt de sistema do rascunho: o mesmo para responder e para abrir a conversa. */
+function sistemaDoRascunho(ctx: EntradaDoAgente): string {
+  return promptDeRascunho({
+    perfil: ctx.perfil,
+    linkDeAgenda: ctx.linkDeAgenda,
+    responsavelDiscovery: ctx.responsavelDiscovery,
+    oferta: ctx.oferta,
+    sdr: ctx.sdr?.sdr ?? null,
+  });
+}
+
+/** O validador (§4.2) sobre um texto escrito pela IA, no contexto do perfil. */
+function validarTextoDaIa(ctx: EntradaDoAgente, texto: string): ResultadoDaValidacao {
+  return validarMensagem(
+    texto,
+    contextoDeValidacao(
+      {
+        praca: ctx.perfil.praca,
+        palavrasProibidas: ctx.perfil.palavrasProibidas,
+        rodapeObrigatorio: ctx.perfil.rodape,
+        limiteNotaConvite: ctx.perfil.limiteNotaConvite,
+        linkDeAgenda: ctx.linkDeAgenda,
+      },
+      null,
+      "ia",
+    ),
+  );
+}
+
+/**
+ * A primeira mensagem depois do aceite, no jeito da abertura do SDR (§4.3).
+ * Mesmo prompt de sistema e mesmo validador do rascunho; só a mensagem do
+ * usuário muda. `mensagens` da entrada é ignorado: a conversa ainda não existe.
+ */
+export async function abrirConversa(p: {
+  entrada: EntradaDoAgente;
+  modelo: ModeloDeLinguagem;
+  consumo: Consumo;
+}): Promise<{ decisao: Decisao; texto: string | null; validacao: ResultadoDaValidacao | null; excecao: string | null }> {
+  const { entrada: ctx, modelo, consumo } = p;
+  const rascunhada = await modelo.rascunhar({
+    sistema: sistemaDoRascunho(ctx),
+    entrada: entradaDaAbertura({ lead: ctx.lead, instrucoesDaCampanha: ctx.instrucoesDaCampanha ?? null }),
+  });
+  consumo.modelos.rascunho = rascunhada.modelo;
+  consumo.uso.rascunho = rascunhada.uso;
+  const decisao = rascunhada.saida;
+  const texto = decisao.mensagem?.trim() || null;
+  const validacao = texto ? validarTextoDaIa(ctx, texto) : null;
+  const excecao = !texto
+    ? "o agente não escreveu a abertura"
+    : validacao && !validacao.ok
+      ? `validador: ${validacao.violacoes.map((v) => v.mensagem).join(" ")}`
+      : null;
+  return { decisao, texto, validacao, excecao };
+}
+
 /**
  * Decisão do agente de conversa (§7) sobre a última mensagem da pessoa.
  *
@@ -113,13 +171,7 @@ export async function decidirResposta(p: {
 
   // Passo 2: decisão e rascunho.
   const rascunhada = await modelo.rascunhar({
-    sistema: promptDeRascunho({
-      perfil: ctx.perfil,
-      linkDeAgenda: ctx.linkDeAgenda,
-      responsavelDiscovery: ctx.responsavelDiscovery,
-      oferta: ctx.oferta,
-      sdr: ctx.sdr?.sdr ?? null,
-    }),
+    sistema: sistemaDoRascunho(ctx),
     entrada: entradaDoRascunho({
       lead: ctx.lead,
       mensagens: ctx.mensagens,
@@ -150,22 +202,7 @@ export async function decidirResposta(p: {
     return { tipo: "escalar", classificacao, decisao, motivo };
   }
 
-  const validacao = texto
-    ? validarMensagem(
-        texto,
-        contextoDeValidacao(
-          {
-            praca: ctx.perfil.praca,
-            palavrasProibidas: ctx.perfil.palavrasProibidas,
-            rodapeObrigatorio: ctx.perfil.rodape,
-            limiteNotaConvite: ctx.perfil.limiteNotaConvite,
-            linkDeAgenda: ctx.linkDeAgenda,
-          },
-          null,
-          "ia",
-        ),
-      )
-    : null;
+  const validacao = texto ? validarTextoDaIa(ctx, texto) : null;
   if (validacao && !validacao.ok) excecoes.push(`validador: ${validacao.violacoes.map((v) => v.mensagem).join(" ")}`);
   if (decisao.acao === "propor_reuniao" && !ctx.linkDeAgenda) excecoes.push("sem link de agenda configurado");
   if (classificacao.sinais.preco) excecoes.push("pergunta de preço");
