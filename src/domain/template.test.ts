@@ -9,6 +9,13 @@ describe("template", () => {
     });
   });
 
+  it("empresa em caixa alta entra com a inicial maiúscula", () => {
+    expect(renderizarTemplate("Como a {{company}} vende?", { first_name: "Ana", company: "LOJAS RENNER" })).toEqual({
+      ok: true,
+      texto: "Como a Lojas Renner vende?",
+    });
+  });
+
   it("recusa token fora da lista", () => {
     expect(tokensDesconhecidos("Oi {{nome}} da {{company}}")).toEqual(["nome"]);
     expect(renderizarTemplate("Oi {{nome}}", { first_name: "Ana", company: "Acme" })).toEqual({

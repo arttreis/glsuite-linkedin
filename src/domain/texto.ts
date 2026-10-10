@@ -48,3 +48,16 @@ export function primeiroNome(nomeCompleto: string | null | undefined, primeiro?:
   const tudoIgual = limpo === limpo.toUpperCase() || limpo === limpo.toLowerCase();
   return tudoIgual ? limpo.charAt(0).toUpperCase() + limpo.slice(1).toLowerCase() : limpo;
 }
+
+/**
+ * Nome da empresa para o `{{company}}` e para a IA. Nome todo em caixa alta
+ * entra só com a inicial maiúscula ("MAGAZINE LUIZA LTDA" → "Magazine Luiza
+ * Ltda"); sigla de até 3 letras fica (IBM, XP, S.A.). Caixa misturada é como a
+ * empresa escreve o nome e fica como está ("GuessLess", "iFood").
+ */
+export function nomeDeEmpresa(nome: string | null | undefined): string | null {
+  const limpo = nome?.trim();
+  if (!limpo) return null;
+  if (limpo !== limpo.toUpperCase() || limpo === limpo.toLowerCase()) return limpo;
+  return limpo.replace(/\p{L}+/gu, (palavra) => (palavra.length <= 3 ? palavra : palavra.charAt(0) + palavra.slice(1).toLowerCase()));
+}

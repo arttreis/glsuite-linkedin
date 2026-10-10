@@ -118,6 +118,9 @@ O fluxo padrão de uma campanha nova é o de 4 toques, já montado:
   canceladas no mesmo processamento do webhook. É o erro mais caro do sistema.
 - A copy aprovada usa só `{{first_name}}` e `{{company}}`. "Token não é
   personalização" — a personalização real é a triagem humana da lista.
+- Nome de empresa todo em caixa alta entra no `{{company}}` só com a inicial
+  maiúscula ("MAGAZINE LUIZA LTDA" vira "Magazine Luiza Ltda"); sigla de até
+  3 letras fica como está.
 - Offsets, textos e a forma do fluxo são configuração da campanha, não código.
   Os valores acima são o default. Onde este documento diz T1–T4, leia "o
   convite e as mensagens do fluxo".
@@ -203,7 +206,7 @@ qualquer operador, sem precisar de reunião.
 | Disse não | encerra. Sem sequência de recuperação, sem outro canal |
 | Pediu para não ser contatado | opt-out global (vale para os 4 perfis), sai da base e não volta em nenhuma importação futura |
 | Perguntou de onde veio o contato | a IA responde a verdade: perfil público do LinkedIn, contato profissional |
-| Quer conversar | proposta de reunião com o link de agenda do responsável (Juliano conduz discovery nas três praças; configurável) |
+| Quer conversar | proposta de conversa com o responsável (Juliano conduz discovery nas três praças; configurável), sem link. O link de agenda vai quando a pessoa aceitar conversar, sem demora |
 
 ⛔ Sem escalada de canal: nada de WhatsApp ou e-mail sem convite explícito da pessoa.
 
@@ -377,6 +380,10 @@ O "como a oferta ajuda" mora aqui, não no dossiê.
   versão da §4.1.
 - O convite personalizado por lead (A/B do SDR-15) continua igual, por cima do
   fluxo gerado.
+- A régua da casa vale como padrão (DM 1 sem pergunta, DM 2 com uma pergunta
+  fácil). O estilo do prompt de referência, com uma pergunta curta que faz a
+  pessoa pensar já na primeira DM, entra como variante do fluxo gerado, para
+  testar contra a régua.
 
 ## 5 · Arquitetura
 
@@ -547,6 +554,20 @@ marcar, reativação), reescritos com as regras da casa: frases curtas, oral, se
 travessão, no máximo 2 perguntas na conversa, link de agenda só com interesse
 real, idioma do prospect. Prompt de sistema estável por perfil, com
 `cache_control` para cache.
+
+Somado em 09/10/2026, do prompt de referência
+(`docs/pesquisa/prompt-de-referencia.md`):
+
+- cada mensagem da conversa tem no máximo 30 palavras, numa linha só;
+- não cumprimenta de novo, não começa com verbo no imperativo e não repete o
+  nome da pessoa em toda mensagem;
+- sem palavras vazias (impressionado, inspirador, admiro, adoro, fascinante,
+  notei, e o equivalente em outros idiomas), também no convite;
+- a proposta de conversa vai sem link, e o link de agenda vai quando a pessoa
+  aceitar (§4.6);
+- sem interesse, o agente é cordial, deixa algo útil quando couber e sai;
+- no convite personalizado, o gancho é um fato específico da pessoa, não da
+  empresa, com prioridade para os posts.
 
 ### 7.1 · Eval — o gate para o modo automático
 

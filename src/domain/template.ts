@@ -1,3 +1,5 @@
+import { nomeDeEmpresa } from "./texto";
+
 /** A copy aprovada usa só estes dois tokens (§4.1). */
 export const TOKENS_PERMITIDOS = ["first_name", "company"] as const;
 export type Token = (typeof TOKENS_PERMITIDOS)[number];
@@ -18,7 +20,7 @@ export type Renderizacao = { ok: true; texto: string } | { ok: false; erro: stri
 /**
  * Troca `{{first_name}}` e `{{company}}` pelos valores do lead. Token
  * desconhecido ou valor faltando não vira texto pela metade: devolve erro, e a
- * ação vai para revisão.
+ * ação vai para revisão. Empresa em caixa alta entra com a inicial maiúscula.
  */
 export function renderizarTemplate(template: string, valores: ValoresDoTemplate): Renderizacao {
   const desconhecidos = tokensDesconhecidos(template);
@@ -27,7 +29,7 @@ export function renderizarTemplate(template: string, valores: ValoresDoTemplate)
   }
   let faltando: string | null = null;
   const texto = template.replace(PADRAO_TOKEN, (_trecho, token: Token) => {
-    const valor = valores[token]?.trim();
+    const valor = token === "company" ? nomeDeEmpresa(valores.company) : valores[token]?.trim();
     if (!valor) faltando ??= token;
     return valor ?? "";
   });
