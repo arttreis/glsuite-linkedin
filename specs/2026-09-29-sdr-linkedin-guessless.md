@@ -965,5 +965,21 @@ migrations das duas linhas já estão no banco (conferido em 09/10).
 - Resultados: `calcularFunil` ganhou o filtro `publicoId`; a aba mostra o
   funil por conta. A visão por público em Métricas fica para o SDR-30.
 - Migration `20261010160000_campanha_do_publico`: coluna e índice novos, e o
-  `drop constraint` das duas chaves do ângulo. Vai ao banco por SQL antes do
-  deploy.
+  `drop constraint` das duas chaves do ângulo. Aplicada em 09/10 pela CLI do
+  Supabase (`supabase db query --linked`, como no PR #2; o conector recusa
+  comando destrutivo), junto com o `revoke` que faltava em `publicos`.
+
+### Prompt de referência (09/10/2026)
+
+- O Arthur mandou um prompt de conversa e de primeira mensagem e autorizou
+  mudar as regras do épico. Ficou guardado em
+  `docs/pesquisa/prompt-de-referencia.md`, com a tabela do que entrou e do
+  que ficou de fora.
+- Mudou regra: a proposta de conversa vai sem link, e o link de agenda vai
+  quando a pessoa aceitar (§4.6). O resto são regras de estilo nos prompts
+  (§7) e o `nomeDeEmpresa` no `{{company}}` (§4.1).
+- Os prompts subiram para a versão `2026-10-09.1`. O gate do modo automático
+  lê o eval pela versão dos prompts: nenhuma praça tem eval na versão nova, e
+  ninguém está no automático.
+- As regras novas ficam no prompt, não no validador: o validador vale também
+  para texto humano, e 30 palavras é regra para a IA.

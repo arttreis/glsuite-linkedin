@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chaveDaEmpresa, primeiroNome, semAcentos } from "./texto";
+import { nomeDeEmpresa, chaveDaEmpresa, primeiroNome, semAcentos } from "./texto";
 
 describe("texto", () => {
   it("tira acentos", () => {
@@ -25,5 +25,19 @@ describe("texto", () => {
     ["", null, null],
   ])("primeiro nome de %s é %s", (completo, primeiro, esperado) => {
     expect(primeiroNome(completo, primeiro)).toBe(esperado);
+  });
+});
+
+describe("nomeDeEmpresa", () => {
+  it("caixa alta vira só a inicial maiúscula, e sigla curta fica", () => {
+    expect(nomeDeEmpresa("MAGAZINE LUIZA LTDA")).toBe("Magazine Luiza Ltda");
+    expect(nomeDeEmpresa("BRF S.A.")).toBe("BRF S.A.");
+    expect(nomeDeEmpresa(" IBM ")).toBe("IBM");
+  });
+
+  it("caixa misturada é como a empresa escreve, e fica", () => {
+    expect(nomeDeEmpresa("GuessLess")).toBe("GuessLess");
+    expect(nomeDeEmpresa("iFood")).toBe("iFood");
+    expect(nomeDeEmpresa("")).toBeNull();
   });
 });
