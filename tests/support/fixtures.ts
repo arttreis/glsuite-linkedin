@@ -176,3 +176,32 @@ export async function criarLead(
   );
   return lead!.id;
 }
+
+/** Público direto no banco, da GuessLess por padrão, já escolhido. */
+export async function criarPublico(
+  db: Db,
+  opcoes: {
+    organizacaoId?: string;
+    nome?: string;
+    cargos?: string[];
+    angulo?: string;
+    praca?: "domestico" | "canada" | "espanha";
+    status?: "sugerido" | "ativo" | "arquivado";
+  } = {},
+): Promise<string> {
+  const [publico] = await db.query<{ id: string }>(
+    `insert into public.publicos (organizacao_id, nome, quem, empresa, por_que, angulo, provas, quem_nao_e, praca, origem, status)
+     values ($1::uuid, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6, '[]'::jsonb, '', $7, 'ia', $8) returning id`,
+    [
+      opcoes.organizacaoId ?? (await idDaOrganizacaoGuessless(db)),
+      opcoes.nome ?? "Diretores de e-commerce de moda",
+      JSON.stringify({ cargos: opcoes.cargos ?? ["Head de E-commerce"], senioridade: "diretoria" }),
+      JSON.stringify({ setores: ["Varejo de moda"], porte: "", regiao: "Brasil, Sudeste" }),
+      JSON.stringify({ dor: "Não sabe a margem por canal.", gatilho: "", resultado: "Decide o mix de canais com número." }),
+      opcoes.angulo ?? "A margem que o marketplace esconde",
+      opcoes.praca ?? "domestico",
+      opcoes.status ?? "ativo",
+    ],
+  );
+  return publico!.id;
+}
