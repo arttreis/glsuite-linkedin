@@ -23,6 +23,7 @@ const DOSSIE: Dossie = {
   objecoes: [],
   tom_de_voz: "Direto.",
   idioma: "pt",
+  mercado: { segmentos: [], alternativas: [], gatilhos: [] },
 };
 
 const PUBLICO: Publico = {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dossie, explicarErroDoDossie, normalizarUrlDoSite, resumoDaOferta, type Dossie } from "./dossie";
+import { dossie, dossieDaIa, explicarErroDoDossie, mercado, MERCADO_VAZIO, normalizarUrlDoSite, resumoDaOferta, type Dossie } from "./dossie";
 import { limparEdicao } from "./edicao";
 
 describe("normalizarUrlDoSite", () => {
@@ -39,6 +39,7 @@ const DOSSIE: Dossie = {
   objecoes: [],
   tom_de_voz: "Direto.",
   idioma: "pt",
+  mercado: { segmentos: [], alternativas: [], gatilhos: [] },
 };
 
 describe("resumoDaOferta", () => {
@@ -87,5 +88,29 @@ describe("explicarErroDoDossie", () => {
     expect(erro({ ...DOSSIE, empresa: { nome: "GuessLess", resumo: "" } })).toBe("Empresa, resumo: não pode ficar em branco.");
     expect(erro({ ...DOSSIE, tom_de_voz: "x".repeat(601) })).toBe("Tom de voz: passou de 600 caracteres.");
     expect(erro({ ...DOSSIE, dores: Array.from({ length: 9 }, (_, i) => `dor ${i}`) })).toBe("Dores: no máximo 8.");
+  });
+});
+
+describe("mercado (SDR-41)", () => {
+  const semMercado = Object.fromEntries(Object.entries(DOSSIE).filter(([chave]) => chave !== "mercado"));
+
+  it("dossiê gravado antes do Mercado lê com ele vazio", () => {
+    expect(dossie.parse(semMercado).mercado).toEqual(MERCADO_VAZIO);
+  });
+
+  it("a IA tem de devolver o Mercado", () => {
+    expect(dossieDaIa.safeParse(semMercado).success).toBe(false);
+    expect(dossieDaIa.safeParse(DOSSIE).success).toBe(true);
+  });
+
+  it("o Mercado não tem campo para tamanho de mercado", () => {
+    expect(Object.keys(mercado.shape)).toEqual(["segmentos", "alternativas", "gatilhos"]);
+  });
+
+  it("erro no Mercado diz a seção e a lista", () => {
+    const comSegmentoSemNome = { ...DOSSIE, mercado: { ...MERCADO_VAZIO, segmentos: [{ nome: "", por_que: "Vende online" }] } };
+    expect(explicarErroDoDossie(dossie.safeParse(limparEdicao(comSegmentoSemNome)).error!)).toBe(
+      "Mercado, quem compra: não pode ficar em branco.",
+    );
   });
 });

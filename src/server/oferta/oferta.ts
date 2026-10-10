@@ -11,10 +11,20 @@ import { entradaDaEstruturacao, promptDaEstruturacao, promptDaLeitura, VERSAO_DO
 /** Leitura em "lendo" há mais que isso parou no meio (deploy, timeout): pode recomeçar. */
 const LEITURA_PARADA_MS = 5 * 60 * 1000;
 
+/** Onde a leitura em andamento está: abrindo páginas, ou montando a análise com o que leu. */
+export type ProgressoDaLeitura = { etapa: "paginas" | "analise"; paginas: FonteDoSite[] };
+
+const PROGRESSO_INICIAL: ProgressoDaLeitura = { etapa: "paginas", paginas: [] };
+
 export type SituacaoDaOferta = {
   ofertaId: string | null;
   url: string | null;
-  leitura: { status: "nenhuma" | "lendo" | "pronta" | "erro" | "parada"; erro: string | null; iniciadaEm: Date | null };
+  leitura: {
+    status: "nenhuma" | "lendo" | "pronta" | "erro" | "parada";
+    erro: string | null;
+    iniciadaEm: Date | null;
+    progresso: ProgressoDaLeitura;
+  };
   /** O rascunho: a última leitura, ou a edição humana por cima dela. */
   dossie: Dossie | null;
   fontes: FonteDoSite[];
@@ -43,6 +53,7 @@ type LinhaDaOferta = {
   tem_confirmado: boolean;
   igual_ao_confirmado: boolean;
   custo_usd: string | null;
+  leitura_progresso: ProgressoDaLeitura | null;
 };
 
 const lendoDeVerdade = (linha: { status: string; leitura_iniciada_em: Date }, agora: Date) =>
@@ -51,7 +62,7 @@ const lendoDeVerdade = (linha: { status: string; leitura_iniciada_em: Date }, ag
 /** A oferta da organização como a tela mostra. Roda como o operador (RLS) ou como sistema. */
 export async function ofertaDaOrganizacao(db: Db, organizacaoId: string, agora: Date): Promise<SituacaoDaOferta> {
   const [linha] = await db.query<LinhaDaOferta>(
-    `select o.id, o.url, o.status, o.dossie, o.fontes, o.erro, o.leitura_iniciada_em, o.gerado_em, o.custo_usd,
+    `select o.id, o.url, o.status, o.dossie, o.fontes, o.erro, o.leitura_iniciada_em, o.gerado_em, o.custo_usd, o.leitura_progresso,
             o.editado_em, ed.nome as editado_por, o.confirmado_em, co.nome as confirmado_por,
             o.dossie_confirmado is not null as tem_confirmado,
             o.dossie is not distinct from o.dossie_confirmado as igual_ao_confirmado
@@ -65,7 +76,7 @@ export async function ofertaDaOrganizacao(db: Db, organizacaoId: string, agora: 
     return {
       ofertaId: null,
       url: null,
-      leitura: { status: "nenhuma", erro: null, iniciadaEm: null },
+      leitura: { status: "nenhuma", erro: null, iniciadaEm: null, progresso: PROGRESSO_INICIAL },
       dossie: null,
       fontes: [],
       geradoEm: null,
@@ -80,7 +91,12 @@ export async function ofertaDaOrganizacao(db: Db, organizacaoId: string, agora: 
   return {
     ofertaId: linha.id,
     url: linha.url,
-    leitura: { status: parada ? "parada" : linha.status, erro: linha.erro, iniciadaEm: linha.leitura_iniciada_em },
+    leitura: {
+      status: parada ? "parada" : linha.status,
+      erro: linha.erro,
+      iniciadaEm: linha.leitura_iniciada_em,
+      progresso: linha.leitura_progresso ?? PROGRESSO_INICIAL,
+    },
     dossie: lido.success ? lido.data : null,
     fontes: linha.fontes,
     geradoEm: linha.gerado_em,
@@ -206,13 +222,13 @@ export async function iniciarLeitura(
   if (atual.leitura.status === "lendo") return { ok: false, erro: "Já estou lendo o site. Espere terminar." };
 
   const [linha] = await db.query<{ id: string }>(
-    `insert into public.ofertas (organizacao_id, url, status, erro, leitura_iniciada_em, criado_por, atualizado_em)
-     values ($1::uuid, $2, 'lendo', null, $3, $4::uuid, $3)
+    `insert into public.ofertas (organizacao_id, url, status, erro, leitura_iniciada_em, leitura_progresso, criado_por, atualizado_em)
+     values ($1::uuid, $2, 'lendo', null, $3, $5::jsonb, $4::uuid, $3)
      on conflict (organizacao_id) do update
-       set url = excluded.url, status = 'lendo', erro = null,
+       set url = excluded.url, status = 'lendo', erro = null, leitura_progresso = excluded.leitura_progresso,
            leitura_iniciada_em = excluded.leitura_iniciada_em, atualizado_em = excluded.atualizado_em
      returning id`,
-    [p.organizacaoId, endereco.url, p.agora, p.operadorId],
+    [p.organizacaoId, endereco.url, p.agora, p.operadorId, JSON.stringify(PROGRESSO_INICIAL)],
   );
   await registrarEvento(db, {
     tipo: "dossie_leitura_iniciada",
@@ -249,6 +265,20 @@ export async function concluirLeitura(
   if (!endereco.ok) return falhar(db, p.ofertaId, endereco.erro, deps.agora());
 
   const inicio = Date.now();
+  // As páginas entram no progresso na ordem em que abrem; uma falha aqui não derruba a leitura.
+  let gravacoes = Promise.resolve();
+  const anotarPagina = (fonte: FonteDoSite) => {
+    gravacoes = gravacoes
+      .then(() =>
+        db.query(
+          `update public.ofertas
+              set leitura_progresso = jsonb_set(leitura_progresso, '{paginas}', (leitura_progresso -> 'paginas') || $2::jsonb)
+            where id = $1::uuid and status = 'lendo'`,
+          [p.ofertaId, JSON.stringify([fonte])],
+        ),
+      )
+      .then(() => undefined, (erro) => console.error("Progresso da leitura não gravado", erro));
+  };
   try {
     const config = await lerConfiguracao(db, "dossie");
     const leitura = await leitor.ler({
@@ -256,7 +286,15 @@ export async function concluirLeitura(
       url: endereco.url,
       dominio: endereco.dominio,
       maxPaginas: config.max_paginas,
+      aoAbrirPagina: anotarPagina,
     });
+    await gravacoes;
+    await db.query(
+      `update public.ofertas
+          set leitura_progresso = jsonb_build_object('etapa', 'analise', 'paginas', $2::jsonb)
+        where id = $1::uuid and status = 'lendo'`,
+      [p.ofertaId, JSON.stringify(leitura.fontes)],
+    );
     const estruturado = await leitor.estruturar({
       sistema: promptDaEstruturacao(),
       entrada: entradaDaEstruturacao({ url: endereco.url, notas: leitura.notas, fontes: leitura.fontes }),

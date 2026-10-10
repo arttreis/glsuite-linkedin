@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it } from "vitest";
-import { estadoDoPrimeiroAcesso, garantirOperadorDoPrimeiroAcesso } from "@/server/acesso/primeiro-acesso";
+import type { Dossie } from "@/domain/dossie";
+import { confirmarAnalise, estadoDoPrimeiroAcesso, garantirOperadorDoPrimeiroAcesso } from "@/server/acesso/primeiro-acesso";
 import { buscarOperadorAtivo, comOperador } from "@/server/db/operador";
 import { arquivosDeMigration, criarBancoDeTeste, type BancoDeTeste } from "../support/banco";
 import { criarOperador, idDaOrganizacaoGuessless, idDoPerfil } from "../support/fixtures";
@@ -143,5 +144,68 @@ describe("primeiro acesso: organização nova por domínio (SDR-40)", () => {
       [guessless],
     );
     expect(org!.concluido).toBe(true);
+  });
+});
+
+const ANALISE: Dossie = {
+  empresa: { nome: "Loja da Duda", resumo: "Moda feminina online." },
+  produtos: [{ nome: "Vestidos", descricao: "Vestidos de festa.", para_quem: "mulheres" }],
+  para_quem: "Mulheres de 25 a 45 anos.",
+  diferenciais: [],
+  provas: [],
+  dores: [],
+  objecoes: [],
+  tom_de_voz: "Leve.",
+  idioma: "pt",
+  mercado: { segmentos: [{ nome: "Lojas de moda", por_que: "Vendem online" }], alternativas: ["Marketplace"], gatilhos: [] },
+};
+
+describe("confirmar a análise no primeiro acesso (SDR-41)", () => {
+  let banco: BancoDeTeste;
+  let userId: string;
+  let organizacaoId: string;
+
+  beforeEach(async () => {
+    banco = await criarBancoDeTeste();
+    userId = randomUUID();
+    await banco.db.query("insert into auth.users (id, email) values ($1::uuid, 'duda@guessless.com.br')", [userId]);
+    await garantirOperadorDoPrimeiroAcesso(banco.db, {
+      userId,
+      email: "duda@guessless.com.br",
+      dominios: ["guessless.com.br"],
+      agora: AGORA,
+    });
+    organizacaoId = (await buscarOperadorAtivo(banco.db, userId))!.organizacaoId;
+    await banco.db.query(
+      "insert into public.ofertas (organizacao_id, url, status, dossie) values ($1::uuid, 'https://duda.com.br/', 'pronta', $2::jsonb)",
+      [organizacaoId, JSON.stringify(ANALISE)],
+    );
+  });
+
+  const confirmar = (dossie: unknown) =>
+    comOperador(banco.db, userId, (tx) => confirmarAnalise(tx, { organizacaoId, dossie, operadorId: userId, agora: AGORA }));
+  const nomeDaOrganizacao = async () =>
+    (await banco.db.query<{ nome: string }>("select nome from public.organizacoes where id = $1::uuid", [organizacaoId]))[0]!.nome;
+
+  it("confirma e dá à organização o nome da empresa", async () => {
+    expect(await confirmar(ANALISE)).toEqual({ ok: true });
+    expect(await nomeDaOrganizacao()).toBe("Loja da Duda");
+    const estado = await comOperador(banco.db, userId, (tx) => estadoDoPrimeiroAcesso(tx));
+    expect(estado.atual).toBe("sdr");
+  });
+
+  it("depois do primeiro acesso, confirmar não muda o nome", async () => {
+    await banco.db.query("update public.organizacoes set primeiro_acesso_em = now(), nome = 'Duda Store' where id = $1::uuid", [
+      organizacaoId,
+    ]);
+    expect(await confirmar(ANALISE)).toEqual({ ok: true });
+    expect(await nomeDaOrganizacao()).toBe("Duda Store");
+  });
+
+  it("análise inválida não confirma nem renomeia", async () => {
+    expect(await confirmar({ ...ANALISE, produtos: [] })).toEqual({ ok: false, erro: "O que vocês vendem: precisa de pelo menos 1." });
+    expect(await nomeDaOrganizacao()).toBe("Empresa de Duda");
+    const estado = await comOperador(banco.db, userId, (tx) => estadoDoPrimeiroAcesso(tx));
+    expect(estado.atual).toBe("analise");
   });
 });

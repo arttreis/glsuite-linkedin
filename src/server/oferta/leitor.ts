@@ -11,6 +11,13 @@ export type LeituraDoSite = { notas: string; fontes: FonteDoSite[]; uso: Uso; mo
  * Em produção é o Claude (`claude.ts`); nos testes, um falso.
  */
 export interface LeitorDeSite {
-  ler(p: { sistema: string; url: string; dominio: string; maxPaginas: number }): Promise<LeituraDoSite>;
+  /** `aoAbrirPagina` avisa cada página aberta, enquanto a leitura ainda corre. */
+  ler(p: {
+    sistema: string;
+    url: string;
+    dominio: string;
+    maxPaginas: number;
+    aoAbrirPagina?: (fonte: FonteDoSite) => void;
+  }): Promise<LeituraDoSite>;
   estruturar(p: { sistema: string; entrada: string }): Promise<Resposta<Dossie>>;
 }

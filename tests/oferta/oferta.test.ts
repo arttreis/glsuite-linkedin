@@ -27,6 +27,7 @@ const DOSSIE: Dossie = {
   objecoes: [],
   tom_de_voz: "Direto.",
   idioma: "pt",
+  mercado: { segmentos: [], alternativas: [], gatilhos: [] },
 };
 
 function leitorFalso(
@@ -138,6 +139,86 @@ describe("oferta: leitura do site e dossiê", () => {
     const vista = await comOperador(banco.db, deFora, (tx) => ofertaDaOrganizacao(tx, guessless, AGORA));
     expect(vista.leitura.status).toBe("nenhuma");
     await expect(iniciar("outra.com.br", guessless, deFora)).rejects.toThrow(/row-level security/);
+  });
+});
+
+describe("análise do site: progresso da leitura e Mercado (SDR-41)", () => {
+  let banco: BancoDeTeste;
+  let guessless: string;
+  let operador: string;
+
+  beforeEach(async () => {
+    banco = await criarBancoDeTeste();
+    guessless = await idDaOrganizacaoGuessless(banco.db);
+    operador = await criarOperador(banco.db, { nome: "Arthur", papel: "admin" });
+  });
+
+  const iniciar = () =>
+    comOperador(banco.db, operador, (tx) =>
+      iniciarLeitura(tx, { organizacaoId: guessless, url: "guessless.com.br", operadorId: operador, agora: AGORA }),
+    ) as Promise<{ ok: true; ofertaId: string }>;
+
+  const progresso = async () => (await ofertaDaOrganizacao(banco.db, guessless, AGORA)).leitura.progresso;
+
+  it("as páginas aparecem conforme abrem, e depois vem a etapa de montar a análise", async () => {
+    const { ofertaId } = await iniciar();
+    expect(await progresso()).toEqual({ etapa: "paginas", paginas: [] });
+
+    const vistos: unknown[] = [];
+    const leitor: LeitorDeSite = {
+      async ler(p) {
+        p.aoAbrirPagina?.({ url: "https://guessless.com.br/", titulo: "GuessLess" });
+        await new Promise((resolver) => setTimeout(resolver, 50));
+        vistos.push(await progresso());
+        p.aoAbrirPagina?.({ url: "https://guessless.com.br/sobre", titulo: "Sobre" });
+        return {
+          notas: "A GuessLess vende diagnóstico de margem.",
+          fontes: [
+            { url: "https://guessless.com.br/", titulo: "GuessLess" },
+            { url: "https://guessless.com.br/sobre", titulo: "Sobre" },
+          ],
+          uso: USO,
+          modelo: "claude-sonnet-5",
+        };
+      },
+      async estruturar() {
+        vistos.push(await progresso());
+        return { saida: DOSSIE, uso: USO, modelo: "claude-sonnet-5" };
+      },
+    };
+    await concluirLeitura({ db: banco.db, leitor, agora: () => AGORA }, { ofertaId });
+
+    expect(vistos).toEqual([
+      { etapa: "paginas", paginas: [{ url: "https://guessless.com.br/", titulo: "GuessLess" }] },
+      {
+        etapa: "analise",
+        paginas: [
+          { url: "https://guessless.com.br/", titulo: "GuessLess" },
+          { url: "https://guessless.com.br/sobre", titulo: "Sobre" },
+        ],
+      },
+    ]);
+  });
+
+  it("uma leitura nova começa o progresso do zero", async () => {
+    const { ofertaId } = await iniciar();
+    await concluirLeitura({ db: banco.db, leitor: leitorFalso(), agora: () => AGORA }, { ofertaId });
+    expect((await progresso()).etapa).toBe("analise");
+
+    await iniciar();
+    expect(await progresso()).toEqual({ etapa: "paginas", paginas: [] });
+  });
+
+  it("dossiê gravado antes do Mercado aparece com o Mercado vazio", async () => {
+    const antigo = Object.fromEntries(Object.entries(DOSSIE).filter(([chave]) => chave !== "mercado"));
+    await banco.db.query(
+      "insert into public.ofertas (organizacao_id, url, status, dossie) values ($1::uuid, 'https://guessless.com.br/', 'pronta', $2::jsonb)",
+      [guessless, JSON.stringify(antigo)],
+    );
+    expect((await ofertaDaOrganizacao(banco.db, guessless, AGORA)).dossie).toEqual({
+      ...DOSSIE,
+      mercado: { segmentos: [], alternativas: [], gatilhos: [] },
+    });
   });
 });
 
