@@ -1148,7 +1148,11 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
   nomes (vira o plano B quando a conta da casa não tem saldo) e pedir o
   LinkedIn antes dos leads (contraria a ordem que o Arthur quer). Risco aceito:
   o limite de busca da conta da casa é dividido entre todas as organizações
-  novas, por isso a prévia tem teto por organização (D2).
+  novas, por isso a prévia tem teto por organização (D2). A conta da casa é a
+  do Arthur (D1, 10/10), já conectada na Unipile; ela sai da operação da
+  GuessLess e não roda campanha. Como ela serve a todas as organizações, a
+  busca da prévia roda pelo servidor, fora do RLS de operador, e grava as
+  pessoas na organização que está no primeiro acesso.
 - **Autonomia: o SDR responde sozinho depois da permissão.** O gate de eval do
   modo automático (§7.1 do épico anterior) sai. O que segura a qualidade passa
   a ser o chat de teste com o mesmo agente da produção, o validador, o "chamar

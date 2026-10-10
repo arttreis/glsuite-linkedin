@@ -167,9 +167,11 @@ confirmada e guardada em versões. Ele tem:
   setores, porte, região, por que precisa (dor, gatilho, resultado), ângulo e
   quem não é. A IA sugere até 3; a pessoa escolhe um e pode editar.
 - **Prévia pela conta da casa.** Antes de a pessoa vincular o LinkedIn, a
-  busca roda por uma conta da GuessLess marcada como conta da casa. A conta da
-  casa só busca: nunca envia convite, mensagem nem visita perfil, e o
-  despachante ignora ela.
+  busca roda por uma conta da GuessLess marcada como conta da casa: a do
+  Arthur (D1). A conta da casa só busca: nunca envia convite, mensagem nem
+  visita perfil, não roda campanha de nenhuma organização, e o despachante
+  ignora ela. A busca da prévia roda pelo servidor em nome da organização que
+  está no primeiro acesso, não como operador da GuessLess.
 - A prévia traz até `previa.max_pessoas` pessoas por organização (padrão 25,
   somando todas as buscas do primeiro acesso), e conta no teto de busca da
   conta da casa (§4.13). Sem saldo, ou com a conta da casa fora do ar, a tela
@@ -440,8 +442,8 @@ tirada é `rejeitado`. Toda transição grava um evento.
 
 | # | Trava | Bloqueia | Dono |
 |---|---|---|---|
-| T-1 | Unipile ativa e a conta da casa conectada e marcada (D1) | prévia de leads (SDR-44) | Arthur |
-| T-2 | Chave da Anthropic na Vercel | análise, SDR, chat de teste, nota, abordagem | Arthur |
+| T-1 | ~~Unipile ativa e a conta da casa conectada~~ ✅ 10/10: chaves na Vercel e a conta do Arthur conectada (marcar como casa é do SDR-44) | prévia de leads (SDR-44) | Arthur |
+| T-2 | ~~Chave da Anthropic na Vercel~~ ✅ 10/10 | análise, SDR, chat de teste, nota, abordagem | Arthur |
 | T-3 | Domínio de produção nas Redirect URLs do Auth do GL Suite | login | Arthur |
 | T-4 | Resend com domínio verificado | aviso de "o SDR chamou você" | Arthur |
 | T-5 | `SUPABASE_SECRET_KEY` do projeto do GL Suite na Vercel | primeiro acesso de e-mail novo (SDR-40) | Arthur |
@@ -528,8 +530,9 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
 - Passo 4 do primeiro acesso.
 - Público principal sugerido da análise (até 3 opções, uma escolhida,
   editável), sobre os públicos que já existem.
-- `perfis.casa`; o despachante, a pesquisa e qualquer envio ignoram a conta da
-  casa.
+- `perfis.casa`, marcado na conta do Arthur pela migration (D1); a conta da
+  casa sai de qualquer campanha e não aparece para escolher conta. O
+  despachante, a pesquisa e qualquer envio ignoram ela.
 - Prévia: busca montada do público pela conta da casa, até
   `previa.max_pessoas` por organização, no teto de busca dela; regras de
   importação; nota de aderência; marcados os que estão na nota de corte.
@@ -625,7 +628,7 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
 
 | # | Decisão | Sugestão | Dono |
 |---|---|---|---|
-| D1 | Que conta do LinkedIn é a conta da casa (pessoal de alguém ou dedicada) e se tem Sales Navigator | conta dedicada, para não gastar o limite de busca de ninguém | Arthur |
+| D1 | Que conta do LinkedIn é a conta da casa | ✅ decidido em 10/10: a do Arthur, só para busca; nenhuma campanha roda nela | Arthur |
 | D2 | Tamanho da prévia por organização | 25 pessoas | Arthur |
 | D3 | Rampa e teto de uma conta nova | 8 · 12 · 15 convites/dia, 75/semana, 15 · 20 · 25 mensagens/dia | Arthur |
 | D4 | O que faz o SDR chamar você, além do que a pessoa configurar | preço, reclamação, pedido fora do comum, confiança abaixo de 0,7 | Arthur |
