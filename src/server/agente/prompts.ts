@@ -1,3 +1,4 @@
+import { textoDoSdr, type Sdr } from "@/domain/sdr";
 import { nomeDeEmpresa } from "@/domain/texto";
 import type { Praca } from "@/domain/validador";
 import type { Classificacao } from "./modelo";
@@ -8,11 +9,11 @@ import type { Classificacao } from "./modelo";
  * regras de estilo vêm da casa e do prompt de referência
  * (`docs/pesquisa/prompt-de-referencia.md`).
  *
- * O prompt de sistema do rascunho depende só do perfil (e da oferta), nunca do
- * lead: é estável e vai para o cache. Lead e conversa vão na mensagem do
- * usuário.
+ * O prompt de sistema do rascunho depende só do perfil, do SDR e da análise,
+ * nunca do lead: é estável e vai para o cache. Lead, instruções da campanha e
+ * conversa vão na mensagem do usuário.
  */
-export const VERSAO_DOS_PROMPTS = "2026-10-09.1";
+export const VERSAO_DOS_PROMPTS = "2026-10-10.1";
 
 export type PerfilDoAgente = {
   nome: string;
@@ -69,15 +70,29 @@ export function promptDeRascunho(p: {
   linkDeAgenda: string | null;
   responsavelDiscovery: string;
   oferta: string;
+  /** O SDR da organização (§4.3). Sem ele, valem a voz e as regras do perfil. */
+  sdr?: Sdr | null;
 }): string {
-  const { perfil } = p;
+  const { perfil, sdr } = p;
   const proibidas = perfil.palavrasProibidas.length > 0 ? perfil.palavrasProibidas.join(", ") : "(nenhuma)";
   const regrasDaPraca =
     perfil.praca === "canada" && perfil.rodape
       ? `\n- Toda mensagem termina com a frase de saída, exatamente: "${perfil.rodape}". É exigência legal (CASL).`
       : "";
 
-  return `Você escreve, em nome de ${perfil.nome}, as respostas de uma conversa de prospecção B2B no LinkedIn para a GuessLess. Um humano revisa antes de enviar, a não ser no modo automático.
+  const inicio = sdr
+    ? `Você escreve, em nome de ${perfil.nome}, as respostas de uma conversa de prospecção B2B no LinkedIn.
+
+O que a empresa vende (análise do site, confirmada por ela):
+${p.oferta}
+
+O SDR, o jeito como ${perfil.nome} conversa (definido pela empresa; vale abaixo das regras da casa):
+${textoDoSdr(sdr, perfil.nome)}
+
+Missão: ${sdr.objetivo}. Se a pessoa não tem interesse, ser cordial, deixar algo útil quando couber e sair sem insistir.
+
+Regras da casa (valem sempre, acima do SDR; se algo do SDR contrariar uma delas, vale a regra da casa):`
+    : `Você escreve, em nome de ${perfil.nome}, as respostas de uma conversa de prospecção B2B no LinkedIn para a GuessLess. Um humano revisa antes de enviar, a não ser no modo automático.
 
 Voz de ${perfil.nome}:
 ${perfil.voz?.trim() || VOZ_PADRAO[perfil.praca]}
@@ -87,7 +102,14 @@ ${p.oferta}
 
 Missão: se a pessoa tem interesse, levar para uma conversa com ${p.responsavelDiscovery}. Se não tem, ser cordial, deixar algo útil quando couber e sair sem insistir.
 
-Regras da casa (valem sempre):
+Regras da casa (valem sempre):`;
+  const conversaProposta = sdr
+    ? "proponha o próximo passo do objetivo, sem link"
+    : `proponha a conversa com ${p.responsavelDiscovery}, que conduz a discovery, sem link`;
+  const regrasDoPerfil =
+    !sdr && perfil.regras?.trim() ? `\nRegras específicas de ${perfil.nome}:\n${perfil.regras.trim()}\n` : "";
+
+  return `${inicio}
 - Devolva só a mensagem, com no máximo 30 palavras, numa linha só, sem linha em branco.
 - Frases curtas, tom oral e direto, como numa conversa de LinkedIn. Nada de lista, nada de formalidade de e-mail, nada que soe robótico.
 - Não cumprimente de novo: a conversa já começou.
@@ -105,11 +127,11 @@ Regras da casa (valem sempre):
 - Se perguntarem de onde veio o contato, diga a verdade: pelo perfil público no LinkedIn, como contato profissional.
 - Nunca puxe a conversa para WhatsApp, e-mail ou telefone. Só se a própria pessoa pedir.
 - Responda no idioma da última mensagem da pessoa.${regrasDaPraca}
-${perfil.regras?.trim() ? `\nRegras específicas de ${perfil.nome}:\n${perfil.regras.trim()}\n` : ""}
+${regrasDoPerfil}
 Como decidir (campo "acao"):
 - responder: a conversa continua. Escreva a mensagem.
 - propor_reuniao: a pessoa mostrou interesse real. Em dois tempos:
-  1. Ela ainda não aceitou conversar: proponha a conversa com ${p.responsavelDiscovery}, que conduz a discovery, sem link.
+  1. Ela ainda não aceitou conversar: ${conversaProposta}.
   2. Ela já aceitou ou pediu horário: mande o link de agenda exatamente assim: ${p.linkDeAgenda ?? "(sem link configurado: não invente um link, escreva sem link)"}.
   Não demore a mandar o link depois que ela aceitar.
 - encerrar: a pessoa disse não. Uma frase curta agradecendo, sem tentar de novo e sem oferecer outro canal.
@@ -139,16 +161,21 @@ export function entradaDoRascunho(p: {
   mensagens: readonly MensagemDoHistorico[];
   nomeDoPerfil: string;
   classificacao: Classificacao;
+  /** Instruções do SDR que valem só nesta campanha (§4.11). */
+  instrucoesDaCampanha?: string | null;
 }): string {
   const { lead, classificacao: c } = p;
   const pesquisa = lead.pesquisa ? `\n- Pesquisa sobre a pessoa: ${JSON.stringify(lead.pesquisa)}` : "";
+  const instrucoes = p.instrucoesDaCampanha?.trim()
+    ? `\n\nInstruções desta campanha (valem abaixo das regras da casa):\n${p.instrucoesDaCampanha.trim()}`
+    : "";
   return `Lead:
 - Nome: ${lead.nome}
 - Cargo: ${lead.cargo ?? "não informado"}
 - Empresa: ${nomeDeEmpresa(lead.empresa) ?? "não informada"}
 - Localização: ${lead.localizacao ?? "não informada"}
 - Campanha: ${lead.campanha}${lead.nicho ? ` (nicho: ${lead.nicho})` : ""}
-- Ângulo de abertura: ${lead.angulo ?? "não registrado"}${pesquisa}
+- Ângulo de abertura: ${lead.angulo ?? "não registrado"}${pesquisa}${instrucoes}
 
 Classificação da última mensagem: ${c.categoria} (confiança ${c.confianca.toFixed(2)}; preço: ${c.sinais.preco ? "sim" : "não"}; reclamação: ${c.sinais.reclamacao ? "sim" : "não"}; idioma: ${c.sinais.idioma}).
 

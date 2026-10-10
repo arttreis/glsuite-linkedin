@@ -1,3 +1,4 @@
+import { resumoDaOferta } from "@/domain/dossie";
 import type { EstadoDoLead } from "@/domain/estados";
 import type { Praca, ResultadoDaValidacao } from "@/domain/validador";
 import { agendarAcao } from "@/server/acoes/agendar";
@@ -7,6 +8,8 @@ import { registrarOptout } from "@/server/conversas/optout";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import { transicionarLead } from "@/server/leads/transicoes";
+import { dossieConfirmado } from "@/server/oferta/oferta";
+import { obterSdr } from "@/server/sdr/sdr";
 import { decidirResposta, type Consumo, type EntradaDoAgente } from "./decidir";
 import type { Classificacao, Decisao, ModeloDeLinguagem, Uso } from "./modelo";
 import { VERSAO_DOS_PROMPTS, type MensagemDoHistorico } from "./prompts";
@@ -39,6 +42,8 @@ async function carregarContexto(db: Db, mensagemId: string): Promise<Contexto | 
     provider_id: string;
     modo: Contexto["modo"];
     perfil_id: string;
+    organizacao_id: string;
+    instrucoes_sdr: string | null;
     perfil_nome: string;
     praca: Praca;
     idioma: string;
@@ -58,6 +63,7 @@ async function carregarContexto(db: Db, mensagemId: string): Promise<Contexto | 
     pesquisa: unknown;
   }>(
     `select l.id as lead_id, l.estado, pe.provider_id, pf.modo_resposta as modo, pf.id as perfil_id, pf.nome as perfil_nome,
+            pf.organizacao_id, c.instrucoes_sdr,
             pf.praca, pf.idioma, pf.voz_md, pf.regras_md, pf.palavras_proibidas, pf.rodape_obrigatorio,
             pf.limite_nota_convite, pf.link_agenda,
             pe.nome, pe.cargo, pe.empresa, pe.localizacao, c.nome as campanha, l.angulo, c.nicho, l.pesquisa
@@ -71,12 +77,17 @@ async function carregarContexto(db: Db, mensagemId: string): Promise<Contexto | 
   );
   if (!linha) return null;
 
-  // Link de agenda do responsável pela discovery (decisão D1: Juliano), senão o do perfil.
+  // Link de agenda: o do SDR; sem ele, o do responsável pela discovery da
+  // própria organização (decisão D1 do épico anterior: Juliano), senão o do perfil.
   const slugResponsavel = await lerConfiguracao(db, "responsavel_discovery");
   const [responsavel] = await db.query<{ nome: string; link_agenda: string | null }>(
-    "select nome, link_agenda from public.perfis where slug = $1",
-    [slugResponsavel],
+    "select nome, link_agenda from public.perfis where slug = $1 and organizacao_id = $2::uuid",
+    [slugResponsavel, linha.organizacao_id],
   );
+  // Com SDR, a oferta é a análise confirmada da organização (§7). Sem SDR, nada
+  // muda no agente: vale o texto de oferta da configuração.
+  const sdr = await obterSdr(db, linha.organizacao_id);
+  const analise = sdr ? await dossieConfirmado(db, linha.organizacao_id) : null;
   const mensagens = await db.query<MensagemDoHistorico>(
     "select direcao, autor, texto, em from public.mensagens where lead_id = $1::uuid order by em",
     [linha.lead_id],
@@ -98,9 +109,11 @@ async function carregarContexto(db: Db, mensagemId: string): Promise<Contexto | 
       rodape: linha.rodape_obrigatorio,
       limiteNotaConvite: linha.limite_nota_convite,
     },
-    linkDeAgenda: responsavel?.link_agenda ?? linha.link_agenda,
+    linkDeAgenda: sdr?.sdr.link_agenda ?? responsavel?.link_agenda ?? linha.link_agenda,
     responsavelDiscovery: responsavel?.nome ?? linha.perfil_nome,
-    oferta: await lerConfiguracao(db, "oferta_vigente"),
+    oferta: analise ? resumoDaOferta(analise) : await lerConfiguracao(db, "oferta_vigente"),
+    sdr: sdr ? { versao: sdr.versao, sdr: sdr.sdr } : null,
+    instrucoesDaCampanha: linha.instrucoes_sdr,
     lead: {
       nome: linha.nome,
       cargo: linha.cargo,
@@ -142,6 +155,7 @@ type Registro = {
   acaoId?: string | null;
   modelos?: Record<string, string>;
   uso?: Record<string, Uso>;
+  sdrVersao?: number | null;
 };
 
 async function concluir(db: Db, rascunhoId: string, r: Registro): Promise<void> {
@@ -149,7 +163,8 @@ async function concluir(db: Db, rascunhoId: string, r: Registro): Promise<void> 
     `update public.rascunhos set
        resultado = $2, categoria = $3, confianca_categoria = $4, sinais = $5::jsonb,
        acao_sugerida = $6, texto = $7, motivo = $8, estagio_sugerido = $9, confianca = $10,
-       validacao = $11::jsonb, excecao = $12, acao_id = $13::uuid, modelos = $14::jsonb, uso = $15::jsonb
+       validacao = $11::jsonb, excecao = $12, acao_id = $13::uuid, modelos = $14::jsonb, uso = $15::jsonb,
+       sdr_versao = $16
      where id = $1::uuid`,
     [
       rascunhoId,
@@ -167,6 +182,7 @@ async function concluir(db: Db, rascunhoId: string, r: Registro): Promise<void> 
       r.acaoId ?? null,
       JSON.stringify({ ...r.modelos, prompts: VERSAO_DOS_PROMPTS }),
       r.uso ? JSON.stringify(r.uso) : null,
+      r.sdrVersao ?? null,
     ],
   );
 }
@@ -203,6 +219,8 @@ export async function processarComAgente(deps: DependenciasDoAgente, mensagemId:
       return "descartado";
     }
     const configuracao = await lerConfiguracao(db, "agente");
+    // A versão do SDR vai junto do registro de cada rascunho (§7).
+    const sdrVersao = ctx.sdr?.versao ?? null;
     const desfecho = await decidirResposta({
       entrada: ctx,
       modelo,
@@ -217,22 +235,28 @@ export async function processarComAgente(deps: DependenciasDoAgente, mensagemId:
       const ultima = ctx.mensagens.filter((m) => m.direcao === "entrada").at(-1);
       await registrarOptout(db, { providerId: ctx.providerId, perfilOrigem: ctx.perfil.id, textoPedido: ultima?.texto ?? "", ator: "agente", agora });
       const { classificacao, decisao, excecao } = desfecho;
-      await concluir(db, rascunhoId, { resultado: "optout_registrado", classificacao, decisao, excecao, modelos, uso });
+      await concluir(db, rascunhoId, { resultado: "optout_registrado", classificacao, decisao, excecao, modelos, uso, sdrVersao });
       return "optout_registrado";
     }
     if (desfecho.tipo === "sem_resposta") {
-      await concluir(db, rascunhoId, { resultado: "sem_resposta_necessaria", classificacao: desfecho.classificacao, modelos, uso });
+      await concluir(db, rascunhoId, {
+        resultado: "sem_resposta_necessaria",
+        classificacao: desfecho.classificacao,
+        modelos,
+        uso,
+        sdrVersao,
+      });
       return "sem_resposta_necessaria";
     }
     if (desfecho.tipo === "escalar") {
       const { classificacao, decisao, motivo } = desfecho;
       await escalar(db, ctx, { rascunhoId, motivo, agora });
-      await concluir(db, rascunhoId, { resultado: "escalado", classificacao, decisao, excecao: motivo, modelos, uso });
+      await concluir(db, rascunhoId, { resultado: "escalado", classificacao, decisao, excecao: motivo, modelos, uso, sdrVersao });
       return "escalado";
     }
 
     const { classificacao, decisao, texto, validacao, excecao } = desfecho;
-    const base = { classificacao, decisao, texto, validacao, excecao, modelos, uso };
+    const base = { classificacao, decisao, texto, validacao, excecao, modelos, uso, sdrVersao };
 
     if (ctx.modo === "manual") {
       // A IA sugere, o humano escreve e envia (§4.8).

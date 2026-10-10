@@ -56,12 +56,26 @@ async function criarModelo(): Promise<PGliteInterface> {
 
 export type BancoDeTeste = { pg: PGliteInterface; db: Db };
 
+const abertos = new Set<PGliteInterface>();
+
 /**
  * Banco novo com todas as migrations aplicadas. Clona um modelo migrado uma vez
- * por arquivo de teste, então cada chamada começa do zero e rápido.
+ * por arquivo de teste, então cada chamada começa do zero e rápido. O clone
+ * fecha sozinho no fim do teste (`fecharBancosDeTeste`, no setup do vitest).
  */
 export async function criarBancoDeTeste(): Promise<BancoDeTeste> {
   modelo ??= criarModelo();
   const pg = await (await modelo).clone();
+  abertos.add(pg);
   return { pg, db: criarDbPglite(pg) };
+}
+
+/**
+ * Fecha os clones abertos no teste. Cada um segura a memória de um Postgres em
+ * WASM, e esperar o coletor de lixo estoura os 8 GB da máquina de dev.
+ */
+export async function fecharBancosDeTeste(): Promise<void> {
+  const clones = [...abertos];
+  abertos.clear();
+  await Promise.all(clones.map((pg) => (pg.closed ? undefined : pg.close())));
 }

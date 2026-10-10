@@ -100,7 +100,9 @@ verifica.
   Concluído = LinkedIn vinculado e a primeira campanha com permissão. Depois
   disso o primeiro acesso não volta.
 - Organização que já existia antes deste épico, com conta conectada, entra
-  direto no app. O SDR dela é gerado da oferta já confirmada.
+  direto no app. O SDR dela nasce da oferta já confirmada quando alguém abre o
+  SDR em Configurações. Até lá, o agente segue com a voz e as regras de cada
+  perfil: nada muda na voz de quem já conversa sem alguém ver o SDR antes.
 
 ### 4.2 · Análise do site
 
@@ -507,11 +509,12 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
 - O agente passa a montar o prompt de sistema com regras da casa + SDR +
   análise (§7) no lugar de voz, regras e oferta do perfil; o rascunho grava a
   versão do SDR. Instruções da campanha entram na mensagem do usuário.
-- Organização antiga ganha o SDR gerado da oferta confirmada na primeira vez
-  que o agente roda ou que o SDR é aberto.
+- O SDR nasce logo depois de confirmar a análise, no primeiro acesso. O
+  agente nunca gera SDR sozinho: organização sem SDR segue com a voz e as
+  regras do perfil e o texto de oferta da configuração, sem mudança.
 - Aceite: prompt de sistema igual para a mesma versão do SDR (cache); as
   regras da casa aparecem sempre, com qualquer SDR; mudança de versão do SDR
-  muda o prompt.
+  muda o prompt; sem SDR, o prompt não muda.
 
 **SDR-43 · Chat de teste: você no papel de lead**
 - Passo 3 do primeiro acesso, e o mesmo componente em Configurações › SDR.
