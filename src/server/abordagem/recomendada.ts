@@ -23,17 +23,21 @@ export type Abordagem = {
 
 export type ResultadoDaAbordagem = { ok: true; abordagem: Abordagem } | { ok: false; erro: string };
 
+/** Limite da nota de convite numa conta gratuita do LinkedIn. */
+const LIMITE_DA_CONTA_GRATUITA = 200;
+
 /** Os toques que a pessoa edita, na ordem do fluxo padrão (§4.1). */
 export const TOQUES = ["T1", "T2", "T3", "T4"] as const;
 export type Toque = (typeof TOQUES)[number];
 
 /**
  * Validação de quem ainda não tem conta: Brasil (§3), sem palavras proibidas
- * de perfil, o limite de nota de convite padrão. O envio valida de novo, com o
- * perfil de verdade.
+ * de perfil. A nota do convite fica no limite da conta gratuita do LinkedIn
+ * (200 caracteres): ainda não se sabe o tipo da conta, e a abordagem não pode
+ * travar ao ativar. O envio valida de novo, com o perfil de verdade.
  */
 export function contextoDoPrimeiroAcesso(linkDeAgenda: string | null): ContextoDoPerfil {
-  return { praca: "domestico", palavrasProibidas: [], rodapeObrigatorio: null, limiteNotaConvite: 300, linkDeAgenda };
+  return { praca: "domestico", palavrasProibidas: [], rodapeObrigatorio: null, limiteNotaConvite: LIMITE_DA_CONTA_GRATUITA, linkDeAgenda };
 }
 
 type LinhaDaAbordagem = {
