@@ -6,6 +6,8 @@ import type { ModeloDeLinguagem } from "@/server/agente/modelo";
 import type { EnviadorDeEmail } from "@/server/alertas/alertas";
 import { criarLeitorClaude } from "@/server/oferta/claude";
 import type { LeitorDeSite } from "@/server/oferta/leitor";
+import { criarSugeridorClaude } from "@/server/publicos/claude";
+import type { SugeridorDePublicos } from "@/server/publicos/sugeridor";
 import { criarEnviadorResend } from "@/server/alertas/resend";
 import { criarClienteRd, type ClienteRd } from "@/server/rd/cliente";
 import { criarClienteUnipile, type ClienteUnipile } from "@/server/unipile/cliente";
@@ -102,6 +104,19 @@ export function obterLeitorDeSite(): LeitorDeSite | null {
       : null;
   }
   return leitorDeSite;
+}
+
+let sugeridorDePublicos: SugeridorDePublicos | null | undefined;
+
+/** Sugestão de públicos a partir do dossiê, ou null sem ANTHROPIC_API_KEY. */
+export function obterSugeridorDePublicos(): SugeridorDePublicos | null {
+  if (sugeridorDePublicos === undefined) {
+    const env = envIa();
+    sugeridorDePublicos = env.ANTHROPIC_API_KEY
+      ? criarSugeridorClaude({ apiKey: env.ANTHROPIC_API_KEY, modelo: env.IA_MODELO_RASCUNHO, esforco: env.IA_ESFORCO_RASCUNHO })
+      : null;
+  }
+  return sugeridorDePublicos;
 }
 
 const envRd = lerEnv(z.object({ RD_STATION_TOKEN: z.string().min(1).optional() }));
