@@ -1,4 +1,4 @@
-import { Check, CircleAlert, TriangleAlert, Upload } from "lucide-react";
+import { Check, CircleAlert, Gauge, TriangleAlert, Upload } from "lucide-react";
 import Link from "next/link";
 import { Aviso } from "@/components/aviso";
 import { Cabecalho } from "@/components/cabecalho";
@@ -6,8 +6,9 @@ import { SelecionarTodos } from "@/components/selecionar-todos";
 import { rotuloDaFonte } from "@/domain/rotulos";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
+import { situacaoDasNotas, type SituacaoDasNotas } from "@/server/nota/nota";
 import { exigirOperador } from "@/server/supabase/servidor";
-import { aprovarSelecionados, rejeitarSelecionados } from "./acoes";
+import { aprovarAcimaDoCorteDoPainel, aprovarSelecionados, darNotasDoPainel, rejeitarSelecionados } from "./acoes";
 
 type LinhaDaTriagem = {
   id: string;
@@ -22,11 +23,55 @@ type LinhaDaTriagem = {
   alerta_triagem: string | null;
   campanha: string;
   perfil: string;
+  nota: number | null;
+  nota_motivo: string | null;
 };
 
-type Campanha = { id: string; nome: string; perfil: string; em_triagem: number };
+type Campanha = { id: string; nome: string; perfil: string; em_triagem: number; publico_id: string | null };
+
+function Nota({ nota, motivo, corte }: { nota: number | null; motivo: string | null; corte: number }) {
+  if (nota === null) return <span className="text-xs text-tinta-fraca">sem nota</span>;
+  const tom = nota >= corte ? "etiqueta-ok" : nota >= 40 ? "etiqueta-atencao" : "";
+  return (
+    <div className="flex flex-col gap-1">
+      <span className={`etiqueta w-fit tabular-nums ${tom}`}>{nota}</span>
+      {motivo && <span className="text-xs text-tinta-suave">{motivo}</span>}
+    </div>
+  );
+}
 
 const data = (valor: Date) => new Date(valor).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+
+/** Nota de aderência da campanha de público: dar nota a quem falta e aprovar quem passa do corte (§4.13). */
+function PainelDeNotas({ campanhaId, notas }: { campanhaId: string; notas: SituacaoDasNotas }) {
+  return (
+    <div className="cartao mt-5 flex flex-wrap items-center justify-between gap-3 p-4">
+      <p className="text-sm text-tinta-suave">
+        {notas.acimaDoCorte} com nota a partir de {notas.corte} · {notas.semNota} sem nota
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {notas.semNota > 0 && (
+          <form action={darNotasDoPainel}>
+            <input type="hidden" name="campanha" value={campanhaId} />
+            <button type="submit" className="botao botao-pequeno">
+              <Gauge aria-hidden />
+              Dar nota a {Math.min(notas.semNota, 100)}
+            </button>
+          </form>
+        )}
+        {notas.acimaDoCorte > 0 && (
+          <form action={aprovarAcimaDoCorteDoPainel}>
+            <input type="hidden" name="campanha" value={campanhaId} />
+            <button type="submit" className="botao botao-pequeno botao-primario">
+              <Check aria-hidden />
+              Aprovar os {notas.acimaDoCorte} a partir de {notas.corte}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default async function TriagemPage({ searchParams }: PageProps<"/triagem">) {
   const operador = await exigirOperador();
@@ -34,22 +79,23 @@ export default async function TriagemPage({ searchParams }: PageProps<"/triagem"
   const campanhaId = typeof params.campanha === "string" ? params.campanha : null;
   const mensagem = typeof params.msg === "string" ? params.msg : null;
 
-  const { campanhas, leads } = await comOperador(obterDb(), operador.id, async (tx) => ({
+  const { campanhas, leads, notas } = await comOperador(obterDb(), operador.id, async (tx) => ({
+    notas: campanhaId ? await situacaoDasNotas(tx, campanhaId) : null,
     campanhas: await tx.query<Campanha>(`
-      select c.id, c.nome, p.nome as perfil,
+      select c.id, c.nome, p.nome as perfil, c.publico_id,
              (select count(*)::int from public.leads l where l.campanha_id = c.id and l.estado = 'triagem') as em_triagem
         from public.campanhas c join public.perfis p on p.id = c.perfil_id
        where c.status <> 'encerrada'
        order by p.nome, c.nome`),
     leads: await tx.query<LinhaDaTriagem>(
       `select l.id, pe.nome, pe.cargo, pe.empresa, pe.localizacao, pe.url_publica, pe.fonte, pe.coletado_em,
-              l.bloqueio_motivo, l.alerta_triagem, c.nome as campanha, pf.nome as perfil
+              l.bloqueio_motivo, l.alerta_triagem, c.nome as campanha, pf.nome as perfil, l.nota, l.nota_motivo
          from public.leads l
          join public.pessoas pe on pe.id = l.pessoa_id
          join public.campanhas c on c.id = l.campanha_id
          join public.perfis pf on pf.id = l.perfil_id
         where l.estado = 'triagem' and ($1::uuid is null or l.campanha_id = $1::uuid)
-        order by (l.bloqueio_motivo is not null), l.criado_em
+        order by (l.bloqueio_motivo is not null), l.nota desc nulls last, l.criado_em
         limit 300`,
       [campanhaId],
     ),
@@ -86,6 +132,9 @@ export default async function TriagemPage({ searchParams }: PageProps<"/triagem"
         </nav>
 
         {mensagem && <Aviso className="mt-5">{mensagem}</Aviso>}
+        {campanhaId && notas && campanhas.find((c) => c.id === campanhaId)?.publico_id && (
+          <PainelDeNotas campanhaId={campanhaId} notas={notas} />
+        )}
 
         {leads.length === 0 ? (
           <div className="vazio mt-6">
@@ -120,6 +169,7 @@ export default async function TriagemPage({ searchParams }: PageProps<"/triagem"
                       <SelecionarTodos nome="leadIds" rotulo="Selecionar todos que podem ser aprovados" />
                     </th>
                     <th>Pessoa</th>
+                    <th>Nota</th>
                     <th>Empresa</th>
                     <th>Campanha</th>
                     <th>Situação</th>
@@ -153,6 +203,9 @@ export default async function TriagemPage({ searchParams }: PageProps<"/triagem"
                           </div>
                         </details>
                         <span className="text-xs text-tinta-fraca">{lead.cargo ?? "sem cargo"}</span>
+                      </td>
+                      <td className="max-w-56">
+                        <Nota nota={lead.nota} motivo={lead.nota_motivo} corte={notas?.corte ?? 70} />
                       </td>
                       <td>{lead.empresa ?? "—"}</td>
                       <td className="text-xs text-tinta-suave">

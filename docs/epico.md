@@ -479,7 +479,7 @@ pessoas (
 )
 leads (
   id, pessoa_id, campanha_id, fluxo_id, estado, angulo, passo_atual,
-  nota, nota_motivo,                              -- aderência ao público (§4.13)
+  nota, nota_motivo, nota_em,                     -- aderência ao público (§4.13)
   pesquisa jsonb, rd_deal_id, criado_em, atualizado_em
 )
 acoes (
@@ -892,7 +892,7 @@ Depois do caminho principal (detalhar o aceite antes de começar):
 | D6 | Limiar de edição para liberar o automático | < 10% em 2 semanas | Arthur |
 | D7 | Quem opera a triagem da lista (40 h por trimestre estimadas nas campanhas) | — | Arthur |
 | D8 | Teto de resultados de busca por perfil por dia (§4.3) | ✅ decidido em 09/10: 100, até confirmar o limite de uso comercial da conta | Arthur |
-| D9 | Nota de corte para aprovar em lote (§4.13) | 70 | Arthur |
+| D9 | Nota de corte para aprovar em lote (§4.13) | 70, configuração `busca.nota_de_corte`; ajustar com as primeiras listas reais | Arthur |
 | D10 | Opt-out vale só na organização ou em todas? | ✅ decidido em 09/10: só na organização, cada empresa responde pelo próprio contato | Arthur |
 
 ## 11 · Custos de operação

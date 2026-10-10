@@ -1,4 +1,4 @@
-import { Check, FileUp, ListFilter, Pencil, Plug, Send, Workflow } from "lucide-react";
+import { Check, FileUp, Gauge, ListFilter, Pencil, Plug, Send, Workflow } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Aviso } from "@/components/aviso";
@@ -10,6 +10,8 @@ import { comOperador } from "@/server/db/operador";
 import { calcularFunil, type LinhaDoFunil } from "@/server/metricas/funil";
 import { contasDoPublico, type ContaDoPublico } from "@/server/publicos/abordagem";
 import { situacaoDaBusca, type SituacaoDaBusca } from "@/server/publicos/busca";
+import { situacaoDasNotas, type SituacaoDasNotas } from "@/server/nota/nota";
+import { aprovarAcimaDoCorteDoPainel, darNotasDoPainel } from "../../triagem/acoes";
 import { obterPublico, type PublicoSalvo } from "@/server/publicos/publicos";
 import { exigirOperador } from "@/server/supabase/servidor";
 import { comecarAAbordarDoPainel } from "../acoes";
@@ -43,7 +45,48 @@ function SemConta({ p }: { p: PublicoSalvo }) {
   );
 }
 
-function AbaLeads({ p, contas, buscas }: { p: PublicoSalvo; contas: ContaDoPublico[]; buscas: Map<string, SituacaoDaBusca> }) {
+function NotasDaCampanha({ publicoId, campanhaId, notas }: { publicoId: string; campanhaId: string; notas: SituacaoDasNotas }) {
+  if (notas.semNota === 0 && notas.acimaDoCorte === 0) return null;
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-tinta-suave">
+      <span>
+        Nota de aderência: {notas.acimaDoCorte} a partir de {notas.corte} · {notas.semNota} sem nota
+      </span>
+      {notas.semNota > 0 && (
+        <form action={darNotasDoPainel}>
+          <input type="hidden" name="campanha" value={campanhaId} />
+          <input type="hidden" name="volta" value={`/publicos/${publicoId}`} />
+          <button type="submit" className="botao botao-pequeno">
+            <Gauge aria-hidden />
+            Dar nota
+          </button>
+        </form>
+      )}
+      {notas.acimaDoCorte > 0 && (
+        <form action={aprovarAcimaDoCorteDoPainel}>
+          <input type="hidden" name="campanha" value={campanhaId} />
+          <input type="hidden" name="volta" value={`/publicos/${publicoId}`} />
+          <button type="submit" className="botao botao-pequeno">
+            <Check aria-hidden />
+            Aprovar os {notas.acimaDoCorte}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+function AbaLeads({
+  p,
+  contas,
+  buscas,
+  notas,
+}: {
+  p: PublicoSalvo;
+  contas: ContaDoPublico[];
+  buscas: Map<string, SituacaoDaBusca>;
+  notas: Map<string, SituacaoDasNotas>;
+}) {
   if (contas.length === 0) return <SemConta p={p} />;
   const atalhos = {
     regioes: p.empresa.regiao.split(",").map((parte) => parte.trim()).filter(Boolean),
@@ -62,10 +105,13 @@ function AbaLeads({ p, contas, buscas }: { p: PublicoSalvo; contas: ContaDoPubli
               <p className="mt-3 text-sm text-tinta-suave">
                 {conta.campanha.emTriagem} para triar · {conta.campanha.naRegua} na régua · {conta.campanha.emConversa} em conversa
               </p>
+              {notas.get(conta.campanha.id) && (
+                <NotasDaCampanha publicoId={p.id} campanhaId={conta.campanha.id} notas={notas.get(conta.campanha.id)!} />
+              )}
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link href={`/triagem?campanha=${conta.campanha.id}`} className="botao botao-pequeno botao-primario">
                   <ListFilter aria-hidden />
-                  Triar {conta.campanha.emTriagem > 0 ? `${conta.campanha.emTriagem} leads` : "leads"}
+                  Triar {conta.campanha.emTriagem > 0 ? `${conta.campanha.emTriagem} leads` : "leads"}, pela nota
                 </Link>
                 <Link href={`/importar?campanha=${conta.campanha.id}`} className="botao botao-pequeno">
                   <FileUp aria-hidden />
@@ -202,14 +248,17 @@ export default async function PublicoPage({ params, searchParams }: PageProps<"/
     const ativo = publico.status === "ativo";
     const contas = ativo ? await contasDoPublico(tx, id) : [];
     const buscas = new Map<string, SituacaoDaBusca>();
+    const notas = new Map<string, SituacaoDasNotas>();
     for (const conta of contas) {
-      const situacao = conta.campanha ? await situacaoDaBusca(tx, conta.campanha.id, new Date()) : null;
-      if (situacao) buscas.set(conta.campanha!.id, situacao);
+      if (!conta.campanha) continue;
+      const situacao = await situacaoDaBusca(tx, conta.campanha.id, new Date());
+      if (situacao) buscas.set(conta.campanha.id, situacao);
+      notas.set(conta.campanha.id, await situacaoDasNotas(tx, conta.campanha.id));
     }
-    return { publico, contas, buscas, funil: ativo ? await calcularFunil(tx, { publicoId: id }) : null };
+    return { publico, contas, buscas, notas, funil: ativo ? await calcularFunil(tx, { publicoId: id }) : null };
   });
   if (!dados) notFound();
-  const { publico: p, contas, buscas, funil } = dados;
+  const { publico: p, contas, buscas, notas, funil } = dados;
   const ativo = p.status === "ativo";
   const aba: Aba = ativo && ABAS.some((a) => a.valor === abaPedida) ? (abaPedida as Aba) : "quem";
   const semCampanha = contas.every((c) => !c.campanha);
@@ -273,7 +322,7 @@ export default async function PublicoPage({ params, searchParams }: PageProps<"/
             )}
           </div>
         )}
-        {aba === "leads" && <AbaLeads p={p} contas={contas} buscas={buscas} />}
+        {aba === "leads" && <AbaLeads p={p} contas={contas} buscas={buscas} notas={notas} />}
         {aba === "abordagem" && <AbaAbordagem p={p} contas={contas} />}
         {aba === "resultados" && funil && <AbaResultados linhas={funil.porPerfil} leituraMinima={funil.leituraMinima} />}
         {aba !== "quem" && contas.length > 0 && contas.some((c) => !c.conectado || c.status !== "ativo") && (
