@@ -1342,3 +1342,27 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
   pessoa marcada, ou sem nomes.
 - Na tela, a nota aparece num anel, como o alvo da marca: verde a partir do
   corte, apagado abaixo.
+
+### SDR-45 · Abordagem recomendada e permissão
+
+- Como a prévia, a abordagem do primeiro acesso fica à parte (`abordagens`,
+  uma por organização): ainda não há conta nem campanha. No SDR-46 ela vira o
+  fluxo da campanha (`fluxoComTextos`) e a permissão vai junto para
+  `campanhas.permitida_em/por`.
+- Os textos saem do mesmo escritor do fluxo gerado (SDR-29), com o perfil do
+  primeiro acesso: o nome do operador, Brasil, sem palavras proibidas de
+  perfil, e a voz do SDR com o jeito de abrir. A escrita com uma reescrita
+  quando o validador barra virou `escreverComRevisao`, que o fluxo da campanha
+  também usa.
+- Validação igual à da campanha: forma do fluxo, validador (§4.2) e número
+  fora das provas do público. Editar um texto valida a abordagem inteira de
+  novo.
+- Editar ou gerar de novo apaga a permissão: a pessoa permite o que está na
+  tela. Com problema, "pode entrar em contato" fica travado.
+- Fora do primeiro acesso, ativar a campanha é a permissão: a primeira
+  ativação grava quem e quando. Assim a tela antiga de campanhas segue
+  funcionando até o SDR-50.
+- O "o que vai acontecer" mostra quantas pessoas marcadas, a rampa padrão
+  (`RAMPA_PADRAO`, 8 · 12 · 15 convites/dia e 75 por semana, D3), a janela,
+  e quando o SDR chama a pessoa (preço, reclamação e o "quando chamar você"
+  do SDR).

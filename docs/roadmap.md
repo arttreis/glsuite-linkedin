@@ -22,7 +22,7 @@ https://sdr.glsuite.io.
 | 3 | SDR-48 Chats: a réplica das DMs | 47 | 🔜 | — | — |
 | 3 | SDR-49 Pipeline | 47 | 🔜 | — | — |
 | 4 | SDR-43 Chat de teste: você no papel de lead | 42 | ✅ | ⏳ PR aberto | — |
-| 4 | SDR-45 Abordagem recomendada e permissão | 42, 44 | 🔜 | — | — |
+| 4 | SDR-45 Abordagem recomendada e permissão | 42, 44 | ✅ | ⏳ PR aberto | — |
 | 4 | SDR-52 O SDR responde sozinho | 42, 48 | 🔜 | — | ⛔ Resend (T-4) |
 | 5 | SDR-46 Vincular o LinkedIn e começar | 45 | 🔜 | — | — |
 | 5 | SDR-50 Campanhas | 45, 47 | 🔜 | — | — |

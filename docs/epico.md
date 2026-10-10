@@ -212,8 +212,11 @@ confirmada e guardada em versões. Ele tem:
   rampa, a janela, que o SDR responde sozinho e quando chama a pessoa, e que dá
   para pausar a qualquer momento.
 - **Nada sai sem permissão.** "Pode entrar em contato" grava quem permitiu e
-  quando, na campanha. Sem isso a campanha não ativa. A permissão é por
-  campanha.
+  quando. No primeiro acesso ainda não há campanha: a abordagem e a permissão
+  ficam guardadas à parte e vão para a campanha quando a conta é vinculada.
+  Fora do primeiro acesso, ativar a campanha é a permissão, e grava quem e
+  quando. A permissão é por campanha; editar ou gerar de novo a abordagem do
+  primeiro acesso apaga a permissão: a pessoa permite o que vê.
 
 ### 4.6 · Vincular o LinkedIn e começar
 
@@ -407,6 +410,10 @@ previas (                                          -- §4.4, uma por organizaç�
   buscadas, motivo, regiao, iniciada_em, confirmada_em
 )
               modo_resposta: 'automatico' | 'aprovacao' (sai 'manual')
+abordagens (                                       -- §4.5, a do primeiro acesso, uma por organização
+  id, organizacao_id unique, publico_id, textos jsonb, problemas jsonb,
+  gerada_em, editada_em, permitida_em, permitida_por
+)
 campanhas     + permitida_em, permitida_por         -- §4.5
               + instrucoes_sdr                      -- §4.11
 rascunhos     + sdr_versao                          -- que versão do SDR escreveu
@@ -562,9 +569,11 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   do SDR.
 - Linha do tempo legível com textos editáveis, validador em cada texto, o
   resumo do que vai acontecer (§4.5).
-- "Pode entrar em contato" grava `permitida_em` e `permitida_por`, com evento.
-- Aceite: campanha sem permissão não ativa por nenhum caminho; texto barrado
-  duas vezes não deixa seguir; a permissão registra quem e quando.
+- "Pode entrar em contato" grava `permitida_em` e `permitida_por` em
+  `abordagens` (à parte, uma por organização), com evento. Ativar campanha
+  grava a permissão na campanha.
+- Aceite: texto barrado duas vezes não deixa seguir; editar apaga a
+  permissão; a permissão registra quem e quando.
 
 **SDR-46 · Vincular o LinkedIn e começar**
 - Passo 6 do primeiro acesso, sobre a conexão pela Unipile que já existe.

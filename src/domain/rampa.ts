@@ -8,6 +8,16 @@ import { Temporal } from "temporal-polyfill";
 export type EtapaDaRampa = { semana: number; convites_dia: number; dms_dia: number };
 export type LimitesDoDia = { convitesDia: number; dmsDia: number };
 
+/** Rampa de uma conta nova (D3 do épico de 10/10/2026): convites e mensagens por dia, semana a semana. */
+export const RAMPA_PADRAO: readonly EtapaDaRampa[] = [
+  { semana: 1, convites_dia: 8, dms_dia: 15 },
+  { semana: 2, convites_dia: 12, dms_dia: 20 },
+  { semana: 3, convites_dia: 15, dms_dia: 25 },
+];
+
+/** Teto de convites por semana de uma conta nova (D3). */
+export const TETO_SEMANAL_PADRAO = 75;
+
 /** "Semana 1" conta a partir da ativação do perfil no sistema. */
 export function semanaDesdeAtivacao(dataDeAtivacao: string, hoje: string): number {
   const dias = Temporal.PlainDate.from(dataDeAtivacao).until(Temporal.PlainDate.from(hoje), { largestUnit: "days" }).days;

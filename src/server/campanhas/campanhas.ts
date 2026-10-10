@@ -134,8 +134,9 @@ export class ErroDeStatus extends Error {}
 
 /**
  * Ativa, pausa ou encerra. Ativar exige fluxo válido e copy sem problema
- * (§4.1). Encerrar cancela as ações que ainda não saíram; os leads ficam no
- * estado em que estão (histórico).
+ * (§4.1), e é a permissão de entrar em contato (§4.5): a primeira ativação
+ * grava quem e quando. Encerrar cancela as ações que ainda não saíram; os
+ * leads ficam no estado em que estão (histórico).
  */
 export async function mudarStatusDaCampanha(
   db: Db,
@@ -165,7 +166,14 @@ export async function mudarStatusDaCampanha(
       }
     }
 
-    await tx.query("update public.campanhas set status = $2 where id = $1::uuid", [p.campanhaId, p.status]);
+    await tx.query(
+      `update public.campanhas
+          set status = $2,
+              permitida_em = case when $2 = 'ativa' then coalesce(permitida_em, $3) else permitida_em end,
+              permitida_por = case when $2 = 'ativa' then coalesce(permitida_por, $4::uuid) else permitida_por end
+        where id = $1::uuid`,
+      [p.campanhaId, p.status, p.agora, p.operadorId],
+    );
     if (p.status === "encerrada") {
       await tx.query(
         `update public.acoes a set status = 'cancelada', erro = 'campanha encerrada'
