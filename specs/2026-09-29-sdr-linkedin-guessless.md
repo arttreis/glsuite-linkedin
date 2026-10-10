@@ -661,6 +661,16 @@ Anotadas durante a execução, por ticket.
   fichas (`.ficha`) com perfis ativos, envios de hoje e fila. "Para agora" só
   aparece quando há pendência.
 - `Barra`: trilho tracejado com preenchimento menta, para uso contra limite.
+- Na Inbox, o elemento é a próxima resposta (`ProximaResposta`, só no filtro
+  "Abertas"): a primeira conversa de campanha com prazo correndo ou estourado,
+  na ordem que a lista já traz, com a última mensagem e o botão "Responder".
+  Sem ninguém esperando, diz isso e explica o prazo de 4 horas úteis.
+- Em Resultados, o elemento é o funil da casa (`FunilDaCasa`): a soma de
+  `porPerfil` em barras, de convites a reuniões. As etapas contam pessoas;
+  toques contam envios e ficam no título, não nas barras. A barra é a etapa
+  contra os convites e o percentual é contra a etapa anterior, sem cor de
+  status, porque a referência muda por praça (as tabelas abaixo continuam
+  com ela).
 - Os tokens ficam em `src/app/globals.css` (`@theme`) e viram utilitários do
   Tailwind: `bg-superficie`, `border-linha`, `text-tinta-suave` e assim por
   diante. Uma tela nova não usa cor fixa (`neutral-*`, `bg-white`).

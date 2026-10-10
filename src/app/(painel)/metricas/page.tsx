@@ -3,6 +3,7 @@ import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { calcularFunil, referencia, type LinhaDoFunil } from "@/server/metricas/funil";
 import { exigirOperadorLiberado } from "@/server/supabase/servidor";
+import { FunilDaCasa } from "./funil-da-casa";
 
 const pct = (valor: number) => `${Math.round(valor * 100)}%`;
 
@@ -94,6 +95,7 @@ export default async function MetricasPage() {
         descricao={`Taxas só aparecem depois de ${funil.leituraMinima} toques (marco de leitura). Referência de trabalho: aceite 25–35%, resposta sobre aceite 10–15% (Espanha 15–25%). A casa ainda não tem linha de base: estes números são a primeira.`}
       />
       <div className="flex max-w-6xl flex-col gap-9">
+        <FunilDaCasa linhas={funil.porPerfil} />
         <Tabela titulo="Por público" linhas={funil.porPublico} colunas={["publico"]} />
         <Tabela titulo="Por campanha" linhas={funil.porCampanha} colunas={["perfil", "campanha", "angulo", "variante"]} />
         <Tabela titulo="Por ângulo" linhas={funil.porAngulo} colunas={["angulo"]} />
