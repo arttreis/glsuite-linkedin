@@ -14,7 +14,7 @@ type Dependencias = { db: Db; unipile: ClienteUnipile };
  */
 export async function gerarLinkDeConexao(
   deps: Dependencias & { urlApp: string; segredo: string },
-  p: { perfilId: string; agora: Date },
+  p: { perfilId: string; agora: Date; voltarPara?: string },
 ): Promise<string> {
   const [perfil] = await deps.db.query<{ id: string; unipile_account_id: string | null }>(
     "select id, unipile_account_id from public.perfis where id = $1::uuid",
@@ -29,8 +29,8 @@ export async function gerarLinkDeConexao(
     contaParaReconectar: perfil.unipile_account_id ?? undefined,
     nome: perfil.id,
     notifyUrl: notify.toString(),
-    sucessoUrl: new URL("/perfis?conexao=ok", deps.urlApp).toString(),
-    falhaUrl: new URL("/perfis?conexao=falhou", deps.urlApp).toString(),
+    sucessoUrl: new URL(`${p.voltarPara ?? "/perfis"}?conexao=ok`, deps.urlApp).toString(),
+    falhaUrl: new URL(`${p.voltarPara ?? "/perfis"}?conexao=falhou`, deps.urlApp).toString(),
     expiraEm: new Date(p.agora.getTime() + 30 * 60_000),
   });
 }

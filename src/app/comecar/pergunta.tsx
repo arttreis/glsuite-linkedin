@@ -25,15 +25,3 @@ export function Pergunta({
     </div>
   );
 }
-
-/** Passo que ainda não foi construído: mostra a pergunta e avisa. */
-export function PassoEmConstrucao({ passo }: { passo: IdDoPassoInicial }) {
-  return (
-    <>
-      <Pergunta passo={passo} />
-      <div className="vazio mt-10">
-        <p>Este passo ainda está sendo montado.</p>
-      </div>
-    </>
-  );
-}

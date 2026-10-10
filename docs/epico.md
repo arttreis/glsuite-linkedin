@@ -585,8 +585,10 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   conta nova, com o mesmo público.
 - [verificar] id da pessoa da prévia na conta nova; se não valer, resolver de
   novo pela URL pública antes do primeiro convite.
-- Aceite: callback repetido não cria dois perfis; a primeira ação respeita
-  `conta_estavel_minutos`; termina no Dashboard.
+- Roda pelo aviso da Unipile e pela volta da pessoa, o que vier primeiro;
+  só um leva por vez.
+- Aceite: callback repetido não cria dois perfis nem duas campanhas; a
+  primeira ação respeita `conta_estavel_minutos`; termina no app.
 
 ### Marco B · O app
 

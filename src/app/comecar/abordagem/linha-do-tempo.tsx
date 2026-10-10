@@ -8,7 +8,8 @@ import { editarToque, escreverDeNovo, podeEntrarEmContato } from "./acoes";
 
 /** Os toques do fluxo padrão (§4.1): quando sai, o que é e o teto de caracteres. */
 const PASSOS: { toque: Toque; quando: string; titulo: string; teto: number }[] = [
-  { toque: "T1", quando: "Dia 1", titulo: "Convite com nota", teto: 250 },
+  // A nota do convite segue o limite da conta gratuita do LinkedIn (200).
+  { toque: "T1", quando: "Dia 1", titulo: "Convite com nota", teto: 200 },
   { toque: "T2", quando: "2 dias úteis depois do aceite", titulo: "Mensagem 1", teto: 350 },
   { toque: "T3", quando: "4 dias úteis depois", titulo: "Mensagem 2", teto: 250 },
   { toque: "T4", quando: "5 dias úteis depois", titulo: "Mensagem 3", teto: 180 },

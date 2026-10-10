@@ -1366,3 +1366,33 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
   (`RAMPA_PADRAO`, 8 · 12 · 15 convites/dia e 75 por semana, D3), a janela,
   e quando o SDR chama a pessoa (preço, reclamação e o "quando chamar você"
   do SDR).
+
+### SDR-46 · Vincular o LinkedIn e começar
+
+- "Vincular meu LinkedIn" cria (ou reaproveita, com lock pela organização) o
+  perfil da pessoa: pausado, Brasil, fuso de São Paulo, o idioma da análise,
+  `modo_resposta = automatico` (§4.7), `RAMPA_PADRAO` e 75 por semana (D3), sem
+  palavras proibidas de perfil, `operador_id` e `operador_perfis` da pessoa.
+  O hosted auth volta para `/comecar/linkedin`.
+- `concluirPrimeiroAcesso` leva tudo para a conta, e roda pelo aviso da
+  Unipile (`/api/unipile/conta`, depois do `registrarContaConectada`) e pela
+  volta da pessoa à tela, o que vier primeiro. É idempotente, e só um leva por
+  vez (`abordagens.vinculando_em`, que vale por 2 minutos; a campanha criada
+  fica em `abordagens.campanha_id`).
+- A ordem: a campanha nasce do público na conta da pessoa, com
+  `fluxoComTextos` da abordagem e a permissão dela; as marcadas da prévia
+  entram por `importarPessoas` (fonte `unipile_busca`, arquivo "prévia do
+  primeiro acesso"), levando a nota da prévia; o perfil despausa; a campanha
+  ativa (o validador roda de novo, agora com o limite real da conta); as
+  pessoas aprovadas vão para a fila em nome de quem permitiu; o primeiro
+  acesso termina.
+- Prévia sem nomes: a campanha começa sem leads, com a busca do público e a
+  região da prévia salvas, para buscar pela conta da pessoa.
+- Conta gratuita aceita nota de convite de até 200 caracteres, e no primeiro
+  acesso ainda não se sabe o tipo da conta: a abordagem (SDR-45) passou a
+  validar o convite em 200. Se mesmo assim a ativação barrar, a tela explica e
+  manda de volta para a abordagem.
+- [verificar] o id da pessoa trazido pela conta da casa vale na conta da
+  pessoa? A aprovação já consulta a conta nova (`jaEConexao`); se o id não
+  valer, o envio falha com erro permanente e o lead vai para revisão. Ver com
+  a primeira conta real.
