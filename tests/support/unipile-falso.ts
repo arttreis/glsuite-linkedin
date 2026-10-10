@@ -10,6 +10,7 @@ import type {
   ParticipanteDaConversa,
   PerfilLinkedIn,
   PostLinkedIn,
+  ParametroDeBusca,
   ResultadoDeBusca,
   WebhookUnipile,
 } from "@/server/unipile/cliente";
@@ -32,6 +33,9 @@ export class UnipileFalso implements ClienteUnipile {
   conversasDaConta: ConversaDaConta[] = [];
   participantesPorChat = new Map<string, ParticipanteDaConversa[]>();
   resultadosDeBusca: ResultadoDeBusca[] = [];
+  /** Busca em páginas: o cursor `pagina-N` leva à página N. Vazio, vale `resultadosDeBusca`. */
+  paginasDeBusca: ResultadoDeBusca[][] = [];
+  parametrosDeBusca = new Map<string, ParametroDeBusca[]>();
   convitesPendentes: ConviteEnviado[] = [];
   webhooks: WebhookUnipile[] = [];
   private falhas = new Map<Metodo, unknown[]>();
@@ -140,7 +144,15 @@ export class UnipileFalso implements ClienteUnipile {
 
   async buscarPessoas(accountId: string, busca: unknown, cursor?: string) {
     this.registrar("buscarPessoas", { accountId, busca, cursor });
-    return { itens: this.resultadosDeBusca, cursor: null };
+    if (this.paginasDeBusca.length === 0) return { itens: this.resultadosDeBusca, cursor: null };
+    const pagina = cursor ? Number(cursor.replace("pagina-", "")) : 0;
+    const proxima = pagina + 1 < this.paginasDeBusca.length ? `pagina-${pagina + 1}` : null;
+    return { itens: this.paginasDeBusca[pagina] ?? [], cursor: proxima };
+  }
+
+  async listarParametrosDeBusca(accountId: string, tipo: "LOCATION" | "INDUSTRY", texto: string) {
+    this.registrar("listarParametrosDeBusca", { accountId, tipo, texto });
+    return this.parametrosDeBusca.get(`${tipo}:${texto}`) ?? [];
   }
 
   async criarWebhook(p: { url: string; fonte: "messaging" | "users" | "account_status"; nome: string; headers: Record<string, string>; eventos?: string[] }) {

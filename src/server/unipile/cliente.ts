@@ -71,6 +71,21 @@ export type ResultadoDeBusca = {
   cargoAtual: string | null;
 };
 
+/**
+ * Filtros da busca clássica de pessoas (`api: "classic"`, `category: "people"`).
+ * Região e setor vão por id do LinkedIn, tirados de `listarParametrosDeBusca`.
+ * A busca clássica não filtra porte de empresa (§3).
+ */
+export type FiltrosDaBusca = {
+  palavras?: string;
+  /** Vai em `advanced_keywords.title`; aceita OR entre cargos entre aspas. */
+  cargo?: string;
+  regioes?: string[];
+  setores?: string[];
+};
+
+export type ParametroDeBusca = { id: string; nome: string };
+
 export type ConviteEnviado = { id: string; providerId: string | null; data: string | null };
 
 export type WebhookUnipile = { id: string; url: string; fonte: string };
@@ -104,9 +119,11 @@ export interface ClienteUnipile {
   listarParticipantes(chatId: string): Promise<ParticipanteDaConversa[]>;
   buscarPessoas(
     accountId: string,
-    busca: { url: string } | { keywords: string; api?: "classic" | "sales_navigator" },
+    busca: { url: string } | { keywords: string; api?: "classic" | "sales_navigator" } | { filtros: FiltrosDaBusca },
     cursor?: string,
   ): Promise<{ itens: ResultadoDeBusca[]; cursor: string | null }>;
+  /** Ids do LinkedIn para os filtros de região e setor da busca clássica. */
+  listarParametrosDeBusca(accountId: string, tipo: "LOCATION" | "INDUSTRY", texto: string): Promise<ParametroDeBusca[]>;
   criarWebhook(p: { url: string; fonte: "messaging" | "users" | "account_status"; nome: string; headers: Record<string, string>; eventos?: string[] }): Promise<string>;
   listarWebhooks(): Promise<WebhookUnipile[]>;
 }
@@ -123,6 +140,16 @@ type Query = Record<string, string | number | boolean | undefined>;
 type Json = Record<string, unknown>;
 
 const texto = (valor: unknown): string | null => (typeof valor === "string" && valor.length > 0 ? valor : null);
+
+/** Corpo da busca clássica de pessoas, só com os filtros preenchidos. */
+export function corpoDaBuscaClassica(filtros: FiltrosDaBusca): Record<string, unknown> {
+  const corpo: Record<string, unknown> = { api: "classic", category: "people" };
+  if (filtros.palavras?.trim()) corpo.keywords = filtros.palavras.trim();
+  if (filtros.cargo?.trim()) corpo.advanced_keywords = { title: filtros.cargo.trim() };
+  if (filtros.regioes && filtros.regioes.length > 0) corpo.location = filtros.regioes;
+  if (filtros.setores && filtros.setores.length > 0) corpo.industry = filtros.setores;
+  return corpo;
+}
 
 export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
   const host = config.dsn.replace(/^https?:\/\//, "").replace(/\/+$/, "");
@@ -342,12 +369,14 @@ export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
     },
 
     async buscarPessoas(accountId, busca, cursor) {
-      const corpo = cursor
-        ? { cursor }
-        : "url" in busca
+      // O cursor da página seguinte vai na query, com o mesmo corpo da busca.
+      const corpo =
+        "url" in busca
           ? { url: busca.url }
-          : { api: busca.api ?? "classic", category: "people", keywords: busca.keywords };
-      const dados = await chamar<Json>("POST", "/linkedin/search", { query: { account_id: accountId }, json: corpo });
+          : "filtros" in busca
+            ? corpoDaBuscaClassica(busca.filtros)
+            : { api: busca.api ?? "classic", category: "people", keywords: busca.keywords };
+      const dados = await chamar<Json>("POST", "/linkedin/search", { query: { account_id: accountId, cursor }, json: corpo });
       const itens = Array.isArray(dados.items) ? (dados.items as Json[]) : [];
       return {
         itens: itens
@@ -369,6 +398,18 @@ export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
           }),
         cursor: texto(dados.cursor),
       };
+    },
+
+    async listarParametrosDeBusca(accountId, tipo, busca) {
+      const dados = await chamar<Json>("GET", "/linkedin/search/parameters", {
+        query: { account_id: accountId, type: tipo, keywords: busca, limit: 10 },
+      });
+      const itens = Array.isArray(dados.items) ? (dados.items as Json[]) : [];
+      return itens.flatMap((item) => {
+        const id = item.id === undefined || item.id === null ? null : String(item.id);
+        const nome = texto(item.title);
+        return id && nome ? [{ id, nome }] : [];
+      });
     },
 
     async criarWebhook({ url, fonte, nome, headers, eventos }) {

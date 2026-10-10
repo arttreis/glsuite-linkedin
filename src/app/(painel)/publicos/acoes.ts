@@ -5,8 +5,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { obterSugeridorDePublicos } from "@/server/dependencias";
+import { obterSugeridorDePublicos, obterUnipileSeConfigurada } from "@/server/dependencias";
+import { exigirCampanhaDoOperador } from "@/server/painel/autorizacao";
 import { comecarAAbordar } from "@/server/publicos/abordagem";
+import { procurarParametros, rodarBusca, salvarBusca, type ResultadoDaBusca } from "@/server/publicos/busca";
 import { mudarStatusDoPublico, salvarPublico, sugerirPublicos, type Resultado } from "@/server/publicos/publicos";
 import { exigirOperador } from "@/server/supabase/servidor";
 
@@ -79,4 +81,44 @@ export async function comecarAAbordarDoPainel(formData: FormData) {
       ? "Campanha criada. Agora traga os leads: importe uma lista e aprove na triagem."
       : "Esta conta já aborda este público.";
   redirect(`/publicos/${publicoId}?aba=leads&msg=${encodeURIComponent(msg)}`);
+}
+
+const SEM_UNIPILE = "A conexão com o LinkedIn (Unipile) não está configurada. Peça ao admin.";
+
+/** Grava a busca editada na aba Leads. */
+export async function salvarBuscaDoPainel(entrada: { campanhaId: string; busca: unknown }): Promise<Resultado> {
+  const operador = await exigirOperador();
+  const campanhaId = z.uuid().parse(entrada.campanhaId);
+  await exigirCampanhaDoOperador(operador.id, campanhaId);
+  const resultado = await comOperador(obterDb(), operador.id, (tx) =>
+    salvarBusca(tx, { campanhaId, busca: entrada.busca, operadorId: operador.id, agora: new Date() }),
+  );
+  if (resultado.ok) revalidatePath("/publicos", "layout");
+  return resultado;
+}
+
+/** Procura ids de região ou setor no LinkedIn, pela conta da campanha. */
+export async function procurarParametrosDoPainel(entrada: { campanhaId: string; tipo: "LOCATION" | "INDUSTRY"; texto: string }) {
+  const operador = await exigirOperador();
+  const campanhaId = z.uuid().parse(entrada.campanhaId);
+  const tipo = z.enum(["LOCATION", "INDUSTRY"]).parse(entrada.tipo);
+  await exigirCampanhaDoOperador(operador.id, campanhaId);
+  const unipile = obterUnipileSeConfigurada();
+  if (!unipile) return { ok: false as const, erro: SEM_UNIPILE };
+  return procurarParametros({ db: obterDb(), unipile }, { campanhaId, tipo, texto: String(entrada.texto).slice(0, 80) });
+}
+
+/** Roda a busca salva e manda o resultado para a triagem da campanha. */
+export async function rodarBuscaDoPainel(entrada: { campanhaId: string; quantidade: number }): Promise<ResultadoDaBusca> {
+  const operador = await exigirOperador();
+  const campanhaId = z.uuid().parse(entrada.campanhaId);
+  await exigirCampanhaDoOperador(operador.id, campanhaId);
+  const unipile = obterUnipileSeConfigurada();
+  if (!unipile) return { ok: false, erro: SEM_UNIPILE };
+  const resultado = await rodarBusca(
+    { db: obterDb(), unipile },
+    { campanhaId, quantidade: Number(entrada.quantidade) || 10, operadorId: operador.id, agora: new Date() },
+  );
+  revalidatePath("/publicos", "layout");
+  return resultado;
 }

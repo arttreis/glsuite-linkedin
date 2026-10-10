@@ -983,3 +983,38 @@ migrations das duas linhas já estão no banco (conferido em 09/10).
   ninguém está no automático.
 - As regras novas ficam no prompt, não no validador: o validador vale também
   para texto humano, e 30 palavras é regra para a IA.
+
+### SDR-27 · Busca a partir do público
+
+- A busca fica em `campanhas.busca` (jsonb): cargos, palavras-chave, regiões
+  e setores (id e nome do LinkedIn), o `cursor` de onde a última parou e
+  `esgotada`. Sem busca salva, a aba Leads mostra a inicial do público (os
+  cargos dele), sem gravar nada.
+- Filtros: os cargos vão em `advanced_keywords.title` como `"A" OR "B"`;
+  palavras em `keywords`; região e setor em `location` e `industry`. Porte de
+  empresa não tem filtro (§3). Região é obrigatória para rodar.
+- Ids de região e setor: o humano procura na lista do LinkedIn
+  (`/linkedin/search/parameters`) pela conta da campanha, com atalhos que
+  usam o texto do público. A consulta não conta no teto.
+- O cursor da página seguinte vai na query, como diz a referência da Unipile.
+  O cliente antigo mandava só `{ cursor }` no corpo, o que perderia os
+  filtros; a importação por palavra-chave (SDR-04) também passou a usar o
+  jeito certo.
+- Rodar é um botão (o tick continua desligado). Ordem das checagens: busca
+  salva, região, esgotada, conta conectada e saudável, suspensão, janela do
+  perfil em dia útil e teto do dia. O teto conta perfis trazidos (soma de
+  `resultados` nos eventos `busca_feita` do dia, no fuso do perfil), não
+  pedidos.
+- A busca para no alvo (o que o humano pediu, até o saldo do dia). Página
+  trazida pela metade é refeita na próxima vez: quem já entrou aparece como
+  repetido, e ninguém fica de fora. Sem página seguinte, a busca fica
+  esgotada; mudar um filtro tira a marca e recomeça do início.
+- Erro de limite (429 ou tipo de limite da Unipile): `perfis.busca_suspensa_ate`
+  recebe a abertura do próximo dia útil, entra o evento `busca_suspensa` e um
+  alerta para o dono do perfil. O status do perfil não muda: convites e
+  mensagens seguem. O que veio antes do erro vai para a triagem.
+- Tudo o que vem passa por `importarPessoas` com a fonte `unipile_busca`:
+  opt-out nem entra na base, pessoa de outro perfil entra bloqueada com o
+  motivo, cooldown de empresa marca alerta (§4.7).
+- Teto na configuração `busca.max_resultados_dia` (100, D8). Migration
+  `20261010170000_busca_do_publico`.

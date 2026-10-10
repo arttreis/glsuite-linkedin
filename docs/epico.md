@@ -164,9 +164,10 @@ perfil faz.
 - Convite pendente há mais de 21 dias é retirado [verificar endpoint na Unipile].
 - Busca e visita de perfil também são atividade da conta e têm teto próprio por
   perfil: só na janela e em dia útil, até `busca.max_resultados_dia` resultados
-  de busca (padrão 100, decisão aberta D8) e `pesquisa.max_por_dia` visitas
-  (padrão 20) por dia. [verificar na Unipile o limite de uso comercial da busca
-  em conta grátis do LinkedIn]
+  de busca (padrão 100, D8) e `pesquisa.max_por_dia` visitas (padrão 20) por
+  dia. A Unipile recomenda até 1.000 perfis buscados por dia em conta comum e
+  não documenta o limite de uso comercial do LinkedIn em conta grátis
+  (`docs/pesquisa/unipile.md`).
 - Erro de limite na busca suspende só a busca daquele perfil até o dia útil
   seguinte e avisa o dono. Não pausa os envios.
 
@@ -342,11 +343,13 @@ O "como a oferta ajuda" mora aqui, não no dossiê.
   conta no público, e só aparecem contas da praça do público. Um público pode
   rodar em mais de uma conta; um alvo, um dono e o cooldown de empresa (§4.7)
   valem entre elas.
-- A busca é montada a partir do público: cargos viram palavras do cargo;
-  região e setor viram filtros. [verificar na Unipile os filtros da busca
-  clássica e de onde vêm os ids de região e setor] O humano vê e edita a busca
-  antes de rodar. Ela roda pela conta da campanha, dentro do teto de busca
-  (§4.3).
+- A busca é montada a partir do público: os cargos viram o filtro de cargo
+  (qualquer um deles); região e setor viram filtros pelo id do LinkedIn,
+  escolhidos numa lista que vem do próprio LinkedIn. Região é obrigatória. O
+  humano vê e edita a busca antes de rodar. Ela roda pela conta da campanha,
+  dentro do teto de busca (§4.3), e continua de onde a anterior parou; quando
+  o LinkedIn não mostra mais ninguém, a busca fica esgotada até alguém mudar
+  um filtro.
 - Todo resultado passa pelas regras de importação antes de qualquer outra
   coisa: opt-out nunca entra, um alvo um dono, cooldown de empresa, URL, fonte e
   data da coleta (§4.7).
@@ -833,8 +836,8 @@ antes da busca porque a busca roda pela conta da campanha.
 
 - Monta a busca clássica da Unipile a partir do público, mostra para o humano
   editar, roda pela conta da campanha dentro do teto de busca (§4.3) e passa
-  cada resultado pelas regras de importação (§4.13). Antes de codar:
-  [verificar filtros e ids de região e setor na Unipile].
+  cada resultado pelas regras de importação (§4.13). Filtros e ids conferidos
+  na Unipile em 09/10 (`docs/pesquisa/unipile.md`).
 - ✅ Aceite (relógio simulado): a busca não roda fora da janela nem acima do
   teto; erro de limite na busca suspende só a busca do perfil; opt-out e
   pessoa de outro dono nunca entram.

@@ -9,9 +9,11 @@ import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { calcularFunil, type LinhaDoFunil } from "@/server/metricas/funil";
 import { contasDoPublico, type ContaDoPublico } from "@/server/publicos/abordagem";
+import { situacaoDaBusca, type SituacaoDaBusca } from "@/server/publicos/busca";
 import { obterPublico, type PublicoSalvo } from "@/server/publicos/publicos";
 import { exigirOperador } from "@/server/supabase/servidor";
 import { comecarAAbordarDoPainel } from "../acoes";
+import { BuscaDaCampanha } from "../busca";
 import { BotaoDeStatus, ResumoDoPublico } from "../resumo";
 
 const ABAS = [
@@ -41,8 +43,12 @@ function SemConta({ p }: { p: PublicoSalvo }) {
   );
 }
 
-function AbaLeads({ p, contas }: { p: PublicoSalvo; contas: ContaDoPublico[] }) {
+function AbaLeads({ p, contas, buscas }: { p: PublicoSalvo; contas: ContaDoPublico[]; buscas: Map<string, SituacaoDaBusca> }) {
   if (contas.length === 0) return <SemConta p={p} />;
+  const atalhos = {
+    regioes: p.empresa.regiao.split(",").map((parte) => parte.trim()).filter(Boolean),
+    setores: p.empresa.setores,
+  };
   return (
     <ul className="grid gap-3">
       {contas.map((conta) => (
@@ -66,6 +72,17 @@ function AbaLeads({ p, contas }: { p: PublicoSalvo; contas: ContaDoPublico[] }) 
                   Importar lista
                 </Link>
               </div>
+              {buscas.has(conta.campanha.id) && (
+                <BuscaDaCampanha
+                  campanhaId={conta.campanha.id}
+                  inicial={buscas.get(conta.campanha.id)!.busca}
+                  salva={buscas.get(conta.campanha.id)!.salva}
+                  saldoHoje={buscas.get(conta.campanha.id)!.saldoHoje}
+                  tetoDoDia={buscas.get(conta.campanha.id)!.tetoDoDia}
+                  suspensaAte={buscas.get(conta.campanha.id)!.suspensaAte?.toISOString() ?? null}
+                  atalhos={atalhos}
+                />
+              )}
             </>
           ) : (
             <form action={comecarAAbordarDoPainel} className="mt-4 flex flex-wrap items-center gap-3">
@@ -183,14 +200,16 @@ export default async function PublicoPage({ params, searchParams }: PageProps<"/
     const publico = await obterPublico(tx, id);
     if (!publico) return null;
     const ativo = publico.status === "ativo";
-    return {
-      publico,
-      contas: ativo ? await contasDoPublico(tx, id) : [],
-      funil: ativo ? await calcularFunil(tx, { publicoId: id }) : null,
-    };
+    const contas = ativo ? await contasDoPublico(tx, id) : [];
+    const buscas = new Map<string, SituacaoDaBusca>();
+    for (const conta of contas) {
+      const situacao = conta.campanha ? await situacaoDaBusca(tx, conta.campanha.id, new Date()) : null;
+      if (situacao) buscas.set(conta.campanha!.id, situacao);
+    }
+    return { publico, contas, buscas, funil: ativo ? await calcularFunil(tx, { publicoId: id }) : null };
   });
   if (!dados) notFound();
-  const { publico: p, contas, funil } = dados;
+  const { publico: p, contas, buscas, funil } = dados;
   const ativo = p.status === "ativo";
   const aba: Aba = ativo && ABAS.some((a) => a.valor === abaPedida) ? (abaPedida as Aba) : "quem";
   const semCampanha = contas.every((c) => !c.campanha);
@@ -254,7 +273,7 @@ export default async function PublicoPage({ params, searchParams }: PageProps<"/
             )}
           </div>
         )}
-        {aba === "leads" && <AbaLeads p={p} contas={contas} />}
+        {aba === "leads" && <AbaLeads p={p} contas={contas} buscas={buscas} />}
         {aba === "abordagem" && <AbaAbordagem p={p} contas={contas} />}
         {aba === "resultados" && funil && <AbaResultados linhas={funil.porPerfil} leituraMinima={funil.leituraMinima} />}
         {aba !== "quem" && contas.length > 0 && contas.some((c) => !c.conectado || c.status !== "ativo") && (

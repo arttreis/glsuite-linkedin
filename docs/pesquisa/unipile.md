@@ -31,9 +31,21 @@ os [verificar] do épico sobre a Unipile. O cliente está em
 | Conversas com a pessoa | `GET /chat_attendees/{provider_id}/chats?account_id=` | Para achar o chat 1:1 existente. |
 | Conversas da conta | `GET /chats?account_id=&account_type=LINKEDIN&limit=&cursor=` | `limit` 1–250. Itens: `id`, `attendee_provider_id`, `name`, `timestamp`, `type`, `unread_count`; `cursor` para a próxima página. Fonte: [referência](https://developer.unipile.com/reference/chatscontroller_listallchats). |
 | Participantes da conversa | `GET /chats/{chat_id}/attendees` | Itens: `provider_id`, `name`, `profile_url`, `picture_url`, `is_self` (0/1). [verificar] formato tirado de espelho da documentação. |
-| Busca | `POST /linkedin/search?account_id=` | JSON `{ api, category: "people", keywords }` ou `{ url }`. Item: `id` (provider_id), `name`, `headline`, `location`, `public_identifier`, `public_profile_url`, `current_positions[]`. `network_distance` aqui é `DISTANCE_1`… |
+| Busca | `POST /linkedin/search?account_id=&cursor=` | JSON `{ api, category: "people", keywords }` ou `{ url }`. Item: `id` (provider_id), `name`, `headline`, `location`, `public_identifier`, `public_profile_url`, `current_positions[]`. `network_distance` aqui é `DISTANCE_1`… A página seguinte vem com o `cursor` da resposta **na query**, com o mesmo corpo (09/10, [referência](https://developer.unipile.com/reference/linkedincontroller_search)). |
+| Busca clássica de pessoas (filtros) | mesmo `POST` | Corpo `{ api: "classic", category: "people" }` mais os filtros: `keywords` (texto), `advanced_keywords: { first_name, last_name, title, company, school }` (texto), `location`, `industry`, `company`, `past_company`, `school`, `service` (arrays de ids numéricos em string), `profile_language` (ISO 639-1), `network_distance` ([1, 2, 3]), `connections_of`, `followers_of`, `open_to`. **Sem porte de empresa.** 10 resultados por página na busca clássica. |
+| Ids para os filtros | `GET /linkedin/search/parameters?account_id=&type=&keywords=&limit=` | `type`: `LOCATION`, `INDUSTRY`, `COMPANY`, `SCHOOL`, `CONNECTIONS`, `PEOPLE`… Resposta `{ items: [{ object: "LinkedinSearchParameter", id, title }] }`. |
 | Webhooks | `POST /webhooks` | JSON `{ request_url, source, name, headers: [{key, value}], events, format: "json" }`. |
 | País do proxy | `PATCH /accounts/{id}` | `{ country: "CA" }`. Alternativa para a T-1 se o IP não sair do país certo. |
+
+## Limites da busca (09/10/2026)
+
+Da página [Provider limits and restrictions](https://developer.unipile.com/docs/provider-limits-and-restrictions):
+no máximo 1.000 perfis por busca em conta comum (2.500 com Sales Navigator ou
+Recruiter) e a recomendação de não passar de 1.000 perfis buscados por dia em
+conta comum. Visita de perfil: cerca de 100 por dia. Passar do limite devolve
+HTTP 429 ou 500. A documentação não fala do limite de uso comercial da busca
+do LinkedIn em conta grátis. O teto do Kakou (D8) é 100 resultados por dia
+por perfil.
 
 ## Webhooks
 
