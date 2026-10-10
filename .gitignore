@@ -55,3 +55,6 @@ supabase/.temp
 
 # Worktrees adjacentes
 worktrees/
+
+# Prints e logs do Playwright MCP
+.playwright-mcp/

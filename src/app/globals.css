@@ -155,6 +155,17 @@
     letter-spacing: -0.045em;
     color: transparent;
   }
+  /* A pergunta de cada passo do primeiro acesso: a vitrine, um tom abaixo. */
+  .titulo-passo {
+    background: linear-gradient(180deg, #fff 35%, #a9e9c8);
+    background-clip: text;
+    font-size: clamp(2rem, 4.2vw, 3.25rem);
+    font-weight: 500;
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    color: transparent;
+    text-wrap: balance;
+  }
 
   /* Botões */
 

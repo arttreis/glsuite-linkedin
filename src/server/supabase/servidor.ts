@@ -68,11 +68,21 @@ export async function exigirOperador(): Promise<Operador> {
 }
 
 /**
- * Operador que já tem a primeira campanha pronta (§4.10). Quem ainda não tem
- * volta para o Início, que mostra os primeiros passos.
+ * Operador de organização que terminou o primeiro acesso (§4.1). Quem não
+ * terminou vai para `/comecar`.
+ */
+export async function exigirOperadorNoApp(): Promise<Operador> {
+  const operador = await exigirOperador();
+  if (!operador.primeiroAcessoConcluido) redirect("/comecar");
+  return operador;
+}
+
+/**
+ * Operador que já tem a primeira campanha pronta (§4.10 do épico anterior).
+ * Quem ainda não tem volta para o Início, que mostra os primeiros passos.
  */
 export async function exigirOperadorLiberado(): Promise<Operador> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorNoApp();
   const { concluido } = await avaliarPrimeirosPassos(obterDb(), operador.id, new Date());
   if (!concluido) redirect(`/?msg=${encodeURIComponent("Termine os primeiros passos para liberar esta tela.")}`);
   return operador;

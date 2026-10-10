@@ -14,7 +14,7 @@ https://sdr.glsuite.io.
 
 | Onda | Ticket | Depende de | Código | PR / merge | Aceite com serviço real |
 |---|---|---|---|---|---|
-| 1 | SDR-40 Acesso por domínio, organização nova e moldura do primeiro acesso | — | 🔜 | — | ⛔ `SUPABASE_SECRET_KEY` (T-5) |
+| 1 | SDR-40 Acesso por domínio, organização nova e moldura do primeiro acesso | — | ✅ | ⏳ PR aberto | ⛔ `SUPABASE_SECRET_KEY` (T-5) |
 | 2 | SDR-41 Análise do site: negócio, produto e mercado | 40 | 🔜 | — | — |
 | 2 | SDR-47 Menu novo e Dashboard | 40 | 🔜 | — | — |
 | 3 | SDR-42 O SDR da organização | 41 | 🔜 | — | — |

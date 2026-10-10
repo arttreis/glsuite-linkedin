@@ -25,12 +25,15 @@ export type Operador = {
   papel: "admin" | "operador";
   organizacaoId: string;
   organizacaoNome: string;
+  /** A organização terminou o primeiro acesso (§4.1). Sem isso, só `/comecar` abre. */
+  primeiroAcessoConcluido: boolean;
 };
 
 /** Operador ativo pelo id do usuário do Supabase Auth, ou null. */
 export async function buscarOperadorAtivo(db: Db, userId: string): Promise<Operador | null> {
   const [operador] = await db.query<Operador>(
-    `select o.id, o.nome, o.email, o.papel, o.organizacao_id as "organizacaoId", g.nome as "organizacaoNome"
+    `select o.id, o.nome, o.email, o.papel, o.organizacao_id as "organizacaoId", g.nome as "organizacaoNome",
+            g.primeiro_acesso_em is not null as "primeiroAcessoConcluido"
        from public.operadores o join public.organizacoes g on g.id = o.organizacao_id
       where o.id = $1::uuid and o.ativo`,
     [userId],
