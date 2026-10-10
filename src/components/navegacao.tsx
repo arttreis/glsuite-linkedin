@@ -3,15 +3,10 @@
 import {
   ChartColumn,
   ChevronDown,
-  ClipboardCheck,
-  FileUp,
   Globe,
   House,
   Inbox,
-  ListFilter,
   Lock,
-  Megaphone,
-  PenLine,
   Settings,
   UsersRound,
   type LucideIcon,
@@ -28,30 +23,23 @@ type Item = { href: string; rotulo: string; icone: LucideIcon; soAdmin?: boolean
 
 const GRUPOS: { titulo: string; itens: Item[] }[] = [
   {
-    titulo: "Operação",
+    titulo: "Jornada",
     itens: [
       { href: "/", rotulo: "Início", icone: House, guiado: true },
-      { href: "/inbox", rotulo: "Inbox", icone: Inbox },
-      { href: "/aprovacao", rotulo: "Aprovação", icone: ClipboardCheck },
-      { href: "/tarefas", rotulo: "Tarefas", icone: PenLine },
+      { href: "/oferta", rotulo: "Oferta", icone: Globe, guiado: true },
+      { href: "/publicos", rotulo: "Públicos", icone: UsersRound, guiado: true, tambem: ["/campanhas", "/triagem", "/importar"] },
     ],
   },
   {
-    titulo: "Prospecção",
+    titulo: "Operação",
     itens: [
-      { href: "/oferta", rotulo: "Oferta", icone: Globe, guiado: true },
-      { href: "/publicos", rotulo: "Públicos", icone: UsersRound, guiado: true },
-      { href: "/campanhas", rotulo: "Campanhas", icone: Megaphone, guiado: true },
-      { href: "/triagem", rotulo: "Triagem", icone: ListFilter, guiado: true },
-      { href: "/importar", rotulo: "Importar", icone: FileUp, guiado: true },
+      { href: "/inbox", rotulo: "Conversas", icone: Inbox, tambem: ["/aprovacao", "/tarefas"] },
+      { href: "/metricas", rotulo: "Resultados", icone: ChartColumn },
     ],
   },
   {
     titulo: "Gestão",
-    itens: [
-      { href: "/metricas", rotulo: "Métricas", icone: ChartColumn },
-      { href: "/configuracoes", rotulo: "Configurações", icone: Settings, guiado: true, tambem: ["/perfis", "/integracoes"] },
-    ],
+    itens: [{ href: "/configuracoes", rotulo: "Configurações", icone: Settings, guiado: true, tambem: ["/perfis", "/integracoes"] }],
   },
 ];
 

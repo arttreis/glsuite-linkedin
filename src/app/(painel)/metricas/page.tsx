@@ -17,8 +17,16 @@ function Taxa({ valor, faixa }: { valor: number | null; faixa: { minimo: number;
   );
 }
 
-function Tabela({ titulo, linhas, colunas }: { titulo: string; linhas: LinhaDoFunil[]; colunas: ("perfil" | "campanha" | "angulo" | "variante")[] }) {
-  const ROTULOS = { perfil: "Perfil", campanha: "Campanha", angulo: "Ângulo", variante: "Texto do convite" };
+function Tabela({
+  titulo,
+  linhas,
+  colunas,
+}: {
+  titulo: string;
+  linhas: LinhaDoFunil[];
+  colunas: ("perfil" | "campanha" | "angulo" | "variante" | "publico")[];
+}) {
+  const ROTULOS = { perfil: "Perfil", campanha: "Campanha", angulo: "Ângulo", variante: "Texto do convite", publico: "Público" };
   return (
     <section>
       <h2 className="mb-3 text-[15px] font-semibold">{titulo}</h2>
@@ -82,10 +90,11 @@ export default async function MetricasPage() {
   return (
     <>
       <Cabecalho
-        titulo="Métricas"
+        titulo="Resultados"
         descricao={`Taxas só aparecem depois de ${funil.leituraMinima} toques (marco de leitura). Referência de trabalho: aceite 25–35%, resposta sobre aceite 10–15% (Espanha 15–25%). A casa ainda não tem linha de base: estes números são a primeira.`}
       />
       <div className="flex max-w-6xl flex-col gap-9">
+        <Tabela titulo="Por público" linhas={funil.porPublico} colunas={["publico"]} />
         <Tabela titulo="Por campanha" linhas={funil.porCampanha} colunas={["perfil", "campanha", "angulo", "variante"]} />
         <Tabela titulo="Por ângulo" linhas={funil.porAngulo} colunas={["angulo"]} />
         <Tabela titulo="Por perfil" linhas={funil.porPerfil} colunas={["perfil"]} />

@@ -1,66 +1,66 @@
 import { comOperador } from "@/server/db/operador";
 import type { Db } from "@/server/db/tipos";
 
-export type IdDoPasso = "conectar" | "ativar_perfil" | "criar_campanha" | "importar" | "triar" | "ativar_campanha";
+export type IdDoPasso = "dossie" | "publico" | "conta" | "leads" | "ativar";
 
 export type Passo = { id: IdDoPasso; titulo: string; explicacao: string; href: string; acao: string; feito: boolean };
 
 export type PrimeirosPassos = { concluido: boolean; passos: Passo[] };
 
-/** Os passos da §4.10, nesta ordem. */
-const PASSOS: Omit<Passo, "feito">[] = [
+/** Os passos da jornada (§4.10), nesta ordem. `href` dos passos 3 a 5 depende do público escolhido. */
+const PASSOS: Omit<Passo, "feito" | "href">[] = [
   {
-    id: "conectar",
-    titulo: "Conectar o LinkedIn",
-    explicacao: "Ligue a conta do LinkedIn de um perfil que você opera. A conexão é feita pela Unipile, numa janela própria.",
-    href: "/perfis",
-    acao: "Ir para Perfis",
+    id: "dossie",
+    titulo: "Confirmar a oferta",
+    explicacao: "Cole o site da empresa. A IA lê e monta o dossiê da oferta; você corrige e confirma. É dele que saem os públicos e as mensagens.",
+    acao: "Ir para a Oferta",
   },
   {
-    id: "ativar_perfil",
-    titulo: "Ativar o perfil",
-    explicacao: "Confira o checklist do perfil logo abaixo e ative. A partir daí o sistema pode enviar dentro dos limites do perfil.",
-    href: "#perfis",
-    acao: "Ver os perfis",
+    id: "publico",
+    titulo: "Escolher um público",
+    explicacao: "Peça sugestões à IA ou crie à mão: quem compra e por quê. Escolha pelo menos um.",
+    acao: "Ir para Públicos",
   },
   {
-    id: "criar_campanha",
-    titulo: "Criar uma campanha",
-    explicacao: "A campanha define o ângulo, o convite e as mensagens que cada pessoa aprovada vai receber.",
-    href: "/campanhas/nova",
-    acao: "Nova campanha",
+    id: "conta",
+    titulo: "Escolher a conta do LinkedIn",
+    explicacao: "No público, comece a abordar com uma conta da praça dele. Se a conta ainda não está conectada e ativa, conecte e ative em Configurações.",
+    acao: "Abrir o público",
   },
   {
-    id: "importar",
-    titulo: "Importar uma lista",
-    explicacao: "Traga as pessoas para a campanha: planilha, Apify ou busca no LinkedIn.",
-    href: "/importar",
-    acao: "Importar lista",
+    id: "leads",
+    titulo: "Buscar pessoas e aprovar",
+    explicacao: "Busque no LinkedIn pelo público, veja a nota de cada pessoa e aprove pelo menos uma na triagem.",
+    acao: "Ir para os leads",
   },
   {
-    id: "triar",
-    titulo: "Aprovar pessoas na triagem",
-    explicacao: "Escolha quem vale receber o convite. Pelo menos uma pessoa precisa ser aprovada.",
-    href: "/triagem",
-    acao: "Abrir a triagem",
-  },
-  {
-    id: "ativar_campanha",
-    titulo: "Ativar a campanha",
-    explicacao: "Com a campanha ativa, os convites começam a sair no horário permitido do perfil.",
-    href: "/campanhas",
-    acao: "Ver campanhas",
+    id: "ativar",
+    titulo: "Aprovar as mensagens e ativar",
+    explicacao: "Revise o convite e as mensagens que a IA escreveu para o público e ative a campanha. Os convites saem no horário da conta.",
+    acao: "Revisar e ativar",
   },
 ];
 
 /** Estados de quem já passou da triagem. */
 const APROVADO = "l.estado not in ('importado', 'triagem', 'rejeitado')";
 
+type Estado = Record<IdDoPasso | "pronta", boolean> & { publico_id: string | null; campanha_id: string | null };
+
+function hrefDoPasso(id: IdDoPasso, estado: Estado | undefined): string {
+  const publico = estado?.publico_id ? `/publicos/${estado.publico_id}` : "/publicos";
+  if (id === "dossie") return "/oferta";
+  if (id === "publico") return "/publicos";
+  if (id === "conta" || id === "leads") return estado?.publico_id ? `${publico}?aba=leads` : publico;
+  return estado?.campanha_id ? `/campanhas/${estado.campanha_id}` : estado?.publico_id ? `${publico}?aba=abordagem` : publico;
+}
+
 /**
- * Onde o operador está nos primeiros passos (§4.10). Tudo é lido como o
- * operador (RLS + `pode_ver_perfil`): conta só perfil que ele opera, e o admin
- * vale para todos. Quando a primeira campanha fica pronta, grava o momento em
- * `operadores.primeira_campanha_em` e não pergunta de novo.
+ * Onde o operador está na jornada (§4.10). Tudo é lido como o operador (RLS +
+ * `pode_ver_perfil`): conta só a organização dele e os perfis que ele opera; o
+ * admin vale para todos. "Campanha pronta" continua sendo campanha ativa, num
+ * perfil ativo, com um lead aprovado. Quando ela aparece, grava o momento em
+ * `operadores.primeira_campanha_em` e não pergunta de novo: quem já tinha
+ * campanha pronta não volta para a jornada.
  */
 export async function avaliarPrimeirosPassos(db: Db, operadorId: string, agora: Date): Promise<PrimeirosPassos> {
   const [operador] = await db.query<{ primeira_campanha_em: Date | null }>(
@@ -70,21 +70,24 @@ export async function avaliarPrimeirosPassos(db: Db, operadorId: string, agora: 
   if (operador?.primeira_campanha_em) return { concluido: true, passos: [] };
 
   const [estado] = await comOperador(db, operadorId, (tx) =>
-    tx.query<Record<IdDoPasso | "pronta", boolean>>(`
+    tx.query<Estado>(`
       select
-        exists (select 1 from public.perfis p
-                 where public.pode_ver_perfil(p.id) and p.unipile_account_id is not null) as conectar,
-        exists (select 1 from public.perfis p
-                 where public.pode_ver_perfil(p.id) and p.status = 'ativo') as ativar_perfil,
+        exists (select 1 from public.ofertas o where o.dossie_confirmado is not null) as dossie,
+        exists (select 1 from public.publicos pu where pu.status = 'ativo') as publico,
+        exists (select 1 from public.campanhas c join public.perfis p on p.id = c.perfil_id
+                 where c.publico_id is not null and public.pode_ver_perfil(c.perfil_id) and c.status <> 'encerrada'
+                   and p.status = 'ativo' and p.unipile_account_id is not null) as conta,
+        exists (select 1 from public.leads l join public.campanhas c on c.id = l.campanha_id
+                 where c.publico_id is not null and public.pode_ver_perfil(l.perfil_id) and ${APROVADO}) as leads,
         exists (select 1 from public.campanhas c
-                 where public.pode_ver_perfil(c.perfil_id) and c.status <> 'encerrada') as criar_campanha,
-        exists (select 1 from public.leads l where public.pode_ver_perfil(l.perfil_id)) as importar,
-        exists (select 1 from public.leads l where public.pode_ver_perfil(l.perfil_id) and ${APROVADO}) as triar,
-        exists (select 1 from public.campanhas c
-                 where public.pode_ver_perfil(c.perfil_id) and c.status = 'ativa') as ativar_campanha,
+                 where c.publico_id is not null and public.pode_ver_perfil(c.perfil_id) and c.status = 'ativa') as ativar,
         exists (select 1 from public.campanhas c join public.perfis p on p.id = c.perfil_id
                  where public.pode_ver_perfil(c.perfil_id) and c.status = 'ativa' and p.status = 'ativo'
-                   and exists (select 1 from public.leads l where l.campanha_id = c.id and ${APROVADO})) as pronta`),
+                   and exists (select 1 from public.leads l where l.campanha_id = c.id and ${APROVADO})) as pronta,
+        (select pu.id from public.publicos pu where pu.status = 'ativo' order by pu.criado_em limit 1) as publico_id,
+        (select c.id from public.campanhas c
+          where c.publico_id is not null and public.pode_ver_perfil(c.perfil_id) and c.status <> 'encerrada'
+          order by c.criado_em limit 1) as campanha_id`),
   );
 
   if (estado?.pronta) {
@@ -94,5 +97,8 @@ export async function avaliarPrimeirosPassos(db: Db, operadorId: string, agora: 
     );
     return { concluido: true, passos: [] };
   }
-  return { concluido: false, passos: PASSOS.map((passo) => ({ ...passo, feito: Boolean(estado?.[passo.id]) })) };
+  return {
+    concluido: false,
+    passos: PASSOS.map((passo) => ({ ...passo, href: hrefDoPasso(passo.id, estado), feito: Boolean(estado?.[passo.id]) })),
+  };
 }

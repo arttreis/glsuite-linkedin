@@ -2,6 +2,7 @@ import { Megaphone, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { Aviso } from "@/components/aviso";
 import { Avatar } from "@/components/avatar";
+import { AbasDeConversas } from "@/components/abas-de-conversas";
 import { Cabecalho } from "@/components/cabecalho";
 import { ROTULO_DO_ESTADO, type EstadoDoLead } from "@/domain/estados";
 import { listarConversasExternas } from "@/server/conversas/externas";
@@ -62,6 +63,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
         </form>
       </Cabecalho>
       <div className="max-w-5xl">
+        <AbasDeConversas atual="/inbox" />
         {typeof params.msg === "string" && <Aviso className="mb-5">{params.msg}</Aviso>}
         <div className="flex flex-col gap-2.5">
           <nav aria-label="Situação da conversa" className="segmentos">

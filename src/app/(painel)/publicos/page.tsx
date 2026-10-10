@@ -142,6 +142,13 @@ export default async function PublicosPage({ searchParams }: PageProps<"/publico
           ajuda="Hipóteses. Nada acontece com elas até alguém escolher. Pedir de novo troca estas sugestões."
           publicos={sugeridos}
         />
+        <p className="mt-8 text-xs text-tinta-fraca">
+          Campanhas criadas à mão, fora de um público, continuam em{" "}
+          <Link href="/campanhas" className="link">
+            Campanhas
+          </Link>
+          .
+        </p>
         {arquivados.length > 0 && (
           <details className="mt-8">
             <summary className="cursor-pointer text-sm text-tinta-suave">Arquivados ({arquivados.length})</summary>

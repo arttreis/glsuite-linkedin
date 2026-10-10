@@ -3,6 +3,7 @@ import { Check, Send } from "lucide-react";
 import Link from "next/link";
 import { Aviso } from "@/components/aviso";
 import { Avatar } from "@/components/avatar";
+import { AbasDeConversas } from "@/components/abas-de-conversas";
 import { Cabecalho } from "@/components/cabecalho";
 import { rotuloDoToque } from "@/domain/rotulos";
 import { obterDb } from "@/server/db";
@@ -26,6 +27,7 @@ export default async function TarefasPage({ searchParams }: PageProps<"/tarefas"
         descricao="Mensagens que alguém escreve à mão, no dia certo: na Espanha a lei não deixa automatizar as mensagens, e qualquer campanha pode ter um bloco de tarefa manual no fluxo. Use o roteiro como base e escreva com as suas palavras."
       />
       <div className="max-w-3xl">
+        <AbasDeConversas atual="/tarefas" />
         {typeof msg === "string" && <Aviso className="mb-5">{msg}</Aviso>}
 
         {tarefas.length === 0 ? (
