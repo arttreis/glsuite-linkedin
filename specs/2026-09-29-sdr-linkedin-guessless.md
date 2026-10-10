@@ -1209,3 +1209,31 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
   "Este passo ainda está sendo montado".
 - O portão dos primeiros passos (SDR-19/SDR-30) continua por baixo até o
   SDR-47.
+
+### SDR-41 · Análise do site: negócio, produto e mercado
+
+- O Mercado mora dentro do dossiê (`dossie.mercado`: segmentos com o porquê,
+  alternativas, gatilhos), sem coluna nova. Dossiê gravado antes lê com o
+  Mercado vazio (`default` no esquema). A IA usa `dossieDaIa`, o mesmo esquema
+  com o Mercado obrigatório, para a saída estruturada não poder pular a parte.
+- Mercado é hipótese, e o prompt diz isso: concorrente com nome só se estiver
+  nas notas da leitura; sem número de tamanho de mercado, faturamento ou
+  estatística. O esquema não tem campo para tamanho. Prompts em `dossie-2`.
+- Objeções eram hipótese desde o SDR-23; na tela elas vão para o bloco
+  Mercado. Negócio = empresa, para quem, tom e idioma; Produto = produtos,
+  diferenciais, provas e dores.
+- Progresso da leitura: `ofertas.leitura_progresso` (`etapa` e `paginas`),
+  zerado a cada leitura. A leitura no Claude já era em streaming; cada
+  `web_fetch_tool_result` que fecha vira uma página no progresso, gravada em
+  fila e sem derrubar a leitura se falhar. Antes de estruturar, a etapa vira
+  "analise". A tela recarrega a cada 3 segundos enquanto lê.
+- Edição item a item: cada item vira formulário ali mesmo, e cada "OK" grava o
+  rascunho na hora (`salvarDossie` sem confirmar). "Está certo, seguir"
+  confirma e leva ao passo 3. O editor antigo de Oferta continua no ar até o
+  SDR-53 e preserva o Mercado ao salvar.
+- Durante o primeiro acesso, confirmar a análise dá à organização o nome da
+  empresa que a análise trouxe (`confirmarAnalise`). Depois do primeiro
+  acesso, o nome só muda em Configurações.
+- Local: `vercel env pull` traz a chave da Anthropic vazia, e o validador do
+  ambiente recusa string vazia; para ver as telas que leem o site, rode com
+  uma chave qualquer (nada é chamado sem clicar em Analisar).

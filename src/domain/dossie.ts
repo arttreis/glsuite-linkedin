@@ -2,9 +2,24 @@ import { z } from "zod";
 import { explicarErroDeEdicao } from "./edicao";
 
 /**
- * Dossiê da oferta (jornada do Kakou, passo 1): o que a empresa vende, para quem
- * e por que escolhem ela, tirado do site. É a base dos públicos, da sequência e
- * do agente. Só fato do site: o que não está lá fica em lista vazia.
+ * Mercado (§4.2): hipótese do Kakou, não fato do site. Quem compra e por quê, o
+ * que o cliente usa hoje no lugar e o que faz ser a hora de comprar. Não tem
+ * campo de tamanho de mercado: o Kakou não inventa número.
+ */
+export const mercado = z.object({
+  segmentos: z.array(z.object({ nome: z.string().min(1).max(80), por_que: z.string().min(1).max(300) })).max(5),
+  alternativas: z.array(z.string().min(1).max(200)).max(6),
+  gatilhos: z.array(z.string().min(1).max(200)).max(6),
+});
+export type Mercado = z.infer<typeof mercado>;
+
+export const MERCADO_VAZIO: Mercado = { segmentos: [], alternativas: [], gatilhos: [] };
+
+/**
+ * A análise do site (§4.2): Negócio e Produto são fato do site, o que não está
+ * lá fica em lista vazia; Mercado é hipótese. É a base dos públicos, do SDR, da
+ * abordagem e do agente. Dossiê gravado antes do Mercado existir lê com ele
+ * vazio.
  */
 export const dossie = z.object({
   empresa: z.object({ nome: z.string().min(1).max(80), resumo: z.string().min(1).max(600) }),
@@ -27,8 +42,12 @@ export const dossie = z.object({
   objecoes: z.array(z.object({ objecao: z.string().min(1).max(200), resposta: z.string().min(1).max(300) })).max(8),
   tom_de_voz: z.string().min(1).max(600),
   idioma: z.enum(["pt", "en", "es"]),
+  mercado: mercado.default(MERCADO_VAZIO),
 });
 export type Dossie = z.infer<typeof dossie>;
+
+/** O formato que a IA devolve: o mesmo dossiê, com o Mercado obrigatório. */
+export const dossieDaIa = dossie.extend({ mercado });
 
 const SECOES: Record<string, string> = {
   empresa: "Empresa",
@@ -40,6 +59,7 @@ const SECOES: Record<string, string> = {
   objecoes: "Objeções",
   tom_de_voz: "Tom de voz",
   idioma: "Idioma",
+  mercado: "Mercado",
 };
 
 const CAMPOS: Record<string, string> = {
@@ -50,6 +70,10 @@ const CAMPOS: Record<string, string> = {
   texto: "texto",
   objecao: "objeção",
   resposta: "resposta",
+  segmentos: "quem compra",
+  alternativas: "o que usam hoje",
+  gatilhos: "o que faz ser a hora",
+  por_que: "por quê",
 };
 
 /** O primeiro problema da validação do dossiê, numa frase para quem editou. */

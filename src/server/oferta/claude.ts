@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { dossie } from "@/domain/dossie";
+import { dossieDaIa } from "@/domain/dossie";
 import { ErroDoModelo, type Uso } from "@/server/agente/modelo";
 import type { FonteDoSite, LeitorDeSite } from "./leitor";
 
@@ -34,7 +34,7 @@ export function criarLeitorClaude(config: ConfigDoLeitor): LeitorDeSite {
   const cliente = new Anthropic(config.apiKey ? { apiKey: config.apiKey } : {});
 
   return {
-    async ler({ sistema, url, dominio, maxPaginas }) {
+    async ler({ sistema, url, dominio, maxPaginas, aoAbrirPagina }) {
       const ferramenta: Anthropic.WebFetchTool20260209 = {
         type: "web_fetch_20260209",
         name: "web_fetch",
@@ -49,17 +49,21 @@ export function criarLeitorClaude(config: ConfigDoLeitor): LeitorDeSite {
       let modelo = config.modelo;
 
       for (let rodada = 0; rodada <= MAX_RETOMADAS; rodada++) {
-        const resposta = await cliente.messages
-          .stream({
-            model: config.modelo,
-            max_tokens: 32000,
-            system: sistema,
-            messages: mensagens,
-            tools: [ferramenta],
-            thinking: { type: "adaptive" },
-            output_config: { effort: config.esforco },
-          })
-          .finalMessage();
+        const fluxo = cliente.messages.stream({
+          model: config.modelo,
+          max_tokens: 32000,
+          system: sistema,
+          messages: mensagens,
+          tools: [ferramenta],
+          thinking: { type: "adaptive" },
+          output_config: { effort: config.esforco },
+        });
+        fluxo.on("contentBlock", (bloco) => {
+          if (bloco.type === "web_fetch_tool_result" && bloco.content.type === "web_fetch_result") {
+            aoAbrirPagina?.({ url: bloco.content.url, titulo: bloco.content.content.title ?? null });
+          }
+        });
+        const resposta = await fluxo.finalMessage();
         uso = somar(uso, resposta.usage);
         modelo = resposta.model;
         for (const bloco of resposta.content) {
@@ -87,7 +91,7 @@ export function criarLeitorClaude(config: ConfigDoLeitor): LeitorDeSite {
         system: sistema,
         messages: [{ role: "user", content: entrada }],
         thinking: { type: "adaptive" },
-        output_config: { effort: config.esforco, format: zodOutputFormat(dossie) },
+        output_config: { effort: config.esforco, format: zodOutputFormat(dossieDaIa) },
       });
       if (resposta.stop_reason === "refusal") {
         throw new ErroDoModelo(`O modelo recusou (${resposta.stop_details?.category ?? "sem categoria"}).`);

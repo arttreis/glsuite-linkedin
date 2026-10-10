@@ -1,5 +1,5 @@
 /** Sobe quando os prompts do dossiê mudam: vai gravado em cada leitura. */
-export const VERSAO_DOS_PROMPTS_DO_DOSSIE = "dossie-1";
+export const VERSAO_DOS_PROMPTS_DO_DOSSIE = "dossie-2";
 
 const CAMINHOS_PROVAVEIS = [
   "sobre",
@@ -29,6 +29,7 @@ Ao terminar, escreva notas em texto corrido, só com fatos que estão no site:
 - diferenciais que o site afirma;
 - provas: cases, números, clientes citados, depoimentos e selos, sempre com a URL da página onde estão;
 - dores e problemas que o site diz resolver;
+- setores e tipos de cliente que o site cita, e concorrentes ou alternativas que ele menciona;
 - como o site fala (tom de voz) e em que idioma.
 
 Não invente nada. O que o site não diz, não entra. Não cite nome de pessoa física: escreva "um cliente do varejo", por exemplo.`;
@@ -45,6 +46,11 @@ Regras:
 - "objecoes" são hipóteses suas sobre o que um comprador desse produto costuma dizer para não comprar, cada uma com uma resposta honesta baseada nas notas. No máximo 5.
 - "tom_de_voz" descreve como o site fala, em uma ou duas frases.
 - "idioma" é o idioma principal do site.
+- "mercado" é a única parte que é hipótese sua, e quem lê sabe disso:
+  - "segmentos": de 1 a 5 tipos de empresa que mais provavelmente compram, cada um com o porquê em uma frase. Comece pelos setores e clientes que as notas citam.
+  - "alternativas": o que esse comprador usa hoje no lugar (fazer internamente, planilha, agência, outro tipo de ferramenta). Concorrente com nome só se estiver nas notas; senão, descreva a categoria.
+  - "gatilhos": o que faz ser a hora de comprar (troca de liderança, crescimento, uma meta nova, um problema que estourou).
+  - Nunca escreva número de tamanho de mercado, faturamento do setor, percentual de crescimento ou estatística: você não tem fonte para isso.
 - Escreva o dossiê no idioma do site.`;
 }
 

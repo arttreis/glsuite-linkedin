@@ -3,6 +3,8 @@ import { emailLiberado, nomeDoEmail } from "@/domain/acesso";
 import { passoAtual, type IdDoPassoInicial } from "@/domain/primeiro-acesso";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
+import { dossieConfirmado, salvarDossie, type ResultadoDaEdicao } from "@/server/oferta/oferta";
+import { renomearOrganizacao } from "@/server/organizacao/organizacao";
 
 export type ResultadoDoPrimeiroAcesso = { operadorId: string; criouOrganizacao: boolean } | null;
 
@@ -73,4 +75,30 @@ export async function estadoDoPrimeiroAcesso(db: Db): Promise<EstadoDoPrimeiroAc
   if (linha?.site) feitos.add("site");
   if (linha?.analise) feitos.add("analise");
   return { feitos, atual: passoAtual(feitos) };
+}
+
+/**
+ * Confirma a análise do site (§4.2). Enquanto a organização está no primeiro
+ * acesso, ela ganha o nome da empresa que a análise trouxe, no lugar do
+ * provisório; depois disso, o nome só muda em Configurações. Roda como o
+ * operador: o RLS garante a organização, e só o admin renomeia.
+ */
+export async function confirmarAnalise(
+  db: Db,
+  p: { organizacaoId: string; dossie: unknown; operadorId: string; agora: Date },
+): Promise<ResultadoDaEdicao> {
+  const salvo = await salvarDossie(db, { ...p, confirmar: true });
+  if (!salvo.ok) return salvo;
+
+  const [organizacao] = await db.query<{ nome: string; no_primeiro_acesso: boolean }>(
+    "select nome, primeiro_acesso_em is null as no_primeiro_acesso from public.organizacoes where id = $1::uuid",
+    [p.organizacaoId],
+  );
+  const confirmado = await dossieConfirmado(db, p.organizacaoId);
+  const nome = confirmado?.empresa.nome.trim();
+  if (organizacao?.no_primeiro_acesso && nome && nome !== organizacao.nome) {
+    // Nome curto demais ou operador que não é admin: fica o nome de antes, sem travar a confirmação.
+    await renomearOrganizacao(db, { organizacaoId: p.organizacaoId, nome, operadorId: p.operadorId, agora: p.agora });
+  }
+  return { ok: true };
 }
