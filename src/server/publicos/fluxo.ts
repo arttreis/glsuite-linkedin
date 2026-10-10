@@ -20,6 +20,31 @@ const somar = (a: Uso, b: Uso): Uso => ({
 });
 
 /**
+ * Escreve os textos e avalia; se algo foi barrado, pede uma reescrita com os
+ * problemas apontados, uma vez só. O que sobrar volta marcado: nunca corrige
+ * em silêncio (§4.14). Erro do modelo sobe para quem chamou.
+ */
+export async function escreverComRevisao<R extends { problemas: ProblemaDoTexto[] }>(
+  escritor: EscritorDeFluxo,
+  sistema: string,
+  avaliar: (textos: TextosDoFluxo) => R,
+): Promise<{ resultado: R; respostas: Resposta<TextosDoFluxo>[] }> {
+  const primeira = await escritor.escrever({ sistema, entrada: entradaDoFluxo() });
+  let resultado = avaliar(primeira.saida);
+  const respostas = [primeira];
+  if (resultado.problemas.length > 0) {
+    const segunda = await escritor.escrever({ sistema, entrada: entradaDoFluxo({ anterior: primeira.saida, barrados: resultado.problemas }) });
+    respostas.push(segunda);
+    resultado = avaliar(segunda.saida);
+  }
+  return { resultado, respostas };
+}
+
+/** Uso somado de várias chamadas. */
+export const usoSomado = (respostas: readonly Resposta<unknown>[]): Uso =>
+  respostas.reduce((total, r) => somar(total, r.uso), { entrada: 0, saida: 0, cacheLeitura: 0, cacheEscrita: 0 });
+
+/**
  * Gera o fluxo da campanha de público (§4.14): a forma do fluxo padrão da
  * praça, com os textos escritos para o público, a oferta e a voz do perfil.
  * Valida (§4.2 e provas do público) e reescreve uma vez o que foi barrado; o
@@ -84,24 +109,14 @@ export async function gerarFluxo(
   let respostas: Resposta<TextosDoFluxo>[] = [];
   let resultado: ReturnType<typeof avaliar>;
   try {
-    const primeira = await deps.escritor.escrever({ sistema, entrada: entradaDoFluxo() });
-    respostas = [primeira];
-    resultado = avaliar(primeira.saida);
-    if (resultado.problemas.length > 0) {
-      const segunda = await deps.escritor.escrever({
-        sistema,
-        entrada: entradaDoFluxo({ anterior: primeira.saida, barrados: resultado.problemas }),
-      });
-      respostas.push(segunda);
-      resultado = avaliar(segunda.saida);
-    }
+    ({ resultado, respostas } = await escreverComRevisao(deps.escritor, sistema, avaliar));
   } catch (erro) {
     if (!(erro instanceof ErroDoModelo)) console.error("Fluxo gerado falhou", erro);
     const motivo = erro instanceof ErroDoModelo ? erro.message.replace(/\.$/, "") : "a IA não respondeu";
     return { ok: false, erro: `Não consegui escrever as mensagens: ${motivo}.` };
   }
 
-  const uso = respostas.reduce((total, r) => somar(total, r.uso), { entrada: 0, saida: 0, cacheLeitura: 0, cacheEscrita: 0 });
+  const uso = usoSomado(respostas);
   const modelo = respostas.at(-1)!.modelo;
   const agora = deps.agora();
   await comOperador(deps.db, p.operadorId, async (tx) => {

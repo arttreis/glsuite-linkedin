@@ -107,8 +107,12 @@ describe("fluxo gerado pelo público (SDR-29)", () => {
     expect(escritor.chamadas[0]!.sistema).toContain(`"${PROVA}"`);
     expect(escritor.chamadas[0]!.sistema).toContain("Não pergunta nada.");
     await ativar(campanhaId);
-    const [campanha] = await banco.db.query<{ status: string }>("select status from public.campanhas where id = $1::uuid", [campanhaId]);
-    expect(campanha!.status).toBe("ativa");
+    const [campanha] = await banco.db.query<{ status: string; permitida_em: Date | null; permitida_por: string | null }>(
+      "select status, permitida_em, permitida_por from public.campanhas where id = $1::uuid",
+      [campanhaId],
+    );
+    // Ativar é a permissão de entrar em contato (§4.5): grava quem e quando.
+    expect(campanha).toEqual({ status: "ativa", permitida_em: AGORA, permitida_por: operador });
   });
 
   it("texto barrado ganha uma reescrita; se continuar barrado, chega marcado e a campanha não ativa", async () => {
