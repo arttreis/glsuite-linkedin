@@ -8,7 +8,8 @@ import { criarLeitorClaude } from "@/server/oferta/claude";
 import type { LeitorDeSite } from "@/server/oferta/leitor";
 import { criarAvaliadorClaude } from "@/server/nota/claude";
 import type { AvaliadorDeAderencia } from "@/server/nota/avaliador";
-import { criarSugeridorClaude } from "@/server/publicos/claude";
+import { criarEscritorClaude, criarSugeridorClaude } from "@/server/publicos/claude";
+import type { EscritorDeFluxo } from "@/server/publicos/escritor";
 import type { SugeridorDePublicos } from "@/server/publicos/sugeridor";
 import { criarEnviadorResend } from "@/server/alertas/resend";
 import { criarClienteRd, type ClienteRd } from "@/server/rd/cliente";
@@ -130,6 +131,19 @@ export function obterAvaliadorDeAderencia(): AvaliadorDeAderencia | null {
     avaliador = env.ANTHROPIC_API_KEY ? criarAvaliadorClaude({ apiKey: env.ANTHROPIC_API_KEY, modelo: env.IA_MODELO_CLASSIFICACAO }) : null;
   }
   return avaliador;
+}
+
+let escritorDeFluxo: EscritorDeFluxo | null | undefined;
+
+/** Escreve os textos do fluxo do público (§4.14), ou null sem ANTHROPIC_API_KEY. */
+export function obterEscritorDeFluxo(): EscritorDeFluxo | null {
+  if (escritorDeFluxo === undefined) {
+    const env = envIa();
+    escritorDeFluxo = env.ANTHROPIC_API_KEY
+      ? criarEscritorClaude({ apiKey: env.ANTHROPIC_API_KEY, modelo: env.IA_MODELO_RASCUNHO, esforco: env.IA_ESFORCO_RASCUNHO })
+      : null;
+  }
+  return escritorDeFluxo;
 }
 
 const envRd = lerEnv(z.object({ RD_STATION_TOKEN: z.string().min(1).optional() }));

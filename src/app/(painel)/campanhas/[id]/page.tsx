@@ -21,6 +21,7 @@ type Campanha = {
   status: "rascunho" | "ativa" | "pausada" | "encerrada";
   publico_id: string | null;
   publico_nome: string | null;
+  publico_provas: string[] | null;
 };
 
 const PROXIMOS_STATUS: Record<Campanha["status"], { status: string; rotulo: string; estilo: string }[]> = {
@@ -39,11 +40,11 @@ const PROXIMOS_STATUS: Record<Campanha["status"], { status: string; rotulo: stri
 export default async function CampanhaPage({ params, searchParams }: PageProps<"/campanhas/[id]">) {
   const operador = await exigirOperador();
   const { id } = await params;
-  const { salva, msg } = await searchParams;
+  const { salva, msg, gerado } = await searchParams;
   const { campanha, fluxo } = await comOperador(obterDb(), operador.id, async (tx) => {
     const [campanha] = await tx.query<Campanha>(
       `select c.id, c.perfil_id, c.nome, c.angulo, c.nicho, c.modo_copy, c.max_leads, c.status,
-              c.publico_id, pu.nome as publico_nome
+              c.publico_id, pu.nome as publico_nome, pu.provas as publico_provas
          from public.campanhas c left join public.publicos pu on pu.id = c.publico_id
         where c.id = $1::uuid`,
       [id],
@@ -83,6 +84,17 @@ export default async function CampanhaPage({ params, searchParams }: PageProps<"
             {erroDeStatus}
           </Aviso>
         )}
+        {gerado === "ok" && !erroDeStatus && (
+          <Aviso tom="ok" className="mb-5">
+            A IA escreveu as mensagens para o público e elas passaram no validador. Revise, ajuste o que quiser e ative.
+          </Aviso>
+        )}
+        {gerado === "marcado" && !erroDeStatus && (
+          <Aviso tom="atencao" className="mb-5">
+            A IA escreveu as mensagens, mas algumas ficaram marcadas pelo validador ou citam número fora das provas do público.
+            Corrija os blocos marcados antes de ativar.
+          </Aviso>
+        )}
         {salva && !erroDeStatus && (
           <Aviso tom="ok" className="mb-5">
             Campanha salva.
@@ -101,7 +113,9 @@ export default async function CampanhaPage({ params, searchParams }: PageProps<"
             modoCopy: campanha.modo_copy,
             maxLeads: campanha.max_leads,
             fluxo,
-            publico: campanha.publico_id ? { id: campanha.publico_id, nome: campanha.publico_nome ?? "" } : null,
+            publico: campanha.publico_id
+              ? { id: campanha.publico_id, nome: campanha.publico_nome ?? "", provas: campanha.publico_provas ?? [] }
+              : null,
           }}
         />
       </div>

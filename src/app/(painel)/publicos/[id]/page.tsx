@@ -1,4 +1,4 @@
-import { Check, FileUp, Gauge, ListFilter, Pencil, Plug, Send, Workflow } from "lucide-react";
+import { Check, FileUp, Gauge, ListFilter, Pencil, Plug, Send, Sparkles, Workflow } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Aviso } from "@/components/aviso";
@@ -14,7 +14,7 @@ import { situacaoDasNotas, type SituacaoDasNotas } from "@/server/nota/nota";
 import { aprovarAcimaDoCorteDoPainel, darNotasDoPainel } from "../../triagem/acoes";
 import { obterPublico, type PublicoSalvo } from "@/server/publicos/publicos";
 import { exigirOperador } from "@/server/supabase/servidor";
-import { comecarAAbordarDoPainel } from "../acoes";
+import { comecarAAbordarDoPainel, gerarFluxoDoPainel } from "../acoes";
 import { BuscaDaCampanha } from "../busca";
 import { BotaoDeStatus, ResumoDoPublico } from "../resumo";
 
@@ -195,6 +195,32 @@ function AbaAbordagem({ p, contas }: { p: PublicoSalvo; contas: ContaDoPublico[]
               </Link>
             )}
           </div>
+          {campanha!.status !== "encerrada" && (
+            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-linha pt-4">
+              <form action={gerarFluxoDoPainel}>
+                <input type="hidden" name="campanha" value={campanha!.id} />
+                <input type="hidden" name="publico" value={p.id} />
+                <input type="hidden" name="estilo" value="casa" />
+                <button type="submit" className="botao botao-pequeno">
+                  <Sparkles aria-hidden />
+                  Escrever as mensagens com a IA
+                </button>
+              </form>
+              <form action={gerarFluxoDoPainel}>
+                <input type="hidden" name="campanha" value={campanha!.id} />
+                <input type="hidden" name="publico" value={p.id} />
+                <input type="hidden" name="estilo" value="pergunta" />
+                <button type="submit" className="botao botao-pequeno">
+                  Variante: pergunta já na 1ª mensagem
+                </button>
+              </form>
+              <span className="text-xs text-tinta-fraca">
+                {campanha!.status === "rascunho"
+                  ? "Substitui os textos atuais. Você revisa no editor antes de ativar."
+                  : "Cria uma versão nova do fluxo, que vale para os leads que entrarem depois."}
+              </span>
+            </div>
+          )}
         </li>
       ))}
     </ul>
