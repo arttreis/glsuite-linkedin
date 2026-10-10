@@ -11,6 +11,7 @@ import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { exigirOperadorLiberado } from "@/server/supabase/servidor";
 import { importarHistoricoDoPainel } from "./acoes";
+import { ProximaResposta } from "./proxima";
 import { SeloDoSla } from "./sla";
 
 const FILTROS: { valor: string; rotulo: string }[] = [
@@ -65,6 +66,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
       <div className="max-w-5xl">
         <AbasDeConversas atual="/inbox" />
         {typeof params.msg === "string" && <Aviso className="mb-5">{params.msg}</Aviso>}
+        {estado === "abertas" && <ProximaResposta conversas={conversas} />}
         <div className="flex flex-col gap-2.5">
           <nav aria-label="Situação da conversa" className="segmentos">
             {FILTROS.map((filtro) => (
