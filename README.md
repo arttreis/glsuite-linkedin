@@ -1,8 +1,10 @@
 # guessless-sdr
 
-SDR de LinkedIn próprio da GuessLess. Prospecta pelos 4 perfis da casa (Arthur,
-Juliano, Luiz e JP), respeita o teto de cada perfil, detecta resposta, rascunha
-a conversa com IA para um humano aprovar e registra no RD Station CRM.
+Kakou, o SDR de LinkedIn da GuessLess. A pessoa informa o site, o Kakou analisa
+o negócio, monta um SDR que ela testa no papel de lead e refina, mostra quem no
+LinkedIn pode comprar e pede permissão para começar. Depois o SDR prospecta e
+conversa sozinho pela conta dela, respeitando o teto do perfil, e ela acompanha
+tudo no app.
 
 O produto está descrito em [`docs/epico.md`](docs/epico.md), que é a fonte da
 verdade. As decisões de implementação ficam em [`specs/`](specs/).
