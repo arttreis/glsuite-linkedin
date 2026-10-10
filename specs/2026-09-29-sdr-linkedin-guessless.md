@@ -1046,3 +1046,32 @@ migrations das duas linhas já estão no banco (conferido em 09/10).
 - Custo e versão do prompt (`nota-1`) vão no evento `notas_dadas`. Migration
   `20261010180000_nota_de_aderencia`, que também põe `nota_de_corte` na
   configuração `busca`.
+
+### SDR-29 · Fluxo gerado pelo público
+
+- A IA (`IA_MODELO_RASCUNHO`) escreve só os textos: convite (T1) e as três
+  mensagens (T2 a T4). A forma é o fluxo padrão de 4 toques da praça
+  (`fluxoComTextos`). Na Espanha, as mensagens viram blocos de tarefa manual
+  com o texto como roteiro: o fluxo gerado não tem nenhum bloco de mensagem
+  ali.
+- O prompt leva o resumo do dossiê confirmado, o público (quem, empresa, dor,
+  gatilho, resultado, ângulo e as provas dele), a voz do perfil, as palavras
+  proibidas, os tetos de caracteres e as regras do prompt de referência. No
+  Canadá, manda terminar cada mensagem com a frase de saída do perfil, igual.
+- Dois estilos: `casa` (DM 1 sem pergunta, DM 2 com pergunta fácil) e
+  `pergunta` (a variante do prompt de referência). Para comparar, cada estilo
+  vai numa campanha; as métricas por campanha mostram a diferença.
+- Validação depois da geração: forma do fluxo, convite vazio, o validador da
+  §4.2 em cada bloco e `problemasDeProvas` (número citado que nenhuma prova do
+  público traz, como "40%" ou "30 dias"). Com problema, uma reescrita que
+  recebe a versão barrada e a lista. O que sobrar é salvo assim mesmo e chega
+  marcado: o editor mostra, e a ativação recusa. Nunca corrige em silêncio.
+- A ativação de campanha de público passou a checar também as provas
+  (`mudarStatusDaCampanha`), porque o texto pode ser editado à mão depois.
+- Quando nasce (Começar a abordar), a campanha já sai com o fluxo escrito no
+  estilo `casa`, se a chave da Anthropic existe. Se a IA falhar, a campanha
+  nasce com o fluxo em branco e o aviso diz por quê. Na aba Abordagem, dois
+  botões reescrevem (casa ou variante) e levam ao editor. Em campanha ativa,
+  `salvarFluxo` cria uma versão nova, que vale para os próximos leads (§4.1).
+- Sem migration. Custo, tentativas, problemas, estilo e versão do prompt
+  (`fluxo-1`) vão no evento `fluxo_gerado`.

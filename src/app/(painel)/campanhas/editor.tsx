@@ -7,6 +7,7 @@ import { useMemo, useState, useTransition } from "react";
 import { Aviso } from "@/components/aviso";
 import type { ContextoDoPerfil } from "@/domain/campanha";
 import { fluxoPadrao, validarCopyDoFluxo, validarFluxo, type Fluxo } from "@/domain/fluxo";
+import { problemasDeProvas } from "@/domain/fluxo-gerado";
 import type { ValoresDoTemplate } from "@/domain/template";
 import { salvarCampanhaDoPainel } from "./acoes";
 import { EditorDeFluxo } from "./editor-de-fluxo";
@@ -22,8 +23,8 @@ export type CampanhaDoEditor = {
   modoCopy: "template" | "personalizada";
   maxLeads: number | null;
   fluxo: Fluxo;
-  /** Campanha que nasceu de um público: conta e ângulo vêm dele e não mudam aqui. */
-  publico?: { id: string; nome: string } | null;
+  /** Campanha que nasceu de um público: conta e ângulo vêm dele e não mudam aqui; número só das provas dele. */
+  publico?: { id: string; nome: string; provas: string[] } | null;
 };
 
 export function EditorDeCampanha({
@@ -61,6 +62,10 @@ export function EditorDeCampanha({
     [campanha.fluxo, perfil, exemplo],
   );
   const problemasDoFluxo = useMemo(() => validarFluxo(campanha.fluxo), [campanha.fluxo]);
+  const foraDasProvas = useMemo(
+    () => (campanha.publico ? problemasDeProvas(campanha.fluxo, campanha.publico.provas) : []),
+    [campanha.fluxo, campanha.publico],
+  );
   const temProblemaDeCopy = problemasDeCopy.some((p) => p.violacoes.length > 0);
 
   function trocarPerfil(perfilId: string) {
@@ -189,6 +194,18 @@ export function EditorDeCampanha({
         {problemasDoFluxo.length > 0 && (
           <Aviso tom="atencao">
             O fluxo ainda está incompleto: dá para salvar como rascunho, mas a campanha só ativa com o fluxo completo.
+          </Aviso>
+        )}
+        {foraDasProvas.length > 0 && (
+          <Aviso tom="atencao">
+            <p>Número fora das provas do público: a campanha não ativa até corrigir.</p>
+            <ul className="mt-1 list-disc pl-5">
+              {foraDasProvas.map((p) => (
+                <li key={p.toque}>
+                  {p.toque}: {p.mensagem}
+                </li>
+              ))}
+            </ul>
           </Aviso>
         )}
         <EditorDeFluxo

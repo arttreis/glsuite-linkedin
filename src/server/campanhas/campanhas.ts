@@ -9,6 +9,7 @@ import {
   type ProblemaDoBloco,
   type ProblemaDoFluxo,
 } from "@/domain/fluxo";
+import { problemasDeProvas } from "@/domain/fluxo-gerado";
 import { posT4DaPraca, sequencia } from "@/domain/sequencia";
 import type { ValoresDoTemplate } from "@/domain/template";
 import { lerConfiguracao } from "@/server/configuracoes";
@@ -141,8 +142,10 @@ export async function mudarStatusDaCampanha(
   p: { campanhaId: string; status: StatusDaCampanha; operadorId: string; agora: Date },
 ): Promise<void> {
   await db.transacao(async (tx) => {
-    const [campanha] = await tx.query<{ perfil_id: string; status: StatusDaCampanha }>(
-      "select perfil_id, status from public.campanhas where id = $1::uuid for update",
+    const [campanha] = await tx.query<{ perfil_id: string; status: StatusDaCampanha; provas: string[] | null }>(
+      `select c.perfil_id, c.status, pu.provas
+         from public.campanhas c left join public.publicos pu on pu.id = c.publico_id
+        where c.id = $1::uuid for update of c`,
       [p.campanhaId],
     );
     if (!campanha) throw new Error("Campanha não encontrada");
@@ -154,8 +157,10 @@ export async function mudarStatusDaCampanha(
         await contextoDoPerfil(tx, campanha.perfil_id),
         await lerConfiguracao(tx, "template_exemplo"),
       );
-      if (forma.length > 0 || copy.length > 0) {
-        const primeiro = forma[0]?.mensagem ?? copy[0]?.violacoes[0]?.mensagem;
+      // Campanha de público só cita número que está nas provas dele (§4.14).
+      const provas = campanha.provas ? problemasDeProvas(fluxo!, campanha.provas) : [];
+      if (forma.length > 0 || copy.length > 0 || provas.length > 0) {
+        const primeiro = forma[0]?.mensagem ?? copy[0]?.violacoes[0]?.mensagem ?? `${provas[0]!.toque}: ${provas[0]!.mensagem}`;
         throw new ErroDeStatus(`O fluxo ainda não pode rodar: ${primeiro} Corrija no editor e ative de novo.`);
       }
     }

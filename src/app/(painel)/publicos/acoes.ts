@@ -5,11 +5,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { obterAvaliadorDeAderencia, obterSugeridorDePublicos, obterUnipileSeConfigurada } from "@/server/dependencias";
+import { obterAvaliadorDeAderencia, obterEscritorDeFluxo, obterSugeridorDePublicos, obterUnipileSeConfigurada } from "@/server/dependencias";
 import { darNotas } from "@/server/nota/nota";
 import { exigirCampanhaDoOperador } from "@/server/painel/autorizacao";
 import { comecarAAbordar } from "@/server/publicos/abordagem";
 import { procurarParametros, rodarBusca, salvarBusca, type ResultadoDaBusca } from "@/server/publicos/busca";
+import { gerarFluxo } from "@/server/publicos/fluxo";
 import { mudarStatusDoPublico, salvarPublico, sugerirPublicos, type Resultado } from "@/server/publicos/publicos";
 import { exigirOperador } from "@/server/supabase/servidor";
 
@@ -75,11 +76,25 @@ export async function comecarAAbordarDoPainel(formData: FormData) {
   const resultado = await comOperador(obterDb(), operador.id, (tx) =>
     comecarAAbordar(tx, { publicoId, perfilId, operadorId: operador.id, agora: new Date() }),
   );
+  // A campanha nasce com o fluxo escrito para o público (§4.14). Sem a IA, nasce com o fluxo padrão em branco.
+  let mensagens = "";
+  const escritor = obterEscritorDeFluxo();
+  if (resultado.ok && resultado.criada && escritor) {
+    const gerado = await gerarFluxo(
+      { db: obterDb(), escritor, agora: () => new Date() },
+      { campanhaId: resultado.campanhaId, operadorId: operador.id, estilo: "casa" },
+    );
+    mensagens = !gerado.ok
+      ? ` As mensagens ficaram em branco: ${gerado.erro}`
+      : gerado.problemas.length > 0
+        ? " A IA escreveu as mensagens, mas algumas ficaram marcadas: corrija na aba Abordagem antes de ativar."
+        : " A IA escreveu as mensagens: revise na aba Abordagem.";
+  }
   revalidatePath("/", "layout");
   const msg = !resultado.ok
     ? resultado.erro
     : resultado.criada
-      ? "Campanha criada. Agora traga os leads: importe uma lista e aprove na triagem."
+      ? `Campanha criada.${mensagens} Agora traga os leads: busque no LinkedIn ou importe uma lista.`
       : "Esta conta já aborda este público.";
   redirect(`/publicos/${publicoId}?aba=leads&msg=${encodeURIComponent(msg)}`);
 }
@@ -128,4 +143,23 @@ export async function rodarBuscaDoPainel(entrada: { campanhaId: string; quantida
   revalidatePath("/publicos", "layout");
   revalidatePath("/triagem");
   return resultado;
+}
+
+/** Escreve (ou reescreve) com a IA as mensagens da campanha de público e abre o editor para revisar e ativar. */
+export async function gerarFluxoDoPainel(formData: FormData) {
+  const operador = await exigirOperador();
+  const dados = z
+    .object({ campanha: z.uuid(), publico: z.uuid(), estilo: z.enum(["casa", "pergunta"]) })
+    .safeParse(Object.fromEntries(formData));
+  if (!dados.success) voltar("Pedido inválido.");
+  const { campanha, publico, estilo } = dados.data!;
+  await exigirCampanhaDoOperador(operador.id, campanha);
+  const deVolta = (msg: string) => redirect(`/publicos/${publico}?aba=abordagem&msg=${encodeURIComponent(msg)}`);
+  const escritor = obterEscritorDeFluxo();
+  if (!escritor) deVolta("Escrever as mensagens precisa da chave da Anthropic. Peça ao admin para configurar.");
+  const resultado = await gerarFluxo({ db: obterDb(), escritor: escritor!, agora: () => new Date() }, { campanhaId: campanha, operadorId: operador.id, estilo });
+  revalidatePath("/publicos", "layout");
+  revalidatePath(`/campanhas/${campanha}`);
+  if (!resultado.ok) deVolta(resultado.erro);
+  if (resultado.ok) redirect(`/campanhas/${campanha}?gerado=${resultado.problemas.length > 0 ? "marcado" : "ok"}`);
 }
