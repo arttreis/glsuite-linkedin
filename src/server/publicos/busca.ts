@@ -38,8 +38,8 @@ async function contaDaCampanha(db: Db, campanhaId: string): Promise<ContaDaBusca
   return conta ?? null;
 }
 
-/** Quantos resultados de busca a conta já trouxe hoje, no fuso dela. */
-async function buscadosHoje(db: Db, conta: Pick<ContaDaBusca, "perfil_id" | "fuso">, agora: Date): Promise<number> {
+/** Quantos resultados de busca a conta já trouxe hoje, no fuso dela (a prévia da conta da casa conta junto). */
+export async function buscadosHoje(db: Db, conta: Pick<ContaDaBusca, "perfil_id" | "fuso">, agora: Date): Promise<number> {
   const { inicio, fim } = limitesDoDia(agora, conta.fuso);
   const [soma] = await db.query<{ n: number }>(
     `select coalesce(sum((payload ->> 'resultados')::int), 0)::int as n from public.eventos

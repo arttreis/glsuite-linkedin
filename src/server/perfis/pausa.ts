@@ -65,11 +65,13 @@ export async function despausarPerfil(
       unipile_status: string | null;
       ativado_em: Date | null;
       motivo_pausa: string | null;
+      casa: boolean;
     }>(
-      "select status, unipile_account_id, unipile_status, ativado_em, motivo_pausa from public.perfis where id = $1::uuid for update",
+      "select status, unipile_account_id, unipile_status, ativado_em, motivo_pausa, casa from public.perfis where id = $1::uuid for update",
       [p.perfilId],
     );
     if (!perfil) throw new ErroDeAtivacao("Perfil não encontrado.");
+    if (perfil.casa) throw new ErroDeAtivacao("Esta é a conta da casa: ela só busca a prévia de leads e nunca ativa (§4.4).");
     if (perfil.status === "ativo") throw new ErroDeAtivacao("O perfil já está ativo.");
     if (!perfil.unipile_account_id) throw new ErroDeAtivacao("Conecte o LinkedIn do perfil antes de ativar.");
     if (perfil.unipile_status && !STATUS_SAUDAVEIS.has(perfil.unipile_status)) {

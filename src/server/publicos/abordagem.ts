@@ -54,7 +54,7 @@ export async function contasDoPublico(db: Db, publicoId: string): Promise<ContaD
        from public.publicos pu
        join public.perfis pf on pf.organizacao_id = pu.organizacao_id and pf.praca = pu.praca
        left join public.campanhas c on c.publico_id = pu.id and c.perfil_id = pf.id
-      where pu.id = $1::uuid and public.pode_ver_perfil(pf.id)
+      where pu.id = $1::uuid and public.pode_ver_perfil(pf.id) and not pf.casa
       order by array_position(array['arthur', 'juliano', 'luiz', 'jp'], pf.slug), pf.nome`,
     [publicoId],
   );

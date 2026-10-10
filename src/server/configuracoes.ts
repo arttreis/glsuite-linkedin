@@ -41,6 +41,7 @@ export const ESQUEMAS_DE_CONFIGURACAO = {
     max_resultados_dia: z.number().int().min(0).max(1000),
     nota_de_corte: z.number().int().min(0).max(100).default(70),
   }),
+  previa: z.object({ max_pessoas: z.number().int().min(0).max(100) }),
   pesquisa: z.object({
     max_por_dia: z.number().int().min(0),
     proporcao_personalizada: z.number().min(0).max(1),
