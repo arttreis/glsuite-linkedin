@@ -2,6 +2,7 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { envPublico } from "@/lib/env";
 import { OPCOES_DO_COOKIE } from "@/lib/supabase/cookie";
 import { obterDb } from "@/server/db";
@@ -53,6 +54,9 @@ export function emailDeAcessoSemLogin(): string | null {
 export async function exigirOperador(): Promise<Operador> {
   const semLogin = emailDeAcessoSemLogin();
   if (semLogin) {
+    // Sem cookie lido, o Next pré-renderiza a página no build e congela o banco
+    // daquele momento. A página tem que ler o banco a cada requisição.
+    await connection();
     const [linha] = await obterDb().query<{ id: string }>(
       "select id from public.operadores where lower(email) = $1 and ativo",
       [semLogin],
