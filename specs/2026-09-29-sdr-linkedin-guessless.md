@@ -1131,3 +1131,47 @@ migrations das duas linhas já estão no banco (conferido em 09/10).
 - Resultados é a tela de métricas com a visão por público em primeiro lugar
   (`calcularFunil` ganhou `porPublico`; campanha criada à mão fica fora dela).
 - Sem migration.
+
+## Primeiro acesso e SDR (10/10/2026)
+
+Decidido com o Arthur em 10/10/2026: o épico de 29/09 foi substituído por um
+novo (`docs/epico.md`), com a experiência refeita por cima do mesmo motor. A
+pessoa informa o site, o Kakou analisa negócio, produto e mercado, monta o SDR
+(um chatbot que ela testa no papel de lead e refina), mostra os leads do
+LinkedIn, recomenda a abordagem e pede permissão; depois ela vincula o
+LinkedIn e entra no app (Dashboard, Chats, Pipeline, Campanhas,
+Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
+
+- **Leads antes do LinkedIn: prévia pela conta da casa.** A busca do primeiro
+  acesso roda por uma conta do LinkedIn da GuessLess marcada como conta da
+  casa, que só busca. Alternativas descartadas: mostrar só o perfil do lead sem
+  nomes (vira o plano B quando a conta da casa não tem saldo) e pedir o
+  LinkedIn antes dos leads (contraria a ordem que o Arthur quer). Risco aceito:
+  o limite de busca da conta da casa é dividido entre todas as organizações
+  novas, por isso a prévia tem teto por organização (D2).
+- **Autonomia: o SDR responde sozinho depois da permissão.** O gate de eval do
+  modo automático (§7.1 do épico anterior) sai. O que segura a qualidade passa
+  a ser o chat de teste com o mesmo agente da produção, o validador, o "chamar
+  você" e o humano assumindo pelo Chats. "Aprovo cada resposta" continua como
+  opção; o modo `manual` sai.
+- **Acesso: só e-mail de domínio liberado no começo** (`guessless.com.br`).
+  Cada e-mail novo ganha a própria organização. Como o Auth é dividido com o GL
+  Suite, o cadastro público do projeto continua desligado: o Kakou cria o
+  usuário pelo servidor (API admin) só para domínio liberado, e o login segue
+  com `shouldCreateUser: false`. Ligar o cadastro público abriria o Auth do GL
+  Suite para qualquer um.
+- **Regras que ficam:** validador de copy, teto por perfil e parada automática
+  (escolha do Arthur), mais as do próprio motor que não estavam em discussão:
+  quem responde sai da régua na hora, opt-out e um alvo, um dono.
+- **Regras que saem:** regras por praça (Canadá e Espanha) e RD Station. Perfis
+  fora do Brasil ficam pausados até as regras voltarem num épico próprio. O
+  Pipeline é o CRM.
+- **O SDR substitui voz e regras do perfil no agente.** O SDR é da organização,
+  com versões; as instruções extras são da campanha. O chat de teste chama a
+  mesma decisão da produção com lead fictício, para que o que se testa seja o
+  que roda.
+- **Mercado é hipótese, Negócio e Produto são fato.** Mantém a regra do dossiê
+  (só fato do site) e dá à análise a parte de mercado que o Arthur pediu, sem
+  número de tamanho de mercado.
+- Numeração dos tickets começa no SDR-40; SDR-31 a SDR-34 do épico anterior
+  caíram.
