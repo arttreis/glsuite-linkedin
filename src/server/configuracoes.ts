@@ -37,7 +37,10 @@ export const ESQUEMAS_DE_CONFIGURACAO = {
   }),
   travas: z.object({ dpa_espanha: z.boolean() }),
   dossie: z.object({ ativo: z.boolean(), max_paginas: z.number().int().min(1).max(20) }),
-  busca: z.object({ max_resultados_dia: z.number().int().min(0).max(1000) }),
+  busca: z.object({
+    max_resultados_dia: z.number().int().min(0).max(1000),
+    nota_de_corte: z.number().int().min(0).max(100).default(70),
+  }),
   pesquisa: z.object({
     max_por_dia: z.number().int().min(0),
     proporcao_personalizada: z.number().min(0).max(1),

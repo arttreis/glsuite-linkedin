@@ -8,11 +8,10 @@ do SDR-17 ao SDR-21 (Marco 5: painel guiado, inbox completa e fluxo com
 blocos), pelo PR #2. O Marco 6 (jornada do Kakou: site → dossiê → públicos →
 busca com nota → fluxo gerado) começou: SDR-22 e SDR-23 entraram pelo PR #3,
 e a jornada revisada nos docs pelo PR #4; do SDR-24 ao SDR-26, pelos PRs #5 a
-#7; as regras do prompt de referência no agente, pelo #8. O SDR-27 está em
-PR. As migrations até `20261010160000_campanha_do_publico` estão aplicadas no
-banco por SQL (09/10); a `20261010170000_busca_do_publico`, do SDR-27, ainda
-não. Produção em https://sdr.glsuite.io, publicada em 09/10 a partir da
-`main` com o #8. O painel está no ar para teste em
+#7; as regras do prompt de referência no agente, pelo #8. O SDR-27 e o SDR-28
+estão em PR. Todas as migrations, até `20261010180000_nota_de_aderencia`,
+estão aplicadas no banco pela CLI do Supabase (09/10). Produção em
+https://sdr.glsuite.io, publicada em 09/10 a partir da `main` com o #8. O painel está no ar para teste em
 https://guessless-sdr.vercel.app, com o banco dividido com o GL Suite. Faltam
 as chaves das integrações e as travas da §8. Detalhes em
 `docs/handoff-2026-09-30.md`.
@@ -49,8 +48,8 @@ as chaves das integrações e as travas da §8. Detalhes em
 | M6 | SDR-26 Campanha nasce do público | ✅ | ✅ #7 | — |
 | M6 | Regras do prompt de referência no agente | ✅ | ✅ #8 | ⛔ eval na versão `2026-10-09.1` (chave da Anthropic) |
 | M6 | SDR-27 Busca a partir do público | ✅ | ⏳ PR aberto | ⛔ testar com a conta real da Unipile |
-| M6 | SDR-28 Nota de aderência | 🔜 próximo | — | ⛔ chave da Anthropic |
-| M6 | SDR-29 Fluxo gerado pelo público | 🔜 | — | ⛔ chave da Anthropic |
+| M6 | SDR-28 Nota de aderência | ✅ | ⏳ PR aberto | ⛔ chave da Anthropic (o Haiku dá a nota) |
+| M6 | SDR-29 Fluxo gerado pelo público | 🔜 próximo | — | ⛔ chave da Anthropic |
 | M6 | SDR-30 Jornada no lugar dos primeiros passos | 🔜 | — | — |
 | M6 | SDR-31 a SDR-34 Início com ação direta, opt-out e regras por organização, dossiê no agente | 🔜 depois do caminho principal | — | — |
 
@@ -66,7 +65,7 @@ Legenda: ✅ feito · 🔜 a fazer · ⏳ aguardando · ⛔ bloqueado por algo e
 | 4 | 1ª rodada real do eval (`pnpm eval`) e revisão humana do `revisao.json` | Claude + Arthur | depende da chave da Anthropic |
 | 5 | ~~SDR-17 a SDR-21~~ | — | ✅ PR #2 |
 | 5a | ~~Mergear o PR do SDR-22 e SDR-23 e depois o da jornada revisada (docs)~~ | — | ✅ #3 e #4 |
-| 5b | SDR-24 a SDR-30, um por vez, na ordem do Marco 6 | Claude | SDR-24 a SDR-26 ✅; SDR-27 em PR |
+| 5b | SDR-24 a SDR-30, um por vez, na ordem do Marco 6 | Claude | SDR-24 a SDR-26 ✅; SDR-27 e SDR-28 em PR |
 | 6 | ~~Migrations do SDR-17 ao SDR-21 por SQL no GL Suite~~ | — | ✅ 09/10, sem tocar no histórico do GL Suite |
 | 7 | ~~Abrir e mergear os PRs do SDR-01 ao SDR-16~~ | — | ✅ PR #1 |
 | 8 | Ligar o tick (pg_cron ou Vercel Cron) | Claude | depois da Unipile e do teste |

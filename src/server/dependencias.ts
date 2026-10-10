@@ -6,6 +6,8 @@ import type { ModeloDeLinguagem } from "@/server/agente/modelo";
 import type { EnviadorDeEmail } from "@/server/alertas/alertas";
 import { criarLeitorClaude } from "@/server/oferta/claude";
 import type { LeitorDeSite } from "@/server/oferta/leitor";
+import { criarAvaliadorClaude } from "@/server/nota/claude";
+import type { AvaliadorDeAderencia } from "@/server/nota/avaliador";
 import { criarSugeridorClaude } from "@/server/publicos/claude";
 import type { SugeridorDePublicos } from "@/server/publicos/sugeridor";
 import { criarEnviadorResend } from "@/server/alertas/resend";
@@ -117,6 +119,17 @@ export function obterSugeridorDePublicos(): SugeridorDePublicos | null {
       : null;
   }
   return sugeridorDePublicos;
+}
+
+let avaliador: AvaliadorDeAderencia | null | undefined;
+
+/** Nota de aderência no modelo de classificação (Haiku, §5), ou null sem ANTHROPIC_API_KEY. */
+export function obterAvaliadorDeAderencia(): AvaliadorDeAderencia | null {
+  if (avaliador === undefined) {
+    const env = envIa();
+    avaliador = env.ANTHROPIC_API_KEY ? criarAvaliadorClaude({ apiKey: env.ANTHROPIC_API_KEY, modelo: env.IA_MODELO_CLASSIFICACAO }) : null;
+  }
+  return avaliador;
 }
 
 const envRd = lerEnv(z.object({ RD_STATION_TOKEN: z.string().min(1).optional() }));

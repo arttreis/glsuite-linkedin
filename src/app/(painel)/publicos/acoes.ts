@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { obterSugeridorDePublicos, obterUnipileSeConfigurada } from "@/server/dependencias";
+import { obterAvaliadorDeAderencia, obterSugeridorDePublicos, obterUnipileSeConfigurada } from "@/server/dependencias";
+import { darNotas } from "@/server/nota/nota";
 import { exigirCampanhaDoOperador } from "@/server/painel/autorizacao";
 import { comecarAAbordar } from "@/server/publicos/abordagem";
 import { procurarParametros, rodarBusca, salvarBusca, type ResultadoDaBusca } from "@/server/publicos/busca";
@@ -119,6 +120,12 @@ export async function rodarBuscaDoPainel(entrada: { campanhaId: string; quantida
     { db: obterDb(), unipile },
     { campanhaId, quantidade: Number(entrada.quantidade) || 10, operadorId: operador.id, agora: new Date() },
   );
+  // Quem chegou já ganha nota (§4.13). Se a IA falhar, o botão "Dar nota" fica na tela.
+  const avaliador = obterAvaliadorDeAderencia();
+  if (resultado.ok && resultado.resumo.novos > 0 && avaliador) {
+    await darNotas({ db: obterDb(), avaliador, agora: new Date() }, { campanhaId });
+  }
   revalidatePath("/publicos", "layout");
+  revalidatePath("/triagem");
   return resultado;
 }

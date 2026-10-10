@@ -1018,3 +1018,31 @@ migrations das duas linhas já estão no banco (conferido em 09/10).
   motivo, cooldown de empresa marca alerta (§4.7).
 - Teto na configuração `busca.max_resultados_dia` (100, D8). Migration
   `20261010170000_busca_do_publico`.
+
+### SDR-28 · Nota de aderência
+
+- `leads.nota` (0 a 100), `nota_motivo` e `nota_em`. A nota vale para todo
+  lead em triagem de campanha de público, venha da busca ou de arquivo.
+- Modelo de classificação (`IA_MODELO_CLASSIFICACAO`, Haiku 4.5, §5), em lotes
+  de 20 pessoas por chamada, até 100 por clique. O Haiku 4.5 não aceita
+  esforço nem pensamento adaptativo: a chamada vai só com a saída
+  estruturada.
+- O público fica no prompt de sistema (estável); as pessoas vão na mensagem,
+  numeradas, só com cargo ou headline, empresa e local. Nome e URL não vão
+  para a IA. A IA devolve a nota pelo índice; nota fora de 0 a 100 é
+  limitada, índice repetido ou fora do lote é ignorado, e quem ficou sem nota
+  entra no próximo clique. Não há chamada ao LinkedIn: dar nota nunca visita
+  perfil.
+- A nota não aprova ninguém. "Aprovar os que passam do corte" é um clique
+  humano que manda para `aprovarLeads` os leads em triagem, sem bloqueio, com
+  nota a partir de `busca.nota_de_corte` (70, D9): cada um passa pelas regras
+  de sempre (opt-out, máximo da campanha). Lead sem nota ou abaixo do corte
+  fica para olhar um por um.
+- Depois de cada busca com gente nova, a ação já dá a nota (até 100). Se a IA
+  falhar, a busca não falha: o botão "Dar nota" fica na tela.
+- Na triagem filtrada por campanha de público, a lista vem pela nota, com o
+  motivo, e o painel tem "Dar nota" e "Aprovar os N a partir de 70". A aba
+  Leads do público mostra o mesmo resumo por conta.
+- Custo e versão do prompt (`nota-1`) vão no evento `notas_dadas`. Migration
+  `20261010180000_nota_de_aderencia`, que também põe `nota_de_corte` na
+  configuração `busca`.
