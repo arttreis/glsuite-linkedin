@@ -1,6 +1,7 @@
 "use client";
 
 import { Info } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Aviso } from "@/components/aviso";
@@ -21,6 +22,8 @@ export type CampanhaDoEditor = {
   modoCopy: "template" | "personalizada";
   maxLeads: number | null;
   fluxo: Fluxo;
+  /** Campanha que nasceu de um público: conta e ângulo vêm dele e não mudam aqui. */
+  publico?: { id: string; nome: string } | null;
 };
 
 export function EditorDeCampanha({
@@ -111,16 +114,28 @@ export function EditorDeCampanha({
             Nome
             <input value={campanha.nome} onChange={(e) => setCampanha({ ...campanha, nome: e.target.value })} className="campo" />
           </label>
-          <label className="rotulo">
-            Ângulo de abertura
-            <select value={campanha.angulo} onChange={(e) => setCampanha({ ...campanha, angulo: e.target.value })} className="campo">
-              {angulos.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              ))}
-            </select>
-          </label>
+          {campanha.publico ? (
+            <div className="rotulo">
+              Ângulo de abertura
+              <p className="text-sm font-normal text-tinta">
+                {campanha.angulo}{" "}
+                <Link href={`/publicos/${campanha.publico.id}`} className="link text-xs">
+                  vem do público {campanha.publico.nome}
+                </Link>
+              </p>
+            </div>
+          ) : (
+            <label className="rotulo">
+              Ângulo de abertura
+              <select value={campanha.angulo} onChange={(e) => setCampanha({ ...campanha, angulo: e.target.value })} className="campo">
+                {angulos.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="rotulo">
             Nicho
             <input
