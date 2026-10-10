@@ -452,7 +452,7 @@ Anotadas durante a execução, por ticket.
   perfil e template × personalizado (a variante vem de `leads.variante_copy`,
   que o SDR-15 preenche). Triagem e rejeitados ficam de fora.
 - A referência de trabalho aparece como faixa. Abaixo dela o número fica em
-  âmbar, acima em verde: é referência, não meta. O sistema cria a primeira linha
+  âmbar, acima no tom de ok: é referência, não meta. O sistema cria a primeira linha
   de base da casa.
 
 ### SDR-15 · Pesquisa do prospect e T1 personalizado
@@ -633,11 +633,22 @@ Anotadas durante a execução, por ticket.
 - Na saída do GL Suite, o caminho é um projeto próprio em São Paulo (§5):
   aplicar as migrations e trocar as variáveis na Vercel.
 
-### Painel · tema visual (09/10/2026)
-- O tema é escuro, com um só destaque laranja (`--color-destaque`). O
-  laranja aparece em dois lugares: no item ativo do menu e na ação principal
-  da tela, e no máximo uma ação principal por tela ou por cartão. Os status
-  (ok, atenção, erro, info) ficam só em etiquetas e avisos.
+### Painel · tema visual (09/10/2026, verde desde 10/10/2026)
+- O tema é escuro, puxado para o verde, com um só destaque menta
+  (`--color-destaque`, `#5fe39a`). Em 10/10 o menta substituiu o laranja. Ele
+  aparece em dois lugares: no item ativo do menu e na ação principal da tela,
+  e no máximo uma ação principal por tela ou por cartão. Os status (ok,
+  atenção, erro, info) ficam só em etiquetas e avisos.
+- O ok é ciano (`#3dd2e0`), não verde, para um perfil "Ativo" não se
+  confundir com o botão principal. O info foi para um azul-lilás (`#8e9bff`)
+  para se separar do ciano.
+- O fundo tem uma luz diagonal e uma grade fina vindas do canto superior
+  direito (`body::before` e `body::after`, fixos atrás de tudo). Fica
+  discreto: é tela de trabalho, não vitrine.
+- Botões, filtros, campos de uma linha e itens do menu são pílulas. Cartões e
+  a moldura da tabela têm borda que acende em cima; a tabela tem fundo liso.
+- `.titulo-pagina` (no `Cabecalho`) e `.titulo-vitrine` (no login) usam
+  grotesca apertada com o fim puxando para o menta.
 - Os tokens ficam em `src/app/globals.css` (`@theme`) e viram utilitários do
   Tailwind: `bg-superficie`, `border-linha`, `text-tinta-suave` e assim por
   diante. Uma tela nova não usa cor fixa (`neutral-*`, `bg-white`).
@@ -661,9 +672,9 @@ Anotadas durante a execução, por ticket.
 - Os estados do lead aparecem com o texto de `ROTULO_DO_ESTADO`
   (`src/domain/estados.ts`), nunca com o valor cru do banco.
 - Os ícones são do `lucide-react`.
-- Contraste mínimo de 4,5:1 nos textos pequenos. Por isso o texto fraco é
-  `#85858d`, e o botão principal usa um laranja um pouco mais fundo que o da
-  referência.
+- Contraste mínimo de 4,5:1 nos textos pequenos. O texto fraco (`#838c87`)
+  dá de 4,5:1 a 5,7:1 nos fundos do tema; o botão principal tem texto quase
+  preto sobre o menta (10:1 ou mais).
 
 ### SDR-18 · Clareza das telas de operação
 

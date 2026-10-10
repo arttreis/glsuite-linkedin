@@ -107,7 +107,7 @@ function BlocoDoFluxo({ data, selected }: NodeProps<BlocoDoCanvas>) {
   const { node, problema, espanha } = data;
   const Icone = ICONE_DO_TIPO[node.tipo];
   const borda = selected
-    ? "border-destaque shadow-[0_0_0_3px_rgb(255_106_26/0.18)]"
+    ? "border-destaque shadow-[0_0_0_3px_rgb(95_227_154/0.18)]"
     : problema === "erro"
       ? "border-erro/70"
       : problema === "atencao"
@@ -230,7 +230,7 @@ function Canvas({ fluxo, onChange, problemasDeCopy, problemasDoFluxo, espanha }:
           type: "smoothstep",
           selected: selecionada,
           label: aresta.saida === "sim" ? "sim" : aresta.saida === "nao" ? "não" : undefined,
-          markerEnd: { type: MarkerType.ArrowClosed, color: selecionada ? "#ff6a1a" : "#5a5a62" },
+          markerEnd: { type: MarkerType.ArrowClosed, color: selecionada ? "#5fe39a" : "#56605b" },
         };
       }),
     [fluxo.arestas, selecao],
