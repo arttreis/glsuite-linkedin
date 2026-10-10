@@ -6,7 +6,7 @@ import { exigirOperadorLiberado } from "@/server/supabase/servidor";
 
 const pct = (valor: number) => `${Math.round(valor * 100)}%`;
 
-/** Abaixo da faixa de referência fica âmbar; acima, verde. */
+/** Abaixo da faixa de referência fica âmbar; acima, no tom de ok. */
 function Taxa({ valor, faixa }: { valor: number | null; faixa: { minimo: number; maximo: number } }) {
   if (valor === null) return <span className="text-tinta-fraca">sem amostra</span>;
   const cor = valor < faixa.minimo ? "text-atencao" : valor > faixa.maximo ? "text-ok" : "text-tinta";

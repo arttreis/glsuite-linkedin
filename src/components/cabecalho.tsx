@@ -26,7 +26,7 @@ export function Cabecalho({
             {voltar.rotulo}
           </Link>
         )}
-        <h1 className="text-[1.375rem] font-semibold tracking-tight">{titulo}</h1>
+        <h1 className="titulo-pagina">{titulo}</h1>
         {descricao && <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-tinta-suave">{descricao}</p>}
       </div>
       {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}

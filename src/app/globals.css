@@ -1,24 +1,25 @@
 @import "tailwindcss";
 
 /*
- * Tema do painel: fundo quase preto, superfícies em degraus de cinza e um só
- * destaque laranja, reservado ao item ativo do menu e à ação principal de cada
- * tela. Status (ok, atenção, erro) só aparece em etiquetas e avisos.
+ * Tema do painel: preto puxado para o verde, uma luz diagonal vinda do canto
+ * superior direito e um só destaque menta, reservado ao item ativo do menu e à
+ * ação principal de cada tela. Status (ok, atenção, erro) só aparece em
+ * etiquetas e avisos; o ok é ciano para não se confundir com o destaque.
  */
 @theme {
-  --color-fundo: #0c0c0d;
-  --color-superficie: #141416;
-  --color-superficie-alta: #1b1b1e;
-  --color-linha: #242428;
-  --color-linha-forte: #323238;
-  --color-tinta: #f1f1f2;
-  --color-tinta-suave: #a2a2aa;
-  --color-tinta-fraca: #85858d;
-  --color-destaque: #ff6a1a;
-  --color-ok: #3ecf8e;
+  --color-fundo: #090b0a;
+  --color-superficie: #111413;
+  --color-superficie-alta: #181c1a;
+  --color-linha: #212624;
+  --color-linha-forte: #2e3431;
+  --color-tinta: #eff3f1;
+  --color-tinta-suave: #a1aaa5;
+  --color-tinta-fraca: #838c87;
+  --color-destaque: #5fe39a;
+  --color-ok: #3dd2e0;
   --color-atencao: #f5b544;
   --color-erro: #f26461;
-  --color-info: #6aa8ff;
+  --color-info: #8e9bff;
 }
 
 @theme inline {
@@ -33,10 +34,37 @@
 
   body {
     background-color: var(--color-fundo);
-    background-image: radial-gradient(1100px 520px at 0% -8%, rgb(255 255 255 / 0.045), transparent 65%);
-    background-repeat: no-repeat;
     color: var(--color-tinta);
     font-family: var(--font-geist-sans), system-ui, sans-serif;
+  }
+
+  /* Luz e grade presas à janela, atrás de tudo: o html não tem fundo próprio. */
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+  body::before {
+    background:
+      radial-gradient(55% 50% at 100% 0%, rgb(150 205 180 / 0.13), transparent 70%),
+      linear-gradient(
+        235deg,
+        transparent 4%,
+        rgb(190 230 210 / 0.055) 13%,
+        transparent 23%,
+        rgb(190 230 210 / 0.035) 29%,
+        transparent 38%
+      );
+  }
+  body::after {
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.03) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(60% 55% at 85% 0%, #000, transparent);
   }
 
   ::selection {
@@ -66,11 +94,14 @@
 @layer components {
   /* Superfícies */
 
+  /* Vidro escuro: a borda acende em cima e apaga no meio, como luz de cima. */
   .cartao {
-    border: 1px solid var(--color-linha);
-    border-radius: 1rem;
-    background: var(--color-superficie);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
+    border: 1px solid transparent;
+    border-radius: 1.125rem;
+    background:
+      linear-gradient(180deg, #151917, #0f1211) padding-box,
+      linear-gradient(180deg, rgb(255 255 255 / 0.13), rgb(255 255 255 / 0.04) 45%, rgb(255 255 255 / 0.06)) border-box;
+    box-shadow: 0 24px 48px -28px rgb(0 0 0 / 0.7);
   }
 
   /* Trecho recuado dentro de um cartão: citação, prévia, roteiro. */
@@ -104,6 +135,27 @@
     padding: 1.75rem var(--respiro) 1.25rem;
   }
 
+  /* Títulos: grotesca apertada, com o fim da palavra puxando para o menta. */
+  .titulo-pagina {
+    display: inline-block;
+    background: linear-gradient(100deg, var(--color-tinta) 45%, #a9e9c8);
+    background-clip: text;
+    font-size: 1.75rem;
+    font-weight: 500;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    color: transparent;
+  }
+  .titulo-vitrine {
+    background: linear-gradient(180deg, #fff 35%, #a9e9c8);
+    background-clip: text;
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 500;
+    line-height: 1.02;
+    letter-spacing: -0.045em;
+    color: transparent;
+  }
+
   /* Botões */
 
   .botao {
@@ -112,13 +164,13 @@
     justify-content: center;
     gap: 0.5rem;
     height: 2.25rem;
-    border: 1px solid var(--color-linha-forte);
-    border-radius: 0.625rem;
-    background: linear-gradient(180deg, #202023, #19191c);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 999px;
+    background: linear-gradient(180deg, #1c211f, #151917);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.05),
+      inset 0 1px 0 rgb(255 255 255 / 0.06),
       0 1px 2px rgb(0 0 0 / 0.4);
-    padding: 0 0.875rem;
+    padding: 0 1rem;
     font-size: 0.875rem;
     font-weight: 500;
     line-height: 1;
@@ -131,8 +183,8 @@
       color 0.15s;
   }
   .botao:hover {
-    border-color: #45454c;
-    background: linear-gradient(180deg, #26262a, #1e1e21);
+    border-color: rgb(255 255 255 / 0.18);
+    background: linear-gradient(180deg, #222826, #1a1f1d);
   }
   .botao:disabled {
     opacity: 0.5;
@@ -145,22 +197,23 @@
     color: var(--color-tinta-suave);
   }
 
+  /* O menta é claro: o texto do botão principal é escuro. */
   .botao-primario {
-    border-color: rgb(255 140 77 / 0.55);
-    background: linear-gradient(180deg, #f26a1f, #d9530a);
+    border-color: rgb(170 245 205 / 0.6);
+    background: linear-gradient(180deg, #86f0b6, #4fd88c);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.25),
+      inset 0 1px 0 rgb(255 255 255 / 0.45),
       0 1px 2px rgb(0 0 0 / 0.4),
-      0 8px 24px -10px rgb(255 106 26 / 0.7);
+      0 10px 28px -12px rgb(95 227 154 / 0.65);
     font-weight: 600;
-    color: #fff;
+    color: #04170c;
   }
   .botao-primario:hover {
-    border-color: rgb(255 160 110 / 0.75);
-    background: linear-gradient(180deg, #ff7a2e, #e85d0d);
+    border-color: rgb(190 250 220 / 0.85);
+    background: linear-gradient(180deg, #9af5c4, #5fe39a);
   }
   .botao-primario svg {
-    color: #fff;
+    color: #04170c;
   }
 
   .botao-perigo {
@@ -175,8 +228,7 @@
 
   .botao-pequeno {
     height: 2rem;
-    border-radius: 0.5rem;
-    padding: 0 0.75rem;
+    padding: 0 0.8125rem;
     font-size: 0.8125rem;
   }
 
@@ -202,11 +254,12 @@
     color: var(--color-tinta-suave);
   }
 
+  /* Campo de uma linha é pílula, como o botão ao lado; texto longo não. */
   .campo {
     border: 1px solid var(--color-linha);
-    border-radius: 0.625rem;
-    background-color: #101012;
-    padding: 0.4375rem 0.75rem;
+    border-radius: 999px;
+    background-color: #0c0f0e;
+    padding: 0.4375rem 1rem;
     font-size: 0.875rem;
     font-weight: 400;
     color: var(--color-tinta);
@@ -231,20 +284,21 @@
   }
   select.campo {
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a8a92' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    background-position: right 0.625rem center;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23838c87' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 0.75rem center;
     background-repeat: no-repeat;
     background-size: 1rem;
     padding-right: 2.25rem;
   }
   textarea.campo {
+    border-radius: 0.875rem;
+    padding-inline: 0.875rem;
     line-height: 1.55;
     resize: vertical;
   }
 
   .campo-pequeno {
-    border-radius: 0.5rem;
-    padding: 0.3125rem 0.5rem;
+    padding: 0.3125rem 0.75rem;
     font-size: 0.8125rem;
   }
   select.campo-pequeno {
@@ -257,10 +311,10 @@
   }
   .campo-arquivo::file-selector-button {
     margin-right: 0.75rem;
-    border: 1px solid var(--color-linha-forte);
-    border-radius: 0.5rem;
-    background: linear-gradient(180deg, #202023, #19191c);
-    padding: 0.4375rem 0.75rem;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 999px;
+    background: linear-gradient(180deg, #1c211f, #151917);
+    padding: 0.4375rem 0.875rem;
     font: inherit;
     font-weight: 500;
     color: var(--color-tinta);
@@ -318,7 +372,7 @@
   .etiqueta-destaque {
     border-color: color-mix(in oklab, var(--color-destaque) 35%, transparent);
     background: color-mix(in oklab, var(--color-destaque) 12%, transparent);
-    color: #ffb48a;
+    color: #a6f4c8;
   }
 
   .aviso {
@@ -326,7 +380,7 @@
     align-items: flex-start;
     gap: 0.625rem;
     border: 1px solid var(--color-linha-forte);
-    border-radius: 0.75rem;
+    border-radius: 0.875rem;
     background: var(--color-superficie-alta);
     padding: 0.75rem 1rem;
     font-size: 0.875rem;
@@ -373,8 +427,8 @@
     gap: 0.375rem;
     height: 2rem;
     border: 1px solid var(--color-linha);
-    border-radius: 0.625rem;
-    padding: 0 0.75rem;
+    border-radius: 999px;
+    padding: 0 0.875rem;
     font-size: 0.8125rem;
     color: var(--color-tinta-suave);
     transition:
@@ -387,9 +441,9 @@
     color: var(--color-tinta);
   }
   .segmento[aria-current="page"] {
-    border-color: #3d3d44;
-    background: linear-gradient(180deg, #232327, #1b1b1e);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+    border-color: rgb(255 255 255 / 0.16);
+    background: linear-gradient(180deg, #232926, #1a1f1d);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07);
     color: var(--color-tinta);
   }
   .segmento-contagem {
@@ -399,11 +453,14 @@
 
   /* Tabelas */
 
+  /* Mesma borda do cartão, mas fundo liso: tabela cheia pede leitura, não brilho. */
   .tabela-moldura {
     overflow-x: auto;
-    border: 1px solid var(--color-linha);
-    border-radius: 1rem;
-    background: var(--color-superficie);
+    border: 1px solid transparent;
+    border-radius: 1.125rem;
+    background:
+      linear-gradient(var(--color-superficie), var(--color-superficie)) padding-box,
+      linear-gradient(180deg, rgb(255 255 255 / 0.13), rgb(255 255 255 / 0.04) 45%, rgb(255 255 255 / 0.06)) border-box;
   }
   .tabela {
     width: 100%;
@@ -496,8 +553,8 @@
     gap: 0.75rem;
     height: 2.5rem;
     border: 1px solid transparent;
-    border-radius: 0.75rem;
-    padding: 0 0.75rem;
+    border-radius: 999px;
+    padding: 0 0.875rem;
     font-size: 0.875rem;
     color: var(--color-tinta-suave);
     transition:
@@ -519,17 +576,17 @@
     color: var(--color-tinta-suave);
   }
   .item-nav[aria-current="page"] {
-    border-color: rgb(255 255 255 / 0.07);
+    border-color: rgb(255 255 255 / 0.08);
     background:
-      radial-gradient(90% 170% at 0% 100%, rgb(255 106 26 / 0.4), transparent 62%),
-      linear-gradient(180deg, #242427, #1b1b1e);
+      radial-gradient(90% 170% at 0% 100%, rgb(95 227 154 / 0.28), transparent 62%),
+      linear-gradient(180deg, #202624, #181c1a);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.07),
-      0 10px 28px -14px rgb(255 106 26 / 0.55);
+      inset 0 1px 0 rgb(255 255 255 / 0.08),
+      0 10px 28px -14px rgb(95 227 154 / 0.45);
     color: #fff;
   }
   .item-nav[aria-current="page"] svg {
-    color: #fff;
+    color: var(--color-destaque);
   }
 
   /* Área principal: o respiro lateral é o mesmo do cabeçalho. */
@@ -551,8 +608,8 @@
  */
 .fluxo {
   --xy-background-color: var(--color-fundo);
-  --xy-background-pattern-color: #2a2a2f;
-  --xy-edge-stroke: #5a5a62;
+  --xy-background-pattern-color: #252b28;
+  --xy-edge-stroke: #56605b;
   --xy-edge-stroke-width: 1.5;
   --xy-edge-stroke-selected: var(--color-destaque);
   --xy-connectionline-stroke: var(--color-destaque);
@@ -562,10 +619,10 @@
   --xy-handle-background-color: var(--color-tinta-fraca);
   --xy-handle-border-color: var(--color-superficie-alta);
   --xy-minimap-background-color: var(--color-superficie);
-  --xy-minimap-mask-background-color: rgb(12 12 13 / 0.6);
+  --xy-minimap-mask-background-color: rgb(9 11 10 / 0.6);
   --xy-minimap-node-background-color: var(--color-linha-forte);
   --xy-controls-button-background-color: var(--color-superficie-alta);
-  --xy-controls-button-background-color-hover: #26262a;
+  --xy-controls-button-background-color-hover: #222826;
   --xy-controls-button-color: var(--color-tinta-suave);
   --xy-controls-button-color-hover: var(--color-tinta);
   --xy-controls-button-border-color: var(--color-linha);
