@@ -636,9 +636,10 @@ Anotadas durante a execução, por ticket.
 ### Painel · tema visual (09/10/2026, verde desde 10/10/2026)
 - O tema é escuro, puxado para o verde, com um só destaque menta
   (`--color-destaque`, `#5fe39a`). Em 10/10 o menta substituiu o laranja. Ele
-  aparece em dois lugares: no item ativo do menu e na ação principal da tela,
-  e no máximo uma ação principal por tela ou por cartão. Os status (ok,
-  atenção, erro, info) ficam só em etiquetas e avisos.
+  aparece no item ativo do menu, na ação principal da tela (no máximo uma por
+  tela ou por cartão) e no preenchimento dos medidores, que mostram quanto de
+  um limite já foi usado; medidor cheio fica âmbar. Os status (ok, atenção,
+  erro, info) ficam só em etiquetas e avisos.
 - O ok é ciano (`#3dd2e0`), não verde, para um perfil "Ativo" não se
   confundir com o botão principal. O info foi para um azul-lilás (`#8e9bff`)
   para se separar do ciano.
@@ -647,8 +648,19 @@ Anotadas durante a execução, por ticket.
   discreto: é tela de trabalho, não vitrine.
 - Botões, filtros, campos de uma linha e itens do menu são pílulas. Cartões e
   a moldura da tabela têm borda que acende em cima; a tabela tem fundo liso.
-- `.titulo-pagina` (no `Cabecalho`) e `.titulo-vitrine` (no login) usam
-  grotesca apertada com o fim puxando para o menta.
+- `.titulo-pagina` (no `Cabecalho`) e `.titulo-vitrine` (no login e na
+  saudação do Início) usam grotesca apertada com o fim puxando para o menta.
+- Cada tela gasta a ousadia num elemento só e deixa o resto quieto. No Início
+  é o alvo (`Alvo`): um anel por perfil, de fora para dentro na ordem da
+  legenda, com os convites de hoje contra o limite do dia; o centro repete a
+  marca. A legenda em texto traz os mesmos números, então o desenho é
+  `aria-hidden`. Os arcos se desenham uma vez ao abrir; com movimento
+  reduzido, não.
+- O Início abre com a saudação: a segunda linha é o estado do dia numa frase
+  (nada esperando, N coisas esperando, ou quantos passos faltam), seguida das
+  fichas (`.ficha`) com perfis ativos, envios de hoje e fila. "Para agora" só
+  aparece quando há pendência.
+- `Barra`: trilho tracejado com preenchimento menta, para uso contra limite.
 - Os tokens ficam em `src/app/globals.css` (`@theme`) e viram utilitários do
   Tailwind: `bg-superficie`, `border-linha`, `text-tinta-suave` e assim por
   diante. Uma tela nova não usa cor fixa (`neutral-*`, `bg-white`).
