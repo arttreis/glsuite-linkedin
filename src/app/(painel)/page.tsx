@@ -1,8 +1,9 @@
-import { ArrowRight, Circle, CircleCheck, Pause, Play } from "lucide-react";
+import { ArrowRight, Circle, CircleCheck, Layers, Pause, Play, Send, type LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { Alvo, type AnelDoAlvo } from "@/components/alvo";
 import { Aviso } from "@/components/aviso";
 import { Avatar } from "@/components/avatar";
-import { Cabecalho } from "@/components/cabecalho";
+import { Barra } from "@/components/barra";
 import { EtiquetaDoPerfil } from "@/components/etiquetas";
 import { resumoDaRampa } from "@/domain/ativacao";
 import type { EtapaDaRampa } from "@/domain/rampa";
@@ -19,15 +20,70 @@ const PRACAS: Record<string, string> = { domestico: "Brasil", canada: "Canadá",
 const hora = (valor: Date | null) =>
   valor ? new Date(valor).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) : "—";
 
-function Resumo({ rotulo, valor, complemento }: { rotulo: string; valor: number | string; complemento?: string }) {
+const FUSO = "America/Sao_Paulo";
+
+function saudacao(agora: Date) {
+  const horaDoDia = Number(agora.toLocaleString("pt-BR", { timeZone: FUSO, hour: "2-digit", hourCycle: "h23" }));
+  if (horaDoDia >= 5 && horaDoDia < 12) return "Bom dia";
+  if (horaDoDia >= 12 && horaDoDia < 18) return "Boa tarde";
+  return "Boa noite";
+}
+
+/** A segunda linha da saudação: o estado do dia numa frase. */
+function fraseDoDia(primeirosPassos: { concluido: boolean; passos: Passo[] }, proximos: ProximoPasso[]) {
+  if (!primeirosPassos.concluido) {
+    const faltam = primeirosPassos.passos.filter((passo) => !passo.feito).length;
+    return faltam === 1 ? "Falta 1 passo para a primeira abordagem." : `Faltam ${faltam} passos para a primeira abordagem.`;
+  }
+  if (proximos.length === 0) return "Nada esperando por você.";
+  if (proximos.length === 1) return `${proximos[0].quantidade} ${proximos[0].texto}.`;
+  const total = proximos.reduce((soma, item) => soma + item.quantidade, 0);
+  return `${total} coisas esperando por você.`;
+}
+
+/** Topo do Início: saudação com o estado do dia, os fatos do dia em fichas e o alvo dos perfis. */
+function Saudacao({
+  nome,
+  agora,
+  frase,
+  calmo,
+  fichas,
+  aneis,
+}: {
+  nome: string;
+  agora: Date;
+  frase: string;
+  calmo: boolean;
+  fichas: { icone: LucideIcon | null; valor: string; texto: string }[];
+  aneis: AnelDoAlvo[];
+}) {
+  const data = agora.toLocaleDateString("pt-BR", { timeZone: FUSO, weekday: "long", day: "numeric", month: "long" });
   return (
-    <div className="cartao px-5 py-4">
-      <dt className="text-[13px] text-tinta-suave">{rotulo}</dt>
-      <dd className="mt-2 flex items-baseline gap-2">
-        <span className="text-2xl font-medium tracking-tight tabular-nums">{valor}</span>
-        {complemento && <span className="text-sm text-tinta-fraca">{complemento}</span>}
-      </dd>
-    </div>
+    <header className="cabecalho grid items-center gap-x-10 gap-y-8 pt-10 pb-9 xl:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="min-w-0">
+        <p className="text-sm text-tinta-suave first-letter:uppercase">{data}</p>
+        <h1 className="titulo-vitrine mt-4 max-w-3xl text-[clamp(2rem,3.3vw,3rem)] text-balance">
+          {saudacao(agora)}, {nome.split(/\s+/)[0]}.
+          <br />
+          {frase}
+        </h1>
+        {calmo && <p className="mt-4 text-tinta-suave">Os envios seguem sozinhos dentro dos limites de cada perfil.</p>}
+        <ul className="mt-7 flex flex-wrap gap-2">
+          {fichas.map((ficha) => {
+            const Icone = ficha.icone;
+            return (
+              <li key={ficha.texto} className="ficha">
+                {Icone ? <Icone aria-hidden /> : <span className="size-1.5 rounded-full bg-ok" aria-hidden />}
+                <span>
+                  <strong>{ficha.valor}</strong> {ficha.texto}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      {aneis.length > 0 && <Alvo aneis={aneis} />}
+    </header>
   );
 }
 
@@ -43,11 +99,8 @@ function Medida({ rotulo, valor, limite }: { rotulo: string; valor: number; limi
         {temLimite && <span className="text-sm text-tinta-fraca"> / {limite}</span>}
       </span>
       {temLimite && limite > 0 && (
-        <span className="mt-0.5 h-1 overflow-hidden rounded-full bg-linha" aria-hidden>
-          <span
-            className={`block h-full rounded-full ${cheio ? "bg-atencao" : "bg-tinta-suave"}`}
-            style={{ width: `${Math.min(100, (valor / limite) * 100)}%` }}
-          />
+        <span className="mt-0.5">
+          <Barra valor={valor} limite={limite} />
         </span>
       )}
     </div>
@@ -293,30 +346,28 @@ function PrimeirosPassos({ passos }: { passos: Passo[] }) {
   );
 }
 
+/** O que espera o operador; sem nada pendente, a saudação já diz isso e a seção some. A primeira é a ação principal. */
 function ParaAgora({ itens }: { itens: ProximoPasso[] }) {
+  if (itens.length === 0) return null;
   return (
-    <section className="mb-6" aria-labelledby="titulo-para-agora">
+    <section className="mb-8" aria-labelledby="titulo-para-agora">
       <h2 id="titulo-para-agora" className="text-[15px] font-semibold">
         Para agora
       </h2>
-      {itens.length === 0 ? (
-        <p className="mt-2 text-[13px] text-tinta-suave">Nada esperando por você. Os envios seguem sozinhos dentro dos limites de cada perfil.</p>
-      ) : (
-        <ul className="mt-3 grid gap-2 md:grid-cols-2">
-          {itens.map((item) => (
-            <li key={item.id} className="cartao flex items-center justify-between gap-3 px-4 py-3">
-              <p className="text-sm">
-                <span className="mr-1.5 text-lg font-medium tabular-nums">{item.quantidade}</span>
-                {item.texto}
-              </p>
-              <Link href={item.href} className="botao botao-pequeno shrink-0">
-                {item.acao}
-                <ArrowRight aria-hidden />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="mt-3 grid gap-2 md:grid-cols-2">
+        {itens.map((item, indice) => (
+          <li key={item.id} className="cartao flex items-center justify-between gap-3 px-4 py-3">
+            <p className="text-sm">
+              <span className="mr-1.5 text-lg font-medium tabular-nums">{item.quantidade}</span>
+              {item.texto}
+            </p>
+            <Link href={item.href} className={`botao botao-pequeno shrink-0 ${indice === 0 ? "botao-primario" : ""}`}>
+              {item.acao}
+              <ArrowRight aria-hidden />
+            </Link>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -334,12 +385,28 @@ export default async function InicioPage({ searchParams }: PageProps<"/">) {
   const detalhes = perfis.flatMap((perfil) => (perfil.detalhes ? [perfil.detalhes] : []));
   const somar = (campo: (d: (typeof detalhes)[number]) => number) => detalhes.reduce((total, d) => total + campo(d), 0);
   const ativos = perfis.filter((perfil) => perfil.status === "ativo").length;
+  const aneis: AnelDoAlvo[] = perfis.map((perfil) => ({
+    id: perfil.id,
+    nome: perfil.nome,
+    valor: perfil.detalhes?.convitesHoje ?? 0,
+    limite: perfil.status === "ativo" ? (perfil.detalhes?.limites?.convitesDia ?? 0) : 0,
+    rotulo:
+      perfil.status === "ativo" ? "ativo" : perfil.primeiraAtivacao ? "não ativado" : "pausado",
+  }));
 
   return (
     <>
-      <Cabecalho
-        titulo="Início"
-        descricao="O que precisa de você agora e a situação de cada perfil do LinkedIn."
+      <Saudacao
+        nome={operador.nome}
+        agora={agora}
+        frase={fraseDoDia(primeirosPassos, proximos)}
+        calmo={primeirosPassos.concluido && proximos.length === 0}
+        fichas={[
+          { icone: null, valor: `${ativos} de ${perfis.length}`, texto: "perfis ativos" },
+          { icone: Send, valor: `${somar((d) => d.convitesHoje)}`, texto: `convites e ${somar((d) => d.dmsHoje)} DMs hoje` },
+          { icone: Layers, valor: `${somar((d) => d.pendentes)}`, texto: `na fila, ${somar((d) => d.emRevisao)} em revisão` },
+        ]}
+        aneis={aneis}
       />
       <div className="max-w-6xl">
         {typeof msg === "string" && <Aviso className="mb-5">{msg}</Aviso>}
@@ -353,14 +420,7 @@ export default async function InicioPage({ searchParams }: PageProps<"/">) {
           Qualquer operador pode pausar um perfil; ativar e despausar ficam registrados com o seu nome.
         </p>
 
-        <dl className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <Resumo rotulo="Perfis ativos" valor={ativos} complemento={`de ${perfis.length}`} />
-          <Resumo rotulo="Convites hoje" valor={somar((d) => d.convitesHoje)} />
-          <Resumo rotulo="DMs hoje" valor={somar((d) => d.dmsHoje)} />
-          <Resumo rotulo="Na fila" valor={somar((d) => d.pendentes)} complemento={`${somar((d) => d.emRevisao)} em revisão`} />
-        </dl>
-
-        <ul className="mt-6 grid gap-4 xl:grid-cols-2">
+        <ul className="grid gap-4 xl:grid-cols-2">
           {perfis.map((perfil) => (
             <CartaoDoPerfil key={perfil.id} perfil={perfil} />
           ))}
