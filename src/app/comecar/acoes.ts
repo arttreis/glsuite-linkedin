@@ -6,8 +6,9 @@ import { after } from "next/server";
 import { confirmarAnalise } from "@/server/acesso/primeiro-acesso";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { obterLeitorDeSite } from "@/server/dependencias";
+import { obterGeradorDeSdr, obterLeitorDeSite } from "@/server/dependencias";
 import { concluirLeitura, iniciarLeitura, ofertaDaOrganizacao, salvarDossie, type ResultadoDaEdicao } from "@/server/oferta/oferta";
+import { garantirSdr } from "@/server/sdr/sdr";
 import { exigirOperador } from "@/server/supabase/servidor";
 
 const SEM_CHAVE = "A leitura do site precisa da chave da Anthropic. Peça ao admin para configurar.";
@@ -56,7 +57,10 @@ export async function salvarAnalise(entrada: { dossie: unknown }): Promise<Resul
   );
 }
 
-/** Passo 2: "Está certo". Confirma e segue para o SDR; com erro, devolve para a tela mostrar. */
+/**
+ * Passo 2: "Está certo". Confirma e segue para o SDR, que começa a ser montado
+ * da análise logo depois da resposta. Com erro, devolve para a tela mostrar.
+ */
 export async function confirmarAnaliseNoPrimeiroAcesso(entrada: { dossie: unknown }): Promise<ResultadoDaEdicao> {
   const operador = await exigirOperador();
   const resultado = await comOperador(obterDb(), operador.id, (tx) =>
@@ -68,6 +72,13 @@ export async function confirmarAnaliseNoPrimeiroAcesso(entrada: { dossie: unknow
     }),
   );
   if (!resultado.ok) return resultado;
+  const gerador = obterGeradorDeSdr();
+  after(() =>
+    garantirSdr(
+      { db: obterDb(), gerador },
+      { organizacaoId: operador.organizacaoId, nome: operador.nome, operadorId: operador.id, agora: new Date() },
+    ),
+  );
   revalidatePath("/comecar", "layout");
   redirect("/comecar/sdr");
 }

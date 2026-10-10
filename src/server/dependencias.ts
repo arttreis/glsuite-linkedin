@@ -11,6 +11,8 @@ import type { AvaliadorDeAderencia } from "@/server/nota/avaliador";
 import { criarEscritorClaude, criarSugeridorClaude } from "@/server/publicos/claude";
 import type { EscritorDeFluxo } from "@/server/publicos/escritor";
 import type { SugeridorDePublicos } from "@/server/publicos/sugeridor";
+import { criarGeradorDeSdrClaude } from "@/server/sdr/claude";
+import type { GeradorDeSdr } from "@/server/sdr/sdr";
 import { criarEnviadorResend } from "@/server/alertas/resend";
 import { criarClienteRd, type ClienteRd } from "@/server/rd/cliente";
 import { criarClienteUnipile, type ClienteUnipile } from "@/server/unipile/cliente";
@@ -144,6 +146,19 @@ export function obterEscritorDeFluxo(): EscritorDeFluxo | null {
       : null;
   }
   return escritorDeFluxo;
+}
+
+let geradorDeSdr: GeradorDeSdr | null | undefined;
+
+/** Gera o SDR a partir da análise (§4.3), ou null sem ANTHROPIC_API_KEY. */
+export function obterGeradorDeSdr(): GeradorDeSdr | null {
+  if (geradorDeSdr === undefined) {
+    const env = envIa();
+    geradorDeSdr = env.ANTHROPIC_API_KEY
+      ? criarGeradorDeSdrClaude({ apiKey: env.ANTHROPIC_API_KEY, modelo: env.IA_MODELO_RASCUNHO, esforco: env.IA_ESFORCO_RASCUNHO })
+      : null;
+  }
+  return geradorDeSdr;
 }
 
 const envRd = lerEnv(z.object({ RD_STATION_TOKEN: z.string().min(1).optional() }));

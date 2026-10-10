@@ -1237,3 +1237,39 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
 - Local: `vercel env pull` traz a chave da Anthropic vazia, e o validador do
   ambiente recusa string vazia; para ver as telas que leem o site, rode com
   uma chave qualquer (nada é chamado sem clicar em Analisar).
+
+### SDR-42 · O SDR da organização
+
+- `sdrs` (um por organização, com a versão atual) e `sdr_versoes` (cada
+  versão, com origem `ia`, `humano`, `ajuste` ou `desfazer`, e o pedido e o
+  resumo quando é ajuste). Versão nova = `on conflict` que soma 1, na mesma
+  transação do histórico. RLS pela organização; versões pela organização do
+  SDR.
+- Esquema do SDR no domínio (`domain/sdr.ts`): objetivo, voz, abertura,
+  qualificação, objeções, regras, quando chamar você e link de agenda (só
+  https). A IA usa `sdrDaIa`, sem o link: quem preenche o link é a pessoa.
+  Gerar de novo mantém o link que já estava.
+- O SDR nasce logo depois de confirmar a análise no primeiro acesso (`after`
+  na ação), em nome do operador. `garantirSdr` não gera de novo quem já tem.
+- **O agente nunca gera SDR sozinho.** Sem SDR, o prompt fica exatamente como
+  antes: voz e regras do perfil e o texto de oferta da configuração. Era o
+  combinado no épico ("na primeira vez que o agente roda"), mas isso mudaria a
+  voz das conversas do Juliano, que está ativo, sem ninguém ver o SDR. O
+  épico foi ajustado: o SDR de organização antiga nasce quando alguém abre o
+  SDR (Configurações, SDR-51).
+- Com SDR, o prompt de sistema é: a análise confirmada (`resumoDaOferta`), o
+  SDR (`textoDoSdr`), a missão (o objetivo do SDR) e as regras da casa por
+  último, marcadas como acima do SDR. As regras do perfil saem; as da praça
+  (Canadá) ficam até o SDR-53. O link de agenda vem do SDR, depois o do
+  responsável, depois o do perfil. Prompts em `2026-10-10.1`.
+- As instruções da campanha (`campanhas.instrucoes_sdr`, até 1.000
+  caracteres) vão na mensagem do usuário, para o prompt de sistema seguir
+  igual em todas as campanhas e cair no cache.
+- `rascunhos.sdr_versao` grava a versão que escreveu.
+- O responsável pela discovery (`responsavel_discovery`) passa a ser buscado
+  só na organização do lead: antes, o slug achava o perfil de qualquer
+  organização.
+- Testes: cada teste clona um Postgres em WASM, e os clones só eram soltos
+  pelo coletor de lixo; com os testes novos do agente, a máquina de 8 GB
+  estourou. Os clones agora fecham no fim de cada teste
+  (`tests/support/setup.ts`).

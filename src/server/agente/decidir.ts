@@ -1,5 +1,6 @@
 import { contextoDeValidacao } from "@/domain/campanha";
 import { detectarOptout } from "@/domain/optout";
+import type { Sdr } from "@/domain/sdr";
 import { validarMensagem, type Praca, type ResultadoDaValidacao } from "@/domain/validador";
 import type { Configuracao } from "@/server/configuracoes";
 import type { Classificacao, Decisao, ModeloDeLinguagem, Uso } from "./modelo";
@@ -27,6 +28,10 @@ export type EntradaDoAgente = {
   linkDeAgenda: string | null;
   responsavelDiscovery: string;
   oferta: string;
+  /** O SDR da organização (§4.3), na versão atual. Sem ele, valem a voz e as regras do perfil. */
+  sdr?: { versao: number; sdr: Sdr } | null;
+  /** Instruções do SDR que valem só na campanha do lead (§4.11). */
+  instrucoesDaCampanha?: string | null;
   lead: LeadDoAgente;
   mensagens: MensagemDoHistorico[];
 };
@@ -113,8 +118,15 @@ export async function decidirResposta(p: {
       linkDeAgenda: ctx.linkDeAgenda,
       responsavelDiscovery: ctx.responsavelDiscovery,
       oferta: ctx.oferta,
+      sdr: ctx.sdr?.sdr ?? null,
     }),
-    entrada: entradaDoRascunho({ lead: ctx.lead, mensagens: ctx.mensagens, nomeDoPerfil: ctx.perfil.nome, classificacao }),
+    entrada: entradaDoRascunho({
+      lead: ctx.lead,
+      mensagens: ctx.mensagens,
+      nomeDoPerfil: ctx.perfil.nome,
+      classificacao,
+      instrucoesDaCampanha: ctx.instrucoesDaCampanha ?? null,
+    }),
   });
   const decisao = rascunhada.saida;
   consumo.modelos.rascunho = rascunhada.modelo;

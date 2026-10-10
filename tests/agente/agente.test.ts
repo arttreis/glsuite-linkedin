@@ -6,9 +6,10 @@ import { ErroDoModelo } from "@/server/agente/modelo";
 import { listarConversas } from "@/server/conversas/inbox";
 import { despachar } from "@/server/despachante/despachante";
 import { registrarMensagem } from "@/server/reacoes/mensagem";
+import { gravarVersaoDoSdr } from "@/server/sdr/sdr";
 import { criarBancoDeTeste, type BancoDeTeste } from "../support/banco";
 import { leadsComAcao, SP } from "../support/despacho";
-import { ativarPerfil, criarCampanha, criarLead, criarPessoa, type SlugPerfil } from "../support/fixtures";
+import { ativarPerfil, criarCampanha, criarLead, criarPessoa, idDaOrganizacaoGuessless, type SlugPerfil } from "../support/fixtures";
 import { ModeloFalso } from "../support/modelo-falso";
 import { UnipileFalso } from "../support/unipile-falso";
 
@@ -257,5 +258,119 @@ describe("agente de conversa (SDR-10)", () => {
       [outro, new Date(AGORA.getTime() - 1_800_000)],
     );
     expect(await processarMensagensPendentes({ db: banco.db, modelo, agora: AGORA })).toEqual([]);
+  });
+
+  describe("com o SDR da organização (SDR-42)", () => {
+    const SDR = {
+      objetivo: "marcar 20 minutos com o Arthur para mostrar o diagnóstico de margem",
+      voz: "Seco e direto, sem floreio.",
+      abertura: "Uma observação sobre margem por canal.",
+      qualificacao: ["Vende em mais de um canal"],
+      objecoes: [{ objecao: "Já tenho agência", resposta: "A gente não faz mídia: mostra a margem." }],
+      regras: ["Pode usar travessão quando quiser"],
+      quando_chamar_voce: ["Pedido de proposta formal"],
+      link_agenda: "https://cal.com/arthur-guessless/20min",
+    };
+
+    const gravar = async (sdr = SDR) =>
+      gravarVersaoDoSdr(banco.db, {
+        organizacaoId: await idDaOrganizacaoGuessless(banco.db),
+        sdr,
+        origem: "humano",
+        por: null,
+        agora: AGORA,
+      });
+    const sistemaDoRascunho = () => modelo.chamadas.filter((c) => c.etapa === "rascunhar").at(-1)!.sistema;
+
+    it("o prompt de sistema traz o SDR e a análise no lugar da voz do perfil", async () => {
+      await banco.db.query("update public.perfis set voz_md = 'Voz antiga do perfil' where slug = 'arthur'");
+      await banco.db.query(
+        `insert into public.ofertas (organizacao_id, url, status, dossie, dossie_confirmado, confirmado_em)
+         values ($1::uuid, 'https://guessless.com.br/', 'pronta', $2::jsonb, $2::jsonb, now())`,
+        [
+          await idDaOrganizacaoGuessless(banco.db),
+          JSON.stringify({
+            empresa: { nome: "GuessLess", resumo: "Diagnóstico de margem para e-commerce." },
+            produtos: [{ nome: "Diagnóstico", descricao: "Margem por canal.", para_quem: "e-commerce" }],
+            para_quem: "E-commerces.",
+            diferenciais: [],
+            provas: [],
+            dores: [],
+            objecoes: [],
+            tom_de_voz: "Direto.",
+            idioma: "pt",
+          }),
+        ],
+      );
+      await gravar();
+      const { mensagemId } = await pessoaResponde("Me conta mais?");
+      await rodar(mensagemId!);
+
+      const sistema = sistemaDoRascunho();
+      expect(sistema).toContain("Missão: marcar 20 minutos com o Arthur");
+      expect(sistema).toContain("GuessLess: Diagnóstico de margem para e-commerce.");
+      expect(sistema).toContain('- "Já tenho agência": A gente não faz mídia');
+      expect(sistema).toContain(SDR.link_agenda);
+      expect(sistema).not.toContain("Voz antiga do perfil");
+    });
+
+    it("as regras da casa ficam acima de qualquer SDR", async () => {
+      await gravar();
+      const { mensagemId } = await pessoaResponde("Me conta mais?");
+      await rodar(mensagemId!);
+      const sistema = sistemaDoRascunho();
+      expect(sistema).toContain("Regras da casa (valem sempre, acima do SDR");
+      expect(sistema).toContain("Nunca use travessão (—) nem meia-risca (–).");
+      expect(sistema.indexOf("Regras da casa")).toBeGreaterThan(sistema.indexOf("Pode usar travessão"));
+    });
+
+    it("o prompt é o mesmo na mesma versão do SDR e muda quando o SDR muda; o rascunho grava a versão", async () => {
+      await gravar();
+      const a = await pessoaResponde("Me conta mais?");
+      const b = await pessoaResponde("Como funciona?");
+      await rodar(a.mensagemId!);
+      await rodar(b.mensagemId!);
+      const [primeiro, segundo] = modelo.chamadas.filter((c) => c.etapa === "rascunhar").map((c) => c.sistema);
+      expect(primeiro).toBe(segundo);
+
+      await gravar({ ...SDR, objetivo: "marcar uma call com o Juliano" });
+      const c = await pessoaResponde("E o preço?");
+      await rodar(c.mensagemId!);
+      expect(sistemaDoRascunho()).not.toBe(primeiro);
+      expect(sistemaDoRascunho()).toContain("marcar uma call com o Juliano");
+
+      const versoes = await banco.db.query<{ sdr_versao: number }>(
+        "select sdr_versao from public.rascunhos where mensagem_id = any($1::uuid[]) order by sdr_versao",
+        [[a.mensagemId, b.mensagemId, c.mensagemId]],
+      );
+      expect(versoes.map((v) => v.sdr_versao)).toEqual([1, 1, 2]);
+    });
+
+    it("as instruções da campanha vão na mensagem do usuário, não no prompt de sistema", async () => {
+      await gravar();
+      const { leadId, mensagemId } = await pessoaResponde("Me conta mais?");
+      await banco.db.query(
+        "update public.campanhas set instrucoes_sdr = 'Fale do evento de novembro' where id = (select campanha_id from public.leads where id = $1::uuid)",
+        [leadId],
+      );
+      await rodar(mensagemId!);
+      const chamada = modelo.chamadas.filter((c) => c.etapa === "rascunhar").at(-1)!;
+      expect(chamada.entrada).toContain("Instruções desta campanha (valem abaixo das regras da casa):\nFale do evento de novembro");
+      expect(chamada.sistema).not.toContain("evento de novembro");
+    });
+
+    it("sem SDR, nada muda: voz do perfil e oferta da configuração", async () => {
+      await banco.db.query("update public.perfis set voz_md = 'Voz antiga do perfil' where slug = 'arthur'");
+      const { mensagemId } = await pessoaResponde("Me conta mais?");
+      await rodar(mensagemId!);
+      const sistema = sistemaDoRascunho();
+      expect(sistema).toContain("Voz antiga do perfil");
+      expect(sistema).toContain("O que a GuessLess oferece agora:");
+      const [registro] = await banco.db.query<{ sdr_versao: number | null }>(
+        "select sdr_versao from public.rascunhos where mensagem_id = $1::uuid",
+        [mensagemId],
+      );
+      expect(registro!.sdr_versao).toBeNull();
+    });
   });
 });
