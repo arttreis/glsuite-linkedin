@@ -2,6 +2,7 @@ import { Check, RotateCcw, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { Aviso } from "@/components/aviso";
 import { Avatar } from "@/components/avatar";
+import { AbasDeConversas } from "@/components/abas-de-conversas";
 import { Cabecalho } from "@/components/cabecalho";
 import { ROTULO_DO_ESTADO, type EstadoDoLead } from "@/domain/estados";
 import { rotuloDoToque } from "@/domain/rotulos";
@@ -167,6 +168,7 @@ export default async function AprovacaoPage({ searchParams }: PageProps<"/aprova
         descricao="Mensagens que o sistema escreveu e esperam o seu ok antes de sair: respostas da IA para quem respondeu, convites personalizados e mensagens barradas por uma regra de texto. Nada daqui sai sem você aprovar."
       />
       <div className="max-w-4xl">
+        <AbasDeConversas atual="/aprovacao" />
         {typeof msg === "string" && <Aviso className="mb-6">{msg}</Aviso>}
 
         {parados.length > 0 && (

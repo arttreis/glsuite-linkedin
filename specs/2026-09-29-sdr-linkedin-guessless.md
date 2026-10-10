@@ -1075,3 +1075,26 @@ migrations das duas linhas já estão no banco (conferido em 09/10).
   `salvarFluxo` cria uma versão nova, que vale para os próximos leads (§4.1).
 - Sem migration. Custo, tentativas, problemas, estilo e versão do prompt
   (`fluxo-1`) vão no evento `fluxo_gerado`.
+
+### SDR-30 · Jornada no lugar dos primeiros passos
+
+- Os passos da §4.10 (`dossie`, `publico`, `conta`, `leads`, `ativar`)
+  substituem os seis do SDR-19. "Campanha pronta" não mudou (campanha ativa,
+  perfil ativo, um lead aprovado), e `operadores.primeira_campanha_em`
+  continua valendo: quem já tinha campanha pronta não volta para a jornada.
+- Cada passo conta só a organização e os perfis do operador (RLS e
+  `pode_ver_perfil`). "Conta" pede campanha de público num perfil ativo e
+  conectado; "leads", um lead aprovado em campanha de público; "ativar",
+  campanha de público ativa.
+- Os links dos passos 3 a 5 vão para o primeiro público escolhido (aba Leads)
+  e para o editor da primeira campanha de público.
+- Menu em três grupos: Jornada (Início, Oferta, Públicos), Operação
+  (Conversas, Resultados) e Gestão (Configurações). Campanhas, Triagem e
+  Importar saíram do menu e acendem Públicos quando abertas; as telas
+  continuam no ar, porque a página do público leva a elas. A lista de
+  campanhas criadas à mão tem um link no fim da tela Públicos.
+- Conversas é a inbox, a aprovação e as tarefas manuais com abas em comum
+  (`AbasDeConversas`), sem juntar as telas: cada uma continua com a sua rota.
+- Resultados é a tela de métricas com a visão por público em primeiro lugar
+  (`calcularFunil` ganhou `porPublico`; campanha criada à mão fica fora dela).
+- Sem migration.

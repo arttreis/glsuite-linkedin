@@ -251,8 +251,8 @@ function PrimeirosPassos({ passos }: { passos: Passo[] }) {
         </span>
       </div>
       <p className="mt-1 text-[13px] text-tinta-suave">
-        Inbox, Aprovação, Tarefas e Métricas liberam quando a sua primeira campanha estiver rodando: campanha ativa, perfil
-        ativo e pelo menos uma pessoa aprovada na triagem.
+        Do site à primeira abordagem. Conversas e Resultados liberam quando ela estiver rodando: campanha ativa, conta ativa
+        e pelo menos uma pessoa aprovada.
       </p>
       <ol className="mt-4 flex flex-col gap-1">
         {passos.map((passo, indice) => {
