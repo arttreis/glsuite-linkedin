@@ -68,8 +68,16 @@ export async function salvarCampanha(
   }
   const campanha = dados.data;
 
-  const [angulo] = await db.query("select 1 from public.angulos where nome = $1 and ativo", [campanha.angulo]);
-  if (!angulo) return { ok: false, erros: [`Ângulo fora da lista fechada: ${campanha.angulo}`], problemas: [] };
+  // Campanha que nasceu de um público fica com o ângulo dele (§4.9); a criada à
+  // mão escolhe da lista das campanhas antigas.
+  const [doPublico] = campanha.id
+    ? await db.query<{ angulo: string }>("select angulo from public.campanhas where id = $1::uuid and publico_id is not null", [campanha.id])
+    : [];
+  const angulo = doPublico?.angulo ?? campanha.angulo;
+  if (!doPublico) {
+    const [daLista] = await db.query("select 1 from public.angulos where nome = $1 and ativo", [angulo]);
+    if (!daLista) return { ok: false, erros: [`Ângulo fora da lista fechada: ${angulo}`], problemas: [] };
+  }
 
   const perfil = await contextoDoPerfil(db, campanha.perfilId);
   const exemplo = await lerConfiguracao(db, "template_exemplo");
@@ -79,7 +87,7 @@ export async function salvarCampanha(
     return { ok: false, erros: ["A copy tem problemas: corrija antes de salvar."], problemas };
   }
 
-  const valores = [campanha.nome, campanha.angulo, campanha.nicho, campanha.modoCopy, campanha.maxLeads];
+  const valores = [campanha.nome, angulo, campanha.nicho, campanha.modoCopy, campanha.maxLeads];
 
   return db.transacao(async (tx) => {
     let campanhaId: string;
@@ -111,7 +119,7 @@ export async function salvarCampanha(
       entidade: "campanha",
       entidadeId: campanhaId,
       perfilId: campanha.perfilId,
-      payload: { nome: campanha.nome, angulo: campanha.angulo },
+      payload: { nome: campanha.nome, angulo },
       ator: p.operadorId,
       em: p.agora,
     });

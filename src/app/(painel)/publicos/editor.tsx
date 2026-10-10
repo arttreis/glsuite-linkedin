@@ -42,7 +42,7 @@ export function EditorDoPublico({
         return;
       }
       const msg = status === "novo" ? "Público criado e escolhido." : ativar ? "Público salvo e escolhido." : "Público salvo.";
-      router.push(`/publicos?msg=${encodeURIComponent(msg)}`);
+      router.push(`/publicos/${resultado.id}?msg=${encodeURIComponent(msg)}`);
     });
 
   const alternarProva = (texto: string, marcada: boolean) =>
@@ -213,7 +213,7 @@ export function EditorDoPublico({
               {status === "novo" ? "Criar público" : "Salvar"}
             </button>
           )}
-          <Link href="/publicos" className="botao">
+          <Link href={id ? `/publicos/${id}` : "/publicos"} className="botao">
             Cancelar
           </Link>
         </div>

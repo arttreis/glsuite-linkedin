@@ -4,8 +4,9 @@ import { comOperador } from "@/server/db/operador";
 import { exigirOperador } from "@/server/supabase/servidor";
 import { FormularioImportacao, type OpcaoDeCampanha } from "./formulario";
 
-export default async function ImportarPage() {
+export default async function ImportarPage({ searchParams }: PageProps<"/importar">) {
   const operador = await exigirOperador();
+  const { campanha } = await searchParams;
   const campanhas = await comOperador(obterDb(), operador.id, (tx) =>
     tx.query<OpcaoDeCampanha>(`
       select c.id, c.nome, p.nome as perfil
@@ -21,7 +22,7 @@ export default async function ImportarPage() {
         descricao="A lista entra na triagem da campanha. Quem tem opt-out não entra; quem é de outro perfil aparece bloqueado com o motivo."
       />
       <div className="max-w-3xl">
-        <FormularioImportacao campanhas={campanhas} />
+        <FormularioImportacao campanhas={campanhas} inicial={typeof campanha === "string" ? campanha : undefined} />
       </div>
     </>
   );

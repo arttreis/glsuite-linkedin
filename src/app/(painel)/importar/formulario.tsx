@@ -47,8 +47,10 @@ function Resultado({ resposta, campanhaId }: { resposta: RespostaDaImportacao; c
   );
 }
 
-export function FormularioImportacao({ campanhas }: { campanhas: OpcaoDeCampanha[] }) {
-  const [campanhaId, setCampanhaId] = useState(campanhas[0]?.id ?? "");
+export function FormularioImportacao({ campanhas, inicial }: { campanhas: OpcaoDeCampanha[]; inicial?: string }) {
+  const [campanhaId, setCampanhaId] = useState(
+    campanhas.some((c) => c.id === inicial) ? inicial! : (campanhas[0]?.id ?? ""),
+  );
   const [previa, setPrevia] = useState<Previa | null>(null);
   const [erroArquivo, setErroArquivo] = useState<string | null>(null);
   const [resposta, setResposta] = useState<RespostaDaImportacao | null>(null);

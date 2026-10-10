@@ -19,6 +19,8 @@ type Campanha = {
   modo_copy: "template" | "personalizada";
   max_leads: number | null;
   status: "rascunho" | "ativa" | "pausada" | "encerrada";
+  publico_id: string | null;
+  publico_nome: string | null;
 };
 
 const PROXIMOS_STATUS: Record<Campanha["status"], { status: string; rotulo: string; estilo: string }[]> = {
@@ -40,8 +42,10 @@ export default async function CampanhaPage({ params, searchParams }: PageProps<"
   const { salva, msg } = await searchParams;
   const { campanha, fluxo } = await comOperador(obterDb(), operador.id, async (tx) => {
     const [campanha] = await tx.query<Campanha>(
-      `select id, perfil_id, nome, angulo, nicho, modo_copy, max_leads, status
-         from public.campanhas where id = $1::uuid`,
+      `select c.id, c.perfil_id, c.nome, c.angulo, c.nicho, c.modo_copy, c.max_leads, c.status,
+              c.publico_id, pu.nome as publico_nome
+         from public.campanhas c left join public.publicos pu on pu.id = c.publico_id
+        where c.id = $1::uuid`,
       [id],
     );
     return { campanha, fluxo: campanha ? await fluxoDaCampanha(tx, id) : null };
@@ -56,7 +60,11 @@ export default async function CampanhaPage({ params, searchParams }: PageProps<"
       <Cabecalho
         titulo={campanha.nome}
         descricao="Edite os dados e o fluxo da campanha. Cada bloco Fim decide o que acontece com quem não responde."
-        voltar={{ href: "/campanhas", rotulo: "Campanhas" }}
+        voltar={
+          campanha.publico_id
+            ? { href: `/publicos/${campanha.publico_id}?aba=abordagem`, rotulo: campanha.publico_nome ?? "Público" }
+            : { href: "/campanhas", rotulo: "Campanhas" }
+        }
       >
         <EtiquetaDaCampanha status={campanha.status} />
         {PROXIMOS_STATUS[campanha.status].map((proximo) => (
@@ -93,6 +101,7 @@ export default async function CampanhaPage({ params, searchParams }: PageProps<"
             modoCopy: campanha.modo_copy,
             maxLeads: campanha.max_leads,
             fluxo,
+            publico: campanha.publico_id ? { id: campanha.publico_id, nome: campanha.publico_nome ?? "" } : null,
           }}
         />
       </div>

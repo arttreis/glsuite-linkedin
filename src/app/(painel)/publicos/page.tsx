@@ -1,6 +1,5 @@
-import { Archive, Check, Pencil, Plus, RotateCcw } from "lucide-react";
+import { Archive, Check, Pencil, Plus, RotateCcw, Send } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { Aviso } from "@/components/aviso";
 import { Cabecalho } from "@/components/cabecalho";
 import { NOME_DA_PRACA } from "@/domain/publico";
@@ -10,41 +9,26 @@ import { obterSugeridorDePublicos } from "@/server/dependencias";
 import { dossieConfirmado } from "@/server/oferta/oferta";
 import { listarPublicos, type PublicoSalvo } from "@/server/publicos/publicos";
 import { exigirOperador } from "@/server/supabase/servidor";
-import { mudarStatusDoPublicoDoPainel } from "./acoes";
 import { BotaoSugerir } from "./botao-sugerir";
+import { BotaoDeStatus, ResumoDoPublico } from "./resumo";
 
 // A sugestão chama a IA dentro da ação e leva até 1 minuto.
 export const maxDuration = 120;
 
-function Linha({ rotulo, children }: { rotulo: string; children: ReactNode }) {
-  return (
-    <div className="grid gap-0.5 sm:grid-cols-[9rem_1fr] sm:gap-3">
-      <dt className="text-tinta-fraca">{rotulo}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}
-
-function BotaoDeStatus({ id, acao, rotulo, icone, principal }: { id: string; acao: string; rotulo: string; icone: ReactNode; principal?: boolean }) {
-  return (
-    <form action={mudarStatusDoPublicoDoPainel}>
-      <input type="hidden" name="id" value={id} />
-      <input type="hidden" name="acao" value={acao} />
-      <button type="submit" className={`botao botao-pequeno ${principal ? "botao-primario" : ""}`}>
-        {icone}
-        {rotulo}
-      </button>
-    </form>
-  );
-}
-
 function CartaoDoPublico({ p }: { p: PublicoSalvo }) {
-  const { por_que: porQue, empresa } = p;
   return (
     <li className="cartao p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-medium">{p.nome}</h3>
+          <h3 className="font-medium">
+            {p.status === "arquivado" ? (
+              p.nome
+            ) : (
+              <Link href={`/publicos/${p.id}`} className="hover:underline">
+                {p.nome}
+              </Link>
+            )}
+          </h3>
           <p className="mt-0.5 text-xs text-tinta-fraca">
             {NOME_DA_PRACA[p.praca]} · {p.origem === "ia" ? "sugerido pela IA" : "criado por alguém do time"}
           </p>
@@ -53,7 +37,7 @@ function CartaoDoPublico({ p }: { p: PublicoSalvo }) {
           {p.status === "sugerido" && (
             <>
               <BotaoDeStatus id={p.id} acao="escolher" rotulo="Escolher" icone={<Check aria-hidden />} principal />
-              <Link href={`/publicos/${p.id}`} className="botao botao-pequeno">
+              <Link href={`/publicos/${p.id}/editar`} className="botao botao-pequeno">
                 <Pencil aria-hidden />
                 Editar antes
               </Link>
@@ -62,7 +46,11 @@ function CartaoDoPublico({ p }: { p: PublicoSalvo }) {
           )}
           {p.status === "ativo" && (
             <>
-              <Link href={`/publicos/${p.id}`} className="botao botao-pequeno">
+              <Link href={`/publicos/${p.id}`} className="botao botao-pequeno botao-primario">
+                <Send aria-hidden />
+                Abordar
+              </Link>
+              <Link href={`/publicos/${p.id}/editar`} className="botao botao-pequeno">
                 <Pencil aria-hidden />
                 Editar
               </Link>
@@ -79,23 +67,9 @@ function CartaoDoPublico({ p }: { p: PublicoSalvo }) {
         </Aviso>
       )}
 
-      <dl className="mt-4 grid gap-2 text-sm">
-        <Linha rotulo="Quem">
-          {p.quem.cargos.join(", ")}
-          {p.quem.senioridade && <span className="text-tinta-suave"> · {p.quem.senioridade}</span>}
-        </Linha>
-        <Linha rotulo="Empresa">
-          {[empresa.setores.join(", "), empresa.porte, empresa.regiao].filter(Boolean).join(" · ")}
-        </Linha>
-        <Linha rotulo="Por que precisa">
-          {porQue.dor}
-          {porQue.gatilho && <span className="text-tinta-suave"> Hora certa: {porQue.gatilho}</span>}
-          <span className="text-tinta-suave"> Resultado: {porQue.resultado}</span>
-        </Linha>
-        <Linha rotulo="Ângulo">{p.angulo}</Linha>
-        <Linha rotulo="Provas">{p.provas.length > 0 ? p.provas.join(" · ") : <span className="text-tinta-fraca">nenhuma</span>}</Linha>
-        {p.quem_nao_e && <Linha rotulo="Quem não é">{p.quem_nao_e}</Linha>}
-      </dl>
+      <div className="mt-4">
+        <ResumoDoPublico p={p} />
+      </div>
     </li>
   );
 }

@@ -931,3 +931,39 @@ migrations das duas linhas já estão no banco (conferido em 09/10).
 - Migration `20261010150000_publicos`, com o grant ao `sdr_servidor`. Vai ao
   banco do GL Suite por SQL antes do deploy (conferido em 09/10: não existe
   `public.publicos` lá).
+- Aplicada em 09/10 pelo conector do Supabase, que recusa comando destrutivo
+  sem confirmação: o `revoke all ... from anon` ficou de fora. O `anon` não lê
+  nenhuma linha (RLS sem policy para ele), mas o `revoke` ainda precisa rodar.
+
+### SDR-26 · Campanha nasce do público
+
+- `campanhas.publico_id`, com índice único em (público, conta): uma campanha
+  por par. "Começar a abordar" com uma conta que já tem campanha devolve a
+  existente.
+- Só aparecem as contas da praça do público que o operador opera
+  (`pode_ver_perfil`). Conta pausada ou sem LinkedIn aparece com o aviso: dá
+  para criar a campanha, mas ela não envia.
+- A campanha herda o nome do público (com " (2)" se a conta já tem uma com o
+  mesmo nome), o nicho (= nome do público) e o ângulo (texto do público). Nasce
+  em rascunho com o fluxo padrão de 4 toques e os textos vazios: até o SDR-29
+  gerar o fluxo, alguém escreve as mensagens no editor da campanha para poder
+  ativar.
+- O ângulo virou texto livre no banco: saíram as chaves estrangeiras de
+  `campanhas.angulo` e `leads.angulo` para `angulos`. A tabela `angulos` fica
+  como a lista das campanhas criadas à mão, que continuam validando contra
+  ela. Campanha de público guarda o ângulo do público mesmo quando é salva no
+  editor de campanha, onde ele aparece só para leitura.
+- Página do público com as abas Quem · Leads · Abordagem · Resultados
+  (`?aba=`). Sugestão só mostra Quem. O editor do público foi para
+  `/publicos/[id]/editar`.
+- Leads, por conta: contagem (para triar, na régua, em conversa), "Triar"
+  abre a triagem filtrada pela campanha e "Importar lista" abre a importação
+  com a campanha escolhida. A triagem continua na tela dela: a aba Leads vira
+  a lista com nota no SDR-28, junto com a busca do SDR-27.
+- Abordagem: status da campanha, o ângulo, o caminho para o editor do fluxo e
+  quantos convites personalizados esperam aprovação.
+- Resultados: `calcularFunil` ganhou o filtro `publicoId`; a aba mostra o
+  funil por conta. A visão por público em Métricas fica para o SDR-30.
+- Migration `20261010160000_campanha_do_publico`: coluna e índice novos, e o
+  `drop constraint` das duas chaves do ângulo. Vai ao banco por SQL antes do
+  deploy.
