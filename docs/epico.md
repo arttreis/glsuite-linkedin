@@ -175,12 +175,20 @@ confirmada e guardada em versões. Ele tem:
   ignora ela. A busca da prévia roda pelo servidor em nome da organização que
   está no primeiro acesso, não como operador da GuessLess.
 - A prévia traz até `previa.max_pessoas` pessoas por organização (padrão 25,
-  somando todas as buscas do primeiro acesso), e conta no teto de busca da
-  conta da casa (§4.13). Sem saldo, ou com a conta da casa fora do ar, a tela
-  mostra o perfil do lead sem nomes e avisa que a lista vem quando a pessoa
-  vincular o LinkedIn. Nunca trava o primeiro acesso.
-- Todo resultado passa pelas regras de importação: opt-out nunca entra, um
-  alvo um dono, cooldown de empresa, URL, fonte e data da coleta.
+  somando todas as buscas do primeiro acesso), e conta no teto de busca do dia
+  da conta da casa (§4.13). Ao contrário das buscas das contas que prospectam,
+  a da prévia roda a qualquer hora: quem chega à noite também vê os nomes.
+  Sem saldo, ou com a conta da casa fora do ar, a tela mostra o perfil do lead
+  sem nomes e avisa que a lista vem quando a pessoa vincular o LinkedIn. Nunca
+  trava o primeiro acesso.
+- A busca usa os cargos do público e a região dele, que o Kakou acha no
+  LinkedIn pelo texto do público (sem achar, Brasil). Setor e porte ficam para
+  a nota.
+- A prévia fica guardada à parte (uma por organização) e não vira lead: só
+  quando a organização vincula o LinkedIn, as pessoas marcadas entram na
+  campanha pela conta dela, e aí passam pelas regras de importação (um alvo um
+  dono, cooldown de empresa, URL, fonte e data da coleta). Opt-out já fica de
+  fora na prévia.
 - Cada pessoa ganha a nota de aderência de 0 a 100, com o motivo numa linha,
   feita só com o que a busca devolve. A lista vem ordenada pela nota; quem
   está na nota de corte ou acima (`busca.nota_de_corte`, padrão 70) já vem
@@ -393,10 +401,14 @@ sdrs (                                             -- §4.3, um por organizaçã
 sdr_versoes (id, sdr_id, versao, sdr jsonb, pedido, resumo, em, por)   -- ajustes e desfazer
 sdr_testes (id, organizacao_id, segmento, mensagens jsonb, sdr_versao, atualizado_em)
 perfis        + casa boolean                        -- §4.4: só busca, o despachante ignora
+previas (                                          -- §4.4, uma por organização
+  id, organizacao_id unique, publico_id, status,   -- 'buscando' | 'pronta' | 'sem_nomes'
+  pessoas jsonb,                                   -- quem a busca trouxe, com nota e marcação
+  buscadas, motivo, regiao, iniciada_em, confirmada_em
+)
               modo_resposta: 'automatico' | 'aprovacao' (sai 'manual')
 campanhas     + permitida_em, permitida_por         -- §4.5
               + instrucoes_sdr                      -- §4.11
-              perfil_id pode ser nulo enquanto a campanha é rascunho do primeiro acesso
 rascunhos     + sdr_versao                          -- que versão do SDR escreveu
 ```
 
@@ -536,14 +548,14 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
 - `perfis.casa`, marcado na conta do Arthur pela migration (D1); a conta da
   casa sai de qualquer campanha e não aparece para escolher conta. O
   despachante, a pesquisa e qualquer envio ignoram ela.
-- Prévia: busca montada do público pela conta da casa, até
-  `previa.max_pessoas` por organização, no teto de busca dela; regras de
-  importação; nota de aderência; marcados os que estão na nota de corte.
+- Prévia: busca montada do público pela conta da casa, a qualquer hora, até
+  `previa.max_pessoas` por organização, no teto de busca do dia dela; opt-out
+  de fora; nota de aderência; marcados os que estão na nota de corte.
 - Sem saldo ou sem conta da casa: perfil do lead sem nomes, com o aviso.
-- A campanha nasce em rascunho, sem perfil, com os leads em `triagem`.
+- A prévia fica em `previas`, à parte; vira lead no SDR-46.
 - Aceite: a conta da casa nunca aparece como remetente de nada; o teto da
-  prévia é por organização somando as buscas; opt-out e um alvo um dono valem
-  na prévia; queda da conta da casa não trava o passo.
+  prévia é por organização somando as buscas; opt-out não aparece na prévia;
+  queda da conta da casa não trava o passo.
 
 **SDR-45 · Abordagem recomendada e permissão**
 - Passo 5 do primeiro acesso, sobre o fluxo gerado que já existe, agora na voz
@@ -558,8 +570,10 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
 - Passo 6 do primeiro acesso, sobre a conexão pela Unipile que já existe.
 - A conta vira perfil da organização, operado por quem vinculou, com a rampa
   padrão e `modo_resposta = automatico`.
-- Com a permissão dada: perfil ativo, a campanha ganha o perfil e ativa, os
-  marcados vão para `na_fila`, e grava `primeiro_acesso_em`.
+- Com a permissão dada: perfil ativo, a campanha ganha o perfil e ativa, as
+  pessoas marcadas na prévia entram pelas regras de importação e vão para
+  `na_fila`, e grava `primeiro_acesso_em`. Prévia sem nomes: a busca roda pela
+  conta nova, com o mesmo público.
 - [verificar] id da pessoa da prévia na conta nova; se não valer, resolver de
   novo pela URL pública antes do primeiro convite.
 - Aceite: callback repetido não cria dois perfis; a primeira ação respeita

@@ -104,7 +104,7 @@ export async function processarPesquisasPendentes(
        join public.campanhas c on c.id = l.campanha_id
        join public.perfis pf on pf.id = a.perfil_id
       where a.tipo = 'convite' and a.origem = 'ia' and a.status = 'pendente' and a.texto_gerado is null
-        and a.agendada_para <= $2 and pf.status = 'ativo' and pf.unipile_account_id is not null
+        and a.agendada_para <= $2 and pf.status = 'ativo' and pf.unipile_account_id is not null and not pf.casa
       order by a.agendada_para, a.criada_em
       limit $1`,
     [limite, agora],

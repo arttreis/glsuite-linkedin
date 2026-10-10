@@ -22,10 +22,11 @@ export type PerfilDoDespachante = {
 const COLUNAS = `id, slug, nome, praca, fuso, janela, rampa, teto_convites_semana, ativado_em,
                  proxima_acao_apos, unipile_account_id, unipile_status, unipile_status_em`;
 
+/** Perfis que o despachante move. A conta da casa (§4.4) só busca: nunca entra aqui. */
 export async function carregarPerfisAtivos(db: Db): Promise<PerfilDoDespachante[]> {
   return db.query<PerfilDoDespachante>(
     `select ${COLUNAS} from public.perfis
-      where status = 'ativo' and unipile_account_id is not null
+      where status = 'ativo' and unipile_account_id is not null and not casa
       order by array_position(array['arthur', 'juliano', 'luiz', 'jp'], slug), slug`,
   );
 }

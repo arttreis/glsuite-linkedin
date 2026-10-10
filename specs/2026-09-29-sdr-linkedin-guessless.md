@@ -1305,3 +1305,40 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
   sistema, sempre na organização do operador: as chamadas da IA levam
   segundos e não devem segurar uma transação aberta.
 - "Ficou bom" grava `sdrs.aprovado_em`, que conclui o passo 3.
+
+### SDR-44 · Leads: público e prévia pela conta da casa
+
+- **A prévia fica à parte, não vira campanha.** O épico dizia "a campanha
+  nasce em rascunho, sem perfil, com os leads em triagem". Campanha, lead e
+  pessoa supõem um perfil em todo o motor (um alvo um dono, cooldown, teto,
+  agente); abrir exceção para perfil nulo espalharia o caso por tudo. A
+  prévia mora em `previas` (uma por organização, pessoas em jsonb, no máximo
+  25) e vira lead no SDR-46, pela conta da organização, passando pelas regras
+  de importação de sempre. O épico foi ajustado.
+- **Conta da casa:** `perfis.casa`, marcada pela migration na conta do Arthur
+  só se ela estiver conectada (no banco de teste ela não está, e os testes que
+  usam o perfil do Arthur seguem iguais). O despachante, a pesquisa de perfil
+  e a escolha de conta da campanha ignoram a casa; despausar a casa é
+  recusado.
+- **A busca da prévia roda a qualquer hora.** As buscas das contas que
+  prospectam continuam só na janela; a da prévia, não, para quem chega à
+  noite também ver nomes. O teto do dia da conta da casa vale: a prévia grava
+  `busca_feita` no perfil da casa, e `buscadosHoje` soma tudo.
+- **Dois tetos:** `previa.max_pessoas` (configuração nova, padrão 25) soma
+  todas as buscas da organização, mesmo trocando de público; e o teto de
+  busca do dia da conta da casa. Esgotado qualquer um, a prévia fica sem
+  nomes, com o motivo, e o passo segue.
+- **Região:** a busca clássica precisa do id do LinkedIn. O Kakou procura o
+  texto da região do público pela conta da casa; sem achar, procura "Brasil";
+  sem achar nada, fica sem nomes. Setor fica de fora da busca (cai na nota).
+- Opt-out (tabela `optouts` e `pessoas.optout_em`) nunca aparece; a mesma
+  pessoa vem uma vez só. Um alvo um dono e cooldown de empresa só fazem
+  sentido com perfil: valem na importação do SDR-46.
+- Erro de limite do LinkedIn suspende a busca da casa por 24 horas.
+- Duas buscas da mesma organização ao mesmo tempo: a segunda espera a
+  primeira (status `buscando`, que vale por 3 minutos).
+- "Trocar o perfil do lead" devolve o público para sugestão e zera a lista;
+  o teto da prévia continua somando. O passo 4 termina com pelo menos uma
+  pessoa marcada, ou sem nomes.
+- Na tela, a nota aparece num anel, como o alvo da marca: verde a partir do
+  corte, apagado abaixo.
