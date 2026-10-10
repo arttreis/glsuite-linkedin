@@ -186,6 +186,24 @@ Decida o próximo passo e, se couber, escreva a resposta.`;
 }
 
 /**
+ * Mensagem do usuário para a primeira mensagem depois do aceite, no jeito da
+ * abertura do SDR (§4.3). O prompt de sistema é o mesmo do rascunho.
+ */
+export function entradaDaAbertura(p: { lead: LeadDoAgente; instrucoesDaCampanha?: string | null }): string {
+  const { lead } = p;
+  const instrucoes = p.instrucoesDaCampanha?.trim()
+    ? `\n\nInstruções desta campanha (valem abaixo das regras da casa):\n${p.instrucoesDaCampanha.trim()}`
+    : "";
+  return `Lead:
+- Nome: ${lead.nome}
+- Cargo: ${lead.cargo ?? "não informado"}
+- Empresa: ${nomeDeEmpresa(lead.empresa) ?? "não informada"}
+- Campanha: ${lead.campanha}${lead.nicho ? ` (nicho: ${lead.nicho})` : ""}${instrucoes}
+
+A pessoa acabou de aceitar o seu convite de conexão e ainda não escreveu nada. Escreva a primeira mensagem da conversa, do jeito da abertura do SDR. É a primeira: pode cumprimentar uma vez, pelo primeiro nome. Não peça reunião. Use a ação "responder".`;
+}
+
+/**
  * T1 personalizado (SDR-15). Adapta à casa a ideia de pesquisar e gerar
  * ângulos antes de escrever a nota. Estável por perfil e campanha (vai para o
  * cache): pesquisa e lead vão na mensagem do usuário.

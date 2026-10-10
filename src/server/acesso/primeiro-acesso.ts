@@ -63,17 +63,20 @@ export type EstadoDoPrimeiroAcesso = { feitos: Set<IdDoPassoInicial>; atual: IdD
 
 /**
  * Onde a organização está no primeiro acesso, tirado dos próprios dados: quem
- * fecha a aba volta para o passo em que parou. Roda como o operador. Os passos
- * do SDR em diante entram com os tickets que os constroem (SDR-42 a SDR-46).
+ * fecha a aba volta para o passo em que parou. Roda como o operador. O SDR está
+ * feito quando a pessoa disse "ficou bom" no chat de teste (SDR-43); os passos
+ * seguintes entram com os tickets que os constroem (SDR-44 a SDR-46).
  */
 export async function estadoDoPrimeiroAcesso(db: Db): Promise<EstadoDoPrimeiroAcesso> {
-  const [linha] = await db.query<{ site: boolean; analise: boolean }>(
+  const [linha] = await db.query<{ site: boolean; analise: boolean; sdr: boolean }>(
     `select exists (select 1 from public.ofertas) as site,
-            exists (select 1 from public.ofertas where dossie_confirmado is not null) as analise`,
+            exists (select 1 from public.ofertas where dossie_confirmado is not null) as analise,
+            exists (select 1 from public.sdrs where aprovado_em is not null) as sdr`,
   );
   const feitos = new Set<IdDoPassoInicial>();
   if (linha?.site) feitos.add("site");
   if (linha?.analise) feitos.add("analise");
+  if (linha?.sdr) feitos.add("sdr");
   return { feitos, atual: passoAtual(feitos) };
 }
 
