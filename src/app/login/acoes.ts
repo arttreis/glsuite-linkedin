@@ -3,6 +3,8 @@
 import { z } from "zod";
 import { urlPublicaDoApp } from "@/lib/env";
 import { caminhoInternoSeguro } from "@/lib/redirecionamento";
+import { dominiosLiberados, pedirLinkDeAcesso } from "@/server/acesso/link";
+import { criadorDeUsuario } from "@/server/supabase/admin";
 import { criarClienteSupabase } from "@/server/supabase/servidor";
 
 export type EstadoLogin =
@@ -18,20 +20,23 @@ export async function enviarLinkDeAcesso(_anterior: EstadoLogin, formData: FormD
   destino.searchParams.set("proximo", caminhoInternoSeguro(String(formData.get("proximo") ?? "")));
 
   const supabase = await criarClienteSupabase();
-  // shouldCreateUser: false — só entra quem já foi cadastrado como operador.
-  const { error } = await supabase.auth.signInWithOtp({
-    email: email.data,
-    options: { shouldCreateUser: false, emailRedirectTo: destino.toString() },
-  });
-  if (error?.code === "over_email_send_rate_limit") {
-    return {
-      status: "erro",
-      mensagem: "Já mandamos um link há menos de 1 minuto. Confira a caixa de entrada e o spam, ou espere um pouco para pedir outro.",
-    };
-  }
-  if (error) {
-    console.error("Link de acesso não enviado", error.code, error.message);
-    return { status: "erro", mensagem: "Não foi possível enviar o link. O acesso é só para operadores cadastrados." };
-  }
-  return { status: "enviado", email: email.data };
+  const resultado = await pedirLinkDeAcesso(
+    {
+      dominios: dominiosLiberados(),
+      criarUsuario: criadorDeUsuario(),
+      // shouldCreateUser: false — o cadastro público do Auth fica desligado (§4.1).
+      enviarLink: async (endereco) => {
+        const { error } = await supabase.auth.signInWithOtp({
+          email: endereco,
+          options: { shouldCreateUser: false, emailRedirectTo: destino.toString() },
+        });
+        if (error && error.code !== "over_email_send_rate_limit") {
+          console.error("Link de acesso não enviado", error.code, error.message);
+        }
+        return error ? (error.code ?? "desconhecido") : null;
+      },
+    },
+    email.data,
+  );
+  return resultado.ok ? { status: "enviado", email: email.data } : { status: "erro", mensagem: resultado.mensagem };
 }

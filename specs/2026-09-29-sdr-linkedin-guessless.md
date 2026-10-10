@@ -1179,3 +1179,33 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
   número de tamanho de mercado.
 - Numeração dos tickets começa no SDR-40; SDR-31 a SDR-34 do épico anterior
   caíram.
+
+### SDR-40 · Acesso por domínio, organização nova e a moldura do primeiro acesso
+
+- O login pede o link do mesmo jeito (`shouldCreateUser: false`). Antes, para
+  e-mail de domínio em `CADASTRO_DOMINIOS`, o servidor cria o usuário no Auth
+  pela API admin (`SUPABASE_SECRET_KEY`), já confirmado; "já existe" não é
+  erro. Sem a chave, o e-mail liberado só entra se já tiver usuário no Auth
+  (o que vale para quem já usa o GL Suite), e o servidor avisa no log.
+- `CADASTRO_DOMINIOS` sem valor vale `guessless.com.br`; definida e vazia,
+  ninguém novo entra. Só o domínio exato: subdomínio não vale.
+- A organização nasce no callback do link, com a conexão do sistema (quem
+  ainda não é operador não passa no RLS), numa transação com
+  `pg_advisory_xact_lock` pelo id do usuário: dois callbacks criam uma só. O
+  lock é de transação, que funciona no pooler em modo transação.
+- Operador desativado não ganha organização nova, e um e-mail que já é de
+  outro operador não vira um segundo. Nome do operador sai do e-mail
+  ("ana.souza" vira "Ana Souza"); o da organização é "Empresa de <nome>" até a
+  análise do site (SDR-41) trazer o nome da empresa.
+- Portão: `organizacoes.primeiro_acesso_em`. O painel inteiro (`(painel)`)
+  passa por `exigirOperadorNoApp`; `/comecar` manda para o app quem já
+  terminou. A migration marca as organizações que já têm conta conectada.
+- O passo atual sai dos dados, não de uma coluna: site lido → análise;
+  análise confirmada → SDR. Os passos seguintes ganham a sua condição nos
+  tickets que os constroem. Passo da frente redireciona para o atual; passo
+  feito abre para corrigir.
+- Cada passo é uma rota estática (`/comecar/site` … `/comecar/linkedin`), para
+  cada ticket trocar só a sua página. Até lá, a página mostra a pergunta e
+  "Este passo ainda está sendo montado".
+- O portão dos primeiros passos (SDR-19/SDR-30) continua por baixo até o
+  SDR-47.

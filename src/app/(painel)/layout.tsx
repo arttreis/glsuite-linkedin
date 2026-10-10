@@ -2,10 +2,10 @@ import type { ReactNode } from "react";
 import { Estrutura } from "@/components/estrutura";
 import { obterDb } from "@/server/db";
 import { avaliarPrimeirosPassos } from "@/server/onboarding/primeiros-passos";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperadorNoApp } from "@/server/supabase/servidor";
 
 export default async function PainelLayout({ children }: { children: ReactNode }) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorNoApp();
   const { concluido } = await avaliarPrimeirosPassos(obterDb(), operador.id, new Date());
 
   return (
