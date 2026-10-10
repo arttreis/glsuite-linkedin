@@ -1,10 +1,5 @@
-import {
-  dossie as esquemaDoDossie,
-  explicarErroDoDossie,
-  limparDossieEditado,
-  normalizarUrlDoSite,
-  type Dossie,
-} from "@/domain/dossie";
+import { dossie as esquemaDoDossie, explicarErroDoDossie, normalizarUrlDoSite, type Dossie } from "@/domain/dossie";
+import { limparEdicao } from "@/domain/edicao";
 import { ErroDoModelo, type Uso } from "@/server/agente/modelo";
 import { lerConfiguracao } from "@/server/configuracoes";
 import type { Db } from "@/server/db/tipos";
@@ -138,7 +133,7 @@ export async function salvarDossie(
   db: Db,
   p: { organizacaoId: string; dossie: unknown; confirmar: boolean; operadorId: string; agora: Date },
 ): Promise<ResultadoDaEdicao> {
-  const validado = esquemaDoDossie.safeParse(limparDossieEditado(p.dossie));
+  const validado = esquemaDoDossie.safeParse(limparEdicao(p.dossie));
   if (!validado.success) return { ok: false, erro: explicarErroDoDossie(validado.error) };
 
   const editavel = await ofertaParaEditar(db, p.organizacaoId, p.agora);

@@ -896,3 +896,38 @@ migrations das duas linhas já estão no banco (conferido em 09/10).
   não remonta, para o retorno continuar visível.
 - Migration `20261010140000_dossie_confirmado`: aditiva e idempotente. Vai ao
   banco do GL Suite por SQL antes do deploy, como as outras.
+
+### SDR-25 · Públicos sugeridos a partir do dossiê
+
+- Tabela `publicos` com as colunas da §6 (`quem`, `empresa` e `por_que` em
+  jsonb), mais `dossie_base_em`: a confirmação do dossiê que o público levou
+  em conta. Quando o dossiê é confirmado de novo, o público aparece como
+  desatualizado até alguém salvar (§4.11).
+- Status: `sugerido` (da IA), `ativo` (escolhido ou criado por um humano) e
+  `arquivado`. `publicoParaCampanha()` só devolve `ativo`: é a porta do
+  SDR-26. Público criado à mão já nasce ativo.
+- A IA devolve as provas pelo número da lista do dossiê confirmado, e o
+  servidor troca o número pelo texto. Número fora da lista some. Assim a
+  sugestão não tem como trazer prova que o dossiê não tem. Na edição humana,
+  a tela só oferece as provas do dossiê, e o servidor recusa texto que não
+  esteja lá.
+- Praça: a IA só sugere nas praças em que a organização tem conta (sem conta
+  nenhuma, Brasil). Sugestão fora delas é descartada. O humano pode escolher
+  qualquer praça, para preparar uma conta que ainda vai conectar.
+- Pedir de novo apaga só as sugestões e mantém escolhidos e arquivados; a IA
+  recebe os escolhidos para não repetir. Falha da IA não apaga nada. Máximo de
+  5 sugestões por pedido.
+- Uma chamada com saída estruturada (`IA_MODELO_RASCUNHO`), síncrona no botão
+  (leva até 1 minuto). A leitura do dossiê e a gravação rodam como o operador,
+  em transações separadas; a chamada à IA fica fora delas. Custo, quantidade,
+  descartes e versão do prompt vão no evento `publicos_sugeridos`.
+- Os cargos ficam no idioma em que aparecem no LinkedIn da praça, porque viram
+  as palavras da busca (SDR-27). O resto do público fica em português.
+- `limparEdicao` e `explicarErroDeEdicao` saíram do dossiê para
+  `src/domain/edicao.ts`, e as peças do formulário (seção, lista de frases)
+  para `src/components/campos-de-edicao.tsx`: dossiê e público usam as mesmas.
+- Tela Públicos no grupo Prospecção, liberada nos primeiros passos: escolhidos,
+  sugestões e arquivados, com escolher, editar antes, descartar e usar de novo.
+- Migration `20261010150000_publicos`, com o grant ao `sdr_servidor`. Vai ao
+  banco do GL Suite por SQL antes do deploy (conferido em 09/10: não existe
+  `public.publicos` lá).

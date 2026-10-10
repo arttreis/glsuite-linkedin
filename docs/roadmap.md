@@ -7,9 +7,9 @@ Decisões de cada ticket: `specs/2026-09-29-sdr-linkedin-guessless.md`.
 do SDR-17 ao SDR-21 (Marco 5: painel guiado, inbox completa e fluxo com
 blocos), pelo PR #2. O Marco 6 (jornada do Kakou: site → dossiê → públicos →
 busca com nota → fluxo gerado) começou: SDR-22 e SDR-23 entraram pelo PR #3,
-e a jornada revisada nos docs pelo PR #4. O SDR-24 está em PR. As migrations
-até `20261010120000_ofertas` estão aplicadas no banco por SQL (conferido em
-09/10); a `20261010140000_dossie_confirmado`, do SDR-24, ainda não. O painel está no ar para teste em
+e a jornada revisada nos docs pelo PR #4; o SDR-24, pelo PR #5. O SDR-25 está
+em PR. As migrations até `20261010140000_dossie_confirmado` estão aplicadas no
+banco por SQL (09/10); a `20261010150000_publicos`, do SDR-25, ainda não. O painel está no ar para teste em
 https://guessless-sdr.vercel.app, com o banco dividido com o GL Suite. Faltam
 as chaves das integrações e as travas da §8. Detalhes em
 `docs/handoff-2026-09-30.md`.
@@ -41,9 +41,9 @@ as chaves das integrações e as travas da §8. Detalhes em
 | M5 | SDR-21 Fluxo de campanha com blocos | ✅ | ✅ #2 | ⛔ testar o editor no navegador |
 | M6 · Jornada do Kakou | SDR-22 Organização como raiz | ✅ | ✅ #3 | — |
 | M6 | SDR-23 Dossiê da oferta a partir do site | ✅ | ✅ #3 | ⛔ chave da Anthropic |
-| M6 | SDR-24 Dossiê editável e confirmado | ✅ | ⏳ PR aberto | ⛔ aplicar a migration `20261010140000` no banco |
-| M6 | SDR-25 Públicos sugeridos a partir do dossiê | 🔜 próximo | — | ⛔ chave da Anthropic |
-| M6 | SDR-26 Campanha nasce do público | 🔜 | — | — |
+| M6 | SDR-24 Dossiê editável e confirmado | ✅ | ✅ #5 | — |
+| M6 | SDR-25 Públicos sugeridos a partir do dossiê | ✅ | ⏳ PR aberto | ⛔ aplicar a migration `20261010150000` no banco; chave da Anthropic |
+| M6 | SDR-26 Campanha nasce do público | 🔜 próximo | — | — |
 | M6 | SDR-27 Busca a partir do público | 🔜 | — | ⛔ Unipile: filtros da busca clássica e limite de uso comercial |
 | M6 | SDR-28 Nota de aderência | 🔜 | — | ⛔ chave da Anthropic |
 | M6 | SDR-29 Fluxo gerado pelo público | 🔜 | — | ⛔ chave da Anthropic |
@@ -62,7 +62,7 @@ Legenda: ✅ feito · 🔜 a fazer · ⏳ aguardando · ⛔ bloqueado por algo e
 | 4 | 1ª rodada real do eval (`pnpm eval`) e revisão humana do `revisao.json` | Claude + Arthur | depende da chave da Anthropic |
 | 5 | ~~SDR-17 a SDR-21~~ | — | ✅ PR #2 |
 | 5a | ~~Mergear o PR do SDR-22 e SDR-23 e depois o da jornada revisada (docs)~~ | — | ✅ #3 e #4 |
-| 5b | SDR-24 a SDR-30, um por vez, na ordem do Marco 6 | Claude | SDR-24 em PR |
+| 5b | SDR-24 a SDR-30, um por vez, na ordem do Marco 6 | Claude | SDR-24 ✅; SDR-25 em PR |
 | 6 | ~~Migrations do SDR-17 ao SDR-21 por SQL no GL Suite~~ | — | ✅ 09/10, sem tocar no histórico do GL Suite |
 | 7 | ~~Abrir e mergear os PRs do SDR-01 ao SDR-16~~ | — | ✅ PR #1 |
 | 8 | Ligar o tick (pg_cron ou Vercel Cron) | Claude | depois da Unipile e do teste |

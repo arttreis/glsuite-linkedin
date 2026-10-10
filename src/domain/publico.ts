@@ -1,0 +1,109 @@
+import { z } from "zod";
+import type { Dossie } from "./dossie";
+import { explicarErroDeEdicao } from "./edicao";
+
+export const PRACAS = ["domestico", "canada", "espanha"] as const;
+export type Praca = (typeof PRACAS)[number];
+
+export const NOME_DA_PRACA: Record<Praca, string> = { domestico: "Brasil", canada: "Canadá", espanha: "Espanha" };
+
+const quem = z.object({
+  cargos: z.array(z.string().min(1).max(80)).min(1).max(10),
+  senioridade: z.string().max(200),
+});
+
+const empresa = z.object({
+  setores: z.array(z.string().min(1).max(80)).max(8),
+  porte: z.string().max(200),
+  regiao: z.string().min(1).max(200),
+});
+
+const porQue = z.object({
+  dor: z.string().min(1).max(400),
+  gatilho: z.string().max(400),
+  resultado: z.string().min(1).max(400),
+});
+
+/**
+ * Público (§4.12): uma hipótese de venda, quem compra e por quê. O dossiê é
+ * fato do site; o público é interpretação. Pode dizer por que alguém precisa,
+ * mas prova só vem do dossiê, e cada público tem uma praça só.
+ */
+export const publico = z.object({
+  nome: z.string().min(1).max(80),
+  quem,
+  empresa,
+  por_que: porQue,
+  angulo: z.string().min(1).max(300),
+  /** Textos de provas do dossiê confirmado. */
+  provas: z.array(z.string().min(1).max(300)).max(12),
+  quem_nao_e: z.string().max(400),
+  praca: z.enum(PRACAS),
+});
+export type Publico = z.infer<typeof publico>;
+
+/**
+ * O que a IA devolve: o mesmo público, com as provas pelo número da lista do
+ * dossiê. Assim ela não tem como escrever uma prova que não está lá.
+ */
+export const sugestaoDePublicos = z.object({
+  publicos: z.array(publico.omit({ provas: true }).extend({ provas: z.array(z.number().int()) })),
+});
+export type SugestaoDePublicos = z.infer<typeof sugestaoDePublicos>;
+
+export const MAX_SUGESTOES = 5;
+
+/**
+ * Converte a sugestão da IA em públicos: as provas viram os textos do dossiê
+ * (número fora da lista é ignorado), e sai o que não cabe no esquema ou cai
+ * numa praça sem conta da organização. No máximo 5.
+ */
+export function publicosDaSugestao(
+  sugestao: SugestaoDePublicos,
+  d: Dossie,
+  pracasPermitidas: readonly Praca[],
+): { publicos: Publico[]; descartados: number } {
+  const publicos: Publico[] = [];
+  let descartados = 0;
+  for (const item of sugestao.publicos) {
+    const provas = [...new Set(item.provas)].flatMap((n) => (d.provas[n] ? [d.provas[n].texto] : []));
+    const lido = publico.safeParse({ ...item, provas });
+    if (!lido.success || !pracasPermitidas.includes(lido.data.praca) || publicos.length >= MAX_SUGESTOES) {
+      descartados++;
+      continue;
+    }
+    publicos.push(lido.data);
+  }
+  return { publicos, descartados };
+}
+
+/** Provas do público que não estão no dossiê confirmado. Tem que ser vazio para salvar. */
+export function provasForaDoDossie(p: Publico, d: Dossie): string[] {
+  const doDossie = new Set(d.provas.map((prova) => prova.texto));
+  return p.provas.filter((prova) => !doDossie.has(prova));
+}
+
+const SECOES: Record<string, string> = {
+  nome: "Nome",
+  quem: "Quem",
+  empresa: "Empresa",
+  por_que: "Por que precisa",
+  angulo: "Ângulo",
+  provas: "Provas",
+  quem_nao_e: "Quem não é",
+  praca: "Praça",
+};
+
+const CAMPOS: Record<string, string> = {
+  cargos: "cargos",
+  senioridade: "senioridade",
+  setores: "setores",
+  porte: "porte",
+  regiao: "região",
+  dor: "dor",
+  gatilho: "gatilho",
+  resultado: "resultado",
+};
+
+/** O primeiro problema da validação do público, numa frase para quem editou. */
+export const explicarErroDoPublico = (erro: z.ZodError) => explicarErroDeEdicao(erro, { secoes: SECOES, campos: CAMPOS });

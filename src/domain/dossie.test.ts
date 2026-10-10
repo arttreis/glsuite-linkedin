@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { dossie, explicarErroDoDossie, limparDossieEditado, normalizarUrlDoSite, resumoDaOferta, type Dossie } from "./dossie";
+import { dossie, explicarErroDoDossie, normalizarUrlDoSite, resumoDaOferta, type Dossie } from "./dossie";
+import { limparEdicao } from "./edicao";
 
 describe("normalizarUrlDoSite", () => {
   it("aceita endereço sem esquema e tira o www do domínio", () => {
@@ -55,7 +56,7 @@ describe("resumoDaOferta", () => {
   });
 });
 
-describe("limparDossieEditado", () => {
+describe("limparEdicao no dossiê", () => {
   it("tira espaço das pontas e descarta item de lista em branco", () => {
     const editado = {
       ...DOSSIE,
@@ -64,7 +65,7 @@ describe("limparDossieEditado", () => {
       objecoes: [{ objecao: "", resposta: " " }],
       provas: [...DOSSIE.provas, { tipo: "case", texto: "", fonte_url: "" }],
     };
-    const limpo = dossie.parse(limparDossieEditado(editado));
+    const limpo = dossie.parse(limparEdicao(editado));
     expect(limpo.empresa.nome).toBe("GuessLess");
     expect(limpo.diferenciais).toEqual(["Engenharia, não achismo"]);
     expect(limpo.objecoes).toEqual([]);
@@ -73,12 +74,12 @@ describe("limparDossieEditado", () => {
 
   it("prova escrita à mão fica sem fonte", () => {
     const editado = { ...DOSSIE, provas: [{ tipo: "cliente", texto: "Atende a Kakou", fonte_url: " " }] };
-    expect(dossie.parse(limparDossieEditado(editado)).provas[0]!.fonte_url).toBeNull();
+    expect(dossie.parse(limparEdicao(editado)).provas[0]!.fonte_url).toBeNull();
   });
 });
 
 describe("explicarErroDoDossie", () => {
-  const erro = (entrada: unknown) => explicarErroDoDossie(dossie.safeParse(limparDossieEditado(entrada)).error!);
+  const erro = (entrada: unknown) => explicarErroDoDossie(dossie.safeParse(limparEdicao(entrada)).error!);
 
   it("diz a seção e o item do problema", () => {
     expect(erro({ ...DOSSIE, produtos: [] })).toBe("O que vocês vendem: precisa de pelo menos 1.");

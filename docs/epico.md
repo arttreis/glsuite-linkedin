@@ -442,7 +442,8 @@ publicos (                                         -- §4.12
   por_que jsonb,                                  -- {dor, gatilho, resultado}
   angulo, provas jsonb, quem_nao_e, praca,
   origem,                                         -- 'ia' | 'humano'
-  status                                          -- 'sugerido' | 'ativo' | 'arquivado'
+  status,                                         -- 'sugerido' | 'ativo' | 'arquivado'
+  dossie_base_em                                  -- confirmação do dossiê que o público levou em conta
 )
 perfis (
   id, organizacao_id, nome, unipile_account_id, praca,            -- 'domestico' | 'canada' | 'espanha'
