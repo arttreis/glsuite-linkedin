@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
       { source: "/comecar/analise", destination: "/onboarding/analysis", permanent: false },
       { source: "/comecar/abordagem", destination: "/onboarding/approach", permanent: false },
       { source: "/comecar/:passo", destination: "/onboarding/:passo", permanent: false },
+      { source: "/campanhas", destination: "/campaigns", permanent: false },
       { source: "/campanhas/nova", destination: "/campaigns/new", permanent: false },
       { source: "/campanhas/:caminho*", destination: "/campaigns/:caminho*", permanent: false },
       { source: "/configuracoes/organizacao", destination: "/settings/organization", permanent: false },

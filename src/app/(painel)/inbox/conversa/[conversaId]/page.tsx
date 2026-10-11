@@ -5,7 +5,7 @@ import { Aviso } from "@/components/aviso";
 import { Cabecalho } from "@/components/cabecalho";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { exigirOperadorLiberado } from "@/server/supabase/servidor";
+import { exigirOperadorNoApp } from "@/server/supabase/servidor";
 import { responderExterna } from "../../acoes";
 
 type Conversa = {
@@ -24,7 +24,7 @@ const hora = (valor: Date) =>
 
 /** Conversa do LinkedIn fora de campanha (§4.6): só leitura e resposta humana. */
 export default async function ConversaExternaPage({ params, searchParams }: PageProps<"/inbox/conversa/[conversaId]">) {
-  const operador = await exigirOperadorLiberado();
+  const operador = await exigirOperadorNoApp();
   const { conversaId } = await params;
   const { msg } = await searchParams;
 

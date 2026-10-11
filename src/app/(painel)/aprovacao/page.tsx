@@ -10,7 +10,7 @@ import { listarFila, taxaDeEdicao, type ItemDaFila } from "@/server/aprovacao/fi
 import { listarParados, type LeadParado } from "@/server/aprovacao/parados";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { exigirOperadorLiberado } from "@/server/supabase/servidor";
+import { exigirOperadorNoApp } from "@/server/supabase/servidor";
 import { aprovar, assumirDoPainel, rejeitar, tentarDeNovoDoPainel } from "./acoes";
 
 const hora = (valor: Date | null) =>
@@ -153,7 +153,7 @@ function Parado({ lead }: { lead: LeadParado }) {
 }
 
 export default async function AprovacaoPage({ searchParams }: PageProps<"/aprovacao">) {
-  const operador = await exigirOperadorLiberado();
+  const operador = await exigirOperadorNoApp();
   const { msg } = await searchParams;
   const { itens, parados, taxas } = await comOperador(obterDb(), operador.id, async (tx) => ({
     itens: await listarFila(tx),

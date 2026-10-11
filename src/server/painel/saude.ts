@@ -14,6 +14,7 @@ export type SaudeDoPerfil = {
   praca: string;
   status: "ativo" | "pausado";
   motivoPausa: string | null;
+  modoResposta: "manual" | "aprovacao" | "automatico";
   unipileStatus: string | null;
   conectado: boolean;
   /** Conectado e com status em que o despachante envia: o mesmo critério do despausar. */
@@ -42,7 +43,7 @@ export type SaudeDoPerfil = {
 type LinhaDoPerfil = PerfilDoDespachante & {
   status: "ativo" | "pausado";
   motivo_pausa: string | null;
-  modo_resposta: string;
+  modo_resposta: "manual" | "aprovacao" | "automatico";
   acessivel: boolean;
 };
 
@@ -50,7 +51,7 @@ type LinhaDoPerfil = PerfilDoDespachante & {
  * Painel de saúde por perfil (§9 SDR-08): aceite em 3 dias úteis, erros de
  * limite, saldo do dia e fila. Roda dentro de `comOperador`: detalhe só de
  * perfil que o operador opera; o status aparece para todos (qualquer um pode
- * pausar).
+ * pausar). A conta da casa só busca e fica de fora.
  */
 export async function saudeDosPerfis(db: Db, agora: Date): Promise<SaudeDoPerfil[]> {
   const perfis = await db.query<LinhaDoPerfil>(`
@@ -58,6 +59,7 @@ export async function saudeDosPerfis(db: Db, agora: Date): Promise<SaudeDoPerfil
            unipile_account_id, unipile_status, unipile_status_em, status, motivo_pausa, modo_resposta,
            public.pode_ver_perfil(id) as acessivel
       from public.perfis
+     where not casa
      order by array_position(array['arthur', 'juliano', 'luiz', 'jp'], slug)`);
   const guardas = await lerConfiguracao(db, "guardas");
 
@@ -69,6 +71,7 @@ export async function saudeDosPerfis(db: Db, agora: Date): Promise<SaudeDoPerfil
       praca: perfil.praca,
       status: perfil.status,
       motivoPausa: perfil.motivo_pausa,
+      modoResposta: perfil.modo_resposta,
       unipileStatus: perfil.unipile_status,
       conectado: Boolean(perfil.unipile_account_id),
       contaPronta:

@@ -1397,6 +1397,39 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
   valer, o envio falha com erro permanente e o lead vai para revisão. Ver com
   a primeira conta real.
 
+### SDR-47 · Menu novo e Dashboard
+
+- Menu plano, sem grupos: Dashboard (`/`), Chats, Campanhas e Configurações.
+  Pipeline entra no menu com a tela, no SDR-49. Até o SDR-48, Chats abre a
+  inbox que já existe; as telas antigas que ainda servem (aprovação, tarefas,
+  públicos, triagem, perfis) acendem o item que vai substituí-las.
+- Sai o portão dos primeiros passos: `exigirOperadorLiberado` e o módulo
+  `primeiros-passos` foram apagados. Fica só o portão do primeiro acesso.
+- **Conta** é o elemento marcante (`cartao-vitrine`): o alvo com um anel por
+  conta (convites de hoje contra o limite) e, por conta, status, semana da
+  rampa, modo de resposta, convites e mensagens de hoje contra o teto,
+  convites da semana contra o teto semanal e aceite em 3 dias úteis. Pausar
+  fica ali (§4.13). Ativar e retomar também, até Configurações › LinkedIn
+  (SDR-51). A conta da casa não aparece: ela só busca.
+- **Precisa de você:** a conversa entra quando está com humano (o SDR chamou
+  você ou você assumiu) ou a conta escreve à mão, e a última mensagem é da
+  pessoa. Cada conversa vira um item próprio, que abre a própria conversa,
+  com o motivo de o SDR ter chamado. São até 5, e o resto vira um item que
+  leva aos Chats. Conversa que o SDR responde sozinho não entra. Depois vêm
+  as respostas para aprovar e os leads parados (aprovação), a conta pausada
+  (âncora da conta no Dashboard), a desconectada (reconectar), as tarefas
+  manuais e a triagem, enquanto essas telas existirem.
+- **Números** da semana e do mês viraram "7 dias" e "30 dias" corridos: segunda
+  de manhã não zera. Contam o que aconteceu no período, não uma turma de
+  convites. Os convites saem de `acoes` enviadas, os aceites de
+  `leads.aceito_em`, e conversas, qualificados e reuniões dos eventos
+  `lead_transicao`, com cada lead contado uma vez por etapa. Parâmetro
+  `?period=30d`. Os resultados por campanha (`/metricas`) saíram do menu e
+  ficam num link da seção até o SDR-50 levá-los para Campanhas.
+- **SDR:** versão, última mudança (origem, quem, quando, resumo) e o modo de
+  resposta das contas. Organização sem SDR vê que cada conta responde com a
+  própria voz (§4.1).
+
 ### Slugs de URL em inglês (10/10/2026)
 
 - Pedido do Arthur: slug de URL sempre em inglês. O código, os nomes de

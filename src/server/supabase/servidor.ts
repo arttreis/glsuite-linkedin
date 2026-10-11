@@ -7,7 +7,6 @@ import { envPublico } from "@/lib/env";
 import { OPCOES_DO_COOKIE } from "@/lib/supabase/cookie";
 import { obterDb } from "@/server/db";
 import { buscarOperadorAtivo, type Operador } from "@/server/db/operador";
-import { avaliarPrimeirosPassos } from "@/server/onboarding/primeiros-passos";
 
 /** Cliente do Supabase ligado aos cookies da requisição. Um por requisição. */
 export async function criarClienteSupabase() {
@@ -78,16 +77,5 @@ export async function exigirOperador(): Promise<Operador> {
 export async function exigirOperadorNoApp(): Promise<Operador> {
   const operador = await exigirOperador();
   if (!operador.primeiroAcessoConcluido) redirect("/onboarding");
-  return operador;
-}
-
-/**
- * Operador que já tem a primeira campanha pronta (§4.10 do épico anterior).
- * Quem ainda não tem volta para o Início, que mostra os primeiros passos.
- */
-export async function exigirOperadorLiberado(): Promise<Operador> {
-  const operador = await exigirOperadorNoApp();
-  const { concluido } = await avaliarPrimeirosPassos(obterDb(), operador.id, new Date());
-  if (!concluido) redirect(`/?msg=${encodeURIComponent("Termine os primeiros passos para liberar esta tela.")}`);
   return operador;
 }

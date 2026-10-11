@@ -55,8 +55,7 @@ export async function alterarStatusDaCampanha(formData: FormData) {
   if (recusa !== null) redirect(`/campaigns/${campanhaId}?msg=${encodeURIComponent(recusa)}`, RedirectType.replace);
   revalidatePath(`/campaigns/${campanhaId}`);
   revalidatePath("/campaigns");
-  // Ativar a campanha pode concluir os primeiros passos: o menu destranca.
-  revalidatePath("/", "layout");
+  revalidatePath("/");
   // Sai da URL com o erro de uma tentativa anterior, se houver.
   redirect(`/campaigns/${campanhaId}`, RedirectType.replace);
 }
