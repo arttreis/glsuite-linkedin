@@ -37,7 +37,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           )}
           <div className="mt-6">
             {params.erro === "acesso" ? (
-              <form action="/auth/sair" method="post">
+              <form action="/auth/logout" method="post">
                 <button type="submit" className="botao w-full">
                   Sair e entrar com outro e-mail
                 </button>

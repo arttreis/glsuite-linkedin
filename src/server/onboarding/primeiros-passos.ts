@@ -51,7 +51,7 @@ function hrefDoPasso(id: IdDoPasso, estado: Estado | undefined): string {
   if (id === "dossie") return "/oferta";
   if (id === "publico") return "/publicos";
   if (id === "conta" || id === "leads") return estado?.publico_id ? `${publico}?aba=leads` : publico;
-  return estado?.campanha_id ? `/campanhas/${estado.campanha_id}` : estado?.publico_id ? `${publico}?aba=abordagem` : publico;
+  return estado?.campanha_id ? `/campaigns/${estado.campanha_id}` : estado?.publico_id ? `${publico}?aba=abordagem` : publico;
 }
 
 /**

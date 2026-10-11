@@ -63,7 +63,7 @@ describe("primeiros passos: a jornada do Kakou (SDR-30)", () => {
     expect(await feitos()).toEqual(["dossie", "publico"]);
     await ativarPerfil(banco.db, "arthur");
     expect(await feitos()).toEqual(["dossie", "publico", "conta"]);
-    expect((await avaliar()).passos.find((p) => p.id === "ativar")!.href).toBe(`/campanhas/${campanha}`);
+    expect((await avaliar()).passos.find((p) => p.id === "ativar")!.href).toBe(`/campaigns/${campanha}`);
 
     const lead = await criarLead(banco.db, { pessoaId: await criarPessoa(banco.db), campanhaId: campanha });
     await banco.db.query("update public.leads set estado = 'na_fila' where id = $1::uuid", [lead]);

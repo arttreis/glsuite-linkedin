@@ -184,7 +184,7 @@ function AbaAbordagem({ p, contas }: { p: PublicoSalvo; contas: ContaDoPublico[]
             Ângulo: <span className="text-tinta">{p.angulo}</span>
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Link href={`/campanhas/${campanha!.id}`} className="botao botao-pequeno botao-primario">
+            <Link href={`/campaigns/${campanha!.id}`} className="botao botao-pequeno botao-primario">
               <Workflow aria-hidden />
               {campanha!.status === "rascunho" ? "Escrever as mensagens e ativar" : "Ver o fluxo"}
             </Link>

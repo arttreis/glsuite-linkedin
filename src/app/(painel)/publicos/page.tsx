@@ -144,7 +144,7 @@ export default async function PublicosPage({ searchParams }: PageProps<"/publico
         />
         <p className="mt-8 text-xs text-tinta-fraca">
           Campanhas criadas à mão, fora de um público, continuam em{" "}
-          <Link href="/campanhas" className="link">
+          <Link href="/campaigns" className="link">
             Campanhas
           </Link>
           .

@@ -159,7 +159,7 @@ export async function gerarFluxoDoPainel(formData: FormData) {
   if (!escritor) deVolta("Escrever as mensagens precisa da chave da Anthropic. Peça ao admin para configurar.");
   const resultado = await gerarFluxo({ db: obterDb(), escritor: escritor!, agora: () => new Date() }, { campanhaId: campanha, operadorId: operador.id, estilo });
   revalidatePath("/publicos", "layout");
-  revalidatePath(`/campanhas/${campanha}`);
+  revalidatePath(`/campaigns/${campanha}`);
   if (!resultado.ok) deVolta(resultado.erro);
-  if (resultado.ok) redirect(`/campanhas/${campanha}?gerado=${resultado.problemas.length > 0 ? "marcado" : "ok"}`);
+  if (resultado.ok) redirect(`/campaigns/${campanha}?gerado=${resultado.problemas.length > 0 ? "marcado" : "ok"}`);
 }

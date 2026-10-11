@@ -36,7 +36,7 @@ function PainelLateral({ operador, aoFechar }: { operador: OperadorDaSessao; aoF
             <p className="truncate text-xs text-tinta-fraca">{operador.email}</p>
           </div>
         </div>
-        <form action="/auth/sair" method="post" className="mt-3">
+        <form action="/auth/logout" method="post" className="mt-3">
           <button type="submit" className="botao botao-pequeno w-full">
             <LogOut aria-hidden />
             Sair

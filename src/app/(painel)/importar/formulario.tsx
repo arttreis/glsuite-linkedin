@@ -82,7 +82,7 @@ export function FormularioImportacao({ campanhas, inicial }: { campanhas: OpcaoD
     return (
       <div className="vazio">
         <p>Nenhuma campanha disponível. Crie uma campanha antes de importar.</p>
-        <Link href="/campanhas/nova" className="botao botao-primario">
+        <Link href="/campaigns/new" className="botao botao-primario">
           <Plus aria-hidden />
           Nova campanha
         </Link>

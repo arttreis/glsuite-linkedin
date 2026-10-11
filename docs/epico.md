@@ -504,8 +504,8 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   dividido com o GL Suite. Os outros só entram se já forem operadores.
 - No callback, e-mail liberado sem operador ganha organização nova e vira admin
   dela, numa transação, com evento.
-- Rota `/comecar` em tela cheia com os seis passos (§2.1) e o portão:
-  organização sem `primeiro_acesso_em` só abre `/comecar`; com ele, `/comecar`
+- Rota `/onboarding` em tela cheia com os seis passos (§2.1) e o portão:
+  organização sem `primeiro_acesso_em` só abre `/onboarding`; com ele, `/onboarding`
   manda para o app. Cada passo abre no estado salvo.
 - Organização que já existia com conta conectada recebe `primeiro_acesso_em`
   na migration.

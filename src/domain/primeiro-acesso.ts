@@ -1,10 +1,24 @@
 /**
  * Os seis passos do primeiro acesso (§2.1), nesta ordem. Cada passo é uma
- * tela em `/comecar/<id>` com uma pergunta e um botão principal.
+ * tela em `/onboarding/<slug>` com uma pergunta e um botão principal.
  */
 export const PASSOS_DO_PRIMEIRO_ACESSO = ["site", "analise", "sdr", "leads", "abordagem", "linkedin"] as const;
 
 export type IdDoPassoInicial = (typeof PASSOS_DO_PRIMEIRO_ACESSO)[number];
+
+/** Slug de URL sempre em inglês; o id do passo segue o nome do domínio. */
+const SLUG_DO_PASSO: Record<IdDoPassoInicial, string> = {
+  site: "site",
+  analise: "analysis",
+  sdr: "sdr",
+  leads: "leads",
+  abordagem: "approach",
+  linkedin: "linkedin",
+};
+
+export function rotaDoPasso(passo: IdDoPassoInicial): string {
+  return `/onboarding/${SLUG_DO_PASSO[passo]}`;
+}
 
 export const PASSO_INICIAL: Record<IdDoPassoInicial, { rotulo: string; pergunta: string }> = {
   site: { rotulo: "Site", pergunta: "Qual o site da sua empresa?" },
