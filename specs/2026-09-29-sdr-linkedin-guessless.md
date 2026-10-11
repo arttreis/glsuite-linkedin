@@ -1471,6 +1471,26 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
   conta e o link do perfil. Mover no Pipeline (qualificado, reunião marcada,
   disse não, opt-out) fica ali. A conta da casa não tem conversa no Chats.
 
+### SDR-49 · Pipeline
+
+- `/pipeline`, no menu entre Chats e Campanhas. As colunas são as da §4.10
+  (`domain/pipeline.ts`). Encerrado fica recolhida, num `details` no fim da
+  fileira. No celular, as colunas rolam de lado.
+- O card mostra o nome, o cargo e a empresa, a nota (destacada a partir da
+  nota de corte, 70), a última atividade e a conta, quando a pessoa opera
+  mais de uma. Clicar no card abre o chat do lead (`/chats/[leadId]`).
+- A última atividade é a mais recente entre a criação do lead, o convite, o
+  aceite, o último toque, a resposta e a última mensagem. Cada coluna mostra
+  até 60 cards, os mais recentes primeiro, e o total.
+- Mover à mão é um menu "Mover" com só os destinos que valem a partir da
+  etapa do lead (`destinosPermitidos`): Qualificado, Reunião marcada (pede a
+  data) e Encerrado, que à mão é "disse não". O servidor passa pela mesma
+  transição (`marcarDesfecho`): movimento inválido não acontece e volta com o
+  motivo. Arrastar e soltar ficou de fora: o menu é acessível e funciona no
+  celular.
+- Filtros `?campaign=` e `?account=` (o de conta só aparece com mais de uma
+  conta). A conta da casa fica de fora.
+
 ### Slugs de URL em inglês (10/10/2026)
 
 - Pedido do Arthur: slug de URL sempre em inglês. O código, os nomes de
