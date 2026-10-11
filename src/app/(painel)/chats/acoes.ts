@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { Violacao } from "@/domain/validador";
 import { aprovarAcao, rejeitarAcao } from "@/server/aprovacao/aprovar";
+import { assumirParado, tentarDeNovo } from "@/server/aprovacao/parados";
 import { devolverAoSdr } from "@/server/chats/chats";
 import { marcarDesfecho } from "@/server/conversas/desfecho";
 import { importarHistorico, responderConversaExterna } from "@/server/conversas/externas";
@@ -87,6 +88,22 @@ export async function descartarPendente(formData: FormData) {
   const { acaoId, leadId } = await exigirPendente(operador.id, formData.get("acaoId"));
   const descartou = await rejeitarAcao(obterDb(), { acaoId, operadorId: operador.id, agora: new Date(), motivo: "descartada no Chats" });
   voltarAoChat(leadId, descartou ? "Descartada. Nada foi enviado." : "Essa resposta já tinha sido decidida.");
+}
+
+/** Sequência parada: refaz o último toque para você aprovar ali mesmo. */
+export async function tentarDeNovoDoChat(formData: FormData) {
+  const operador = await exigirOperador();
+  const leadId = await exigirLead(operador.id, formData.get("leadId"));
+  const ok = await tentarDeNovo(obterDb(), { leadId, operadorId: operador.id, agora: new Date() });
+  voltarAoChat(leadId, ok ? "O toque voltou para você aprovar, no fim da conversa." : "Esse lead já foi resolvido.");
+}
+
+/** Sequência parada: você assume a conversa à mão. */
+export async function assumirParadoDoChat(formData: FormData) {
+  const operador = await exigirOperador();
+  const leadId = await exigirLead(operador.id, formData.get("leadId"));
+  const ok = await assumirParado(obterDb(), { leadId, operadorId: operador.id, agora: new Date() });
+  voltarAoChat(leadId, ok ? "A conversa é sua: a sequência parou." : "Esse lead já foi resolvido.");
 }
 
 const entradaDoDesfecho = z.object({

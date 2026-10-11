@@ -156,7 +156,7 @@ describe("Chats (SDR-48)", () => {
       const acao = await pendente(id, "Te passo por WhatsApp", "barrada no validador: canal fora do LinkedIn");
       const chat = await comoDuda((tx) => abrirChat(tx, id));
       expect(chat!.pendentes).toEqual([
-        { id: acao, texto: "Te passo por WhatsApp", motivo: "barrada no validador: canal fora do LinkedIn", toque: null },
+        { id: acao, tipo: "dm", texto: "Te passo por WhatsApp", motivo: "barrada no validador: canal fora do LinkedIn", toque: null },
       ]);
       expect(chat!.situacao).toBe("precisa");
     });

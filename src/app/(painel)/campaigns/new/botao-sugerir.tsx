@@ -3,7 +3,7 @@
 import { Sparkles } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Aviso } from "@/components/aviso";
-import { sugerirPublicosDoPainel } from "./acoes";
+import { sugerirPublicosDoPainel } from "../acoes-do-publico";
 
 /** Pede públicos à IA e espera: a chamada leva de 20 segundos a 1 minuto. */
 export function BotaoSugerir({ principal, desabilitado, jaTemSugestoes }: { principal: boolean; desabilitado: boolean; jaTemSugestoes: boolean }) {

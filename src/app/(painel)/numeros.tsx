@@ -69,8 +69,8 @@ export function Numeros({ numeros, periodo }: { numeros: NumerosDoPeriodo; perio
         })}
       </ol>
       <p className="mt-5 text-right text-[13px]">
-        <Link href="/metricas" className="link">
-          Resultados por campanha
+        <Link href="/campaigns" className="link">
+          Resultados de cada campanha
         </Link>
       </p>
     </section>

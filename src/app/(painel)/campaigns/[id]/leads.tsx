@@ -2,8 +2,8 @@ import { Check, ExternalLink, FileUp, Gauge, X } from "lucide-react";
 import { SelecionarTodos } from "@/components/selecionar-todos";
 import type { SituacaoDasNotas } from "@/server/nota/nota";
 import type { SituacaoDaBusca } from "@/server/publicos/busca";
-import { BuscaDaCampanha } from "../../publicos/busca";
-import { FormularioImportacao } from "../../importar/formulario";
+import { BuscaDaCampanha } from "./busca";
+import { FormularioImportacao } from "./importar";
 import { aprovarAcimaDoCorteDaCampanhaDoPainel, aprovarLeadsDoPainel, darNotasDaCampanhaDoPainel, tirarLeadsDoPainel } from "../acoes";
 
 export type LeadParaTriar = {

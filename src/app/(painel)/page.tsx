@@ -122,7 +122,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
   const agora = new Date();
   const { contas, precisa, numeros, sdr } = await comOperador(obterDb(), operador.id, async (tx) => ({
     contas: await saudeDosPerfis(tx, agora),
-    precisa: await precisaDeVoce(tx, agora),
+    precisa: await precisaDeVoce(tx),
     numeros: await numerosDoPeriodo(tx, { periodo, agora }),
     sdr: await resumoDoSdr(tx, operador.organizacaoId),
   }));

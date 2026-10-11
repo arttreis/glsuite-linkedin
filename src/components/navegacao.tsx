@@ -11,10 +11,10 @@ import { usePathname } from "next/navigation";
 type Item = { href: string; rotulo: string; icone: LucideIcon; tambem?: string[] };
 
 const ITENS: Item[] = [
-  { href: "/", rotulo: "Dashboard", icone: LayoutDashboard, tambem: ["/metricas"] },
-  { href: "/chats", rotulo: "Chats", icone: MessagesSquare, tambem: ["/aprovacao", "/tarefas"] },
+  { href: "/", rotulo: "Dashboard", icone: LayoutDashboard },
+  { href: "/chats", rotulo: "Chats", icone: MessagesSquare },
   { href: "/pipeline", rotulo: "Pipeline", icone: Kanban },
-  { href: "/campaigns", rotulo: "Campanhas", icone: Megaphone, tambem: ["/publicos", "/triagem", "/importar"] },
+  { href: "/campaigns", rotulo: "Campanhas", icone: Megaphone },
   { href: "/settings", rotulo: "Configurações", icone: Settings },
 ];
 

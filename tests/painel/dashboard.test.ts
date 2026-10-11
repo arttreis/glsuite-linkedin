@@ -61,7 +61,7 @@ describe("Dashboard (SDR-47)", () => {
       await mensagem(ana, "entrada", antes(2 * HORA));
       await escalar(ana, "agente", "pediu preço do atacado");
 
-      expect(await comoDuda((tx) => precisaDeVoce(tx, AGORA))).toEqual([
+      expect(await comoDuda((tx) => precisaDeVoce(tx))).toEqual([
         {
           id: `conversa-${ana}`,
           texto: "Ana Lima, Loja da Ana",
@@ -81,7 +81,7 @@ describe("Dashboard (SDR-47)", () => {
       await escalar(respondida, "agente", "reclamou", antes(2 * HORA));
       await mensagem(respondida, "saida", antes(HORA));
 
-      expect(await comoDuda((tx) => precisaDeVoce(tx, AGORA))).toEqual([]);
+      expect(await comoDuda((tx) => precisaDeVoce(tx))).toEqual([]);
     });
 
     it("conversa que você assumiu espera você quando a pessoa responde", async () => {
@@ -89,7 +89,7 @@ describe("Dashboard (SDR-47)", () => {
       await escalar(bia, duda, "respondido pelo Chats", antes(2 * HORA));
       await mensagem(bia, "entrada", antes(HORA));
 
-      expect(await comoDuda((tx) => precisaDeVoce(tx, AGORA))).toEqual([
+      expect(await comoDuda((tx) => precisaDeVoce(tx))).toEqual([
         expect.objectContaining({ href: `/chats/${bia}`, detalhe: "Esperando a sua resposta." }),
       ]);
     });
@@ -103,7 +103,7 @@ describe("Dashboard (SDR-47)", () => {
         leads.push(id);
       }
 
-      const itens = await comoDuda((tx) => precisaDeVoce(tx, AGORA));
+      const itens = await comoDuda((tx) => precisaDeVoce(tx));
       expect(itens.map((item) => item.href)).toEqual([
         ...leads.slice(2).reverse().map((id) => `/chats/${id}`),
         "/chats?filter=needs-you",
@@ -111,15 +111,15 @@ describe("Dashboard (SDR-47)", () => {
       expect(itens.at(-1)!.texto).toBe("Mais 2 conversas esperando você");
     });
 
-    it("respostas para aprovar levam à aprovação", async () => {
+    it("resposta para aprovar leva à conversa do lead, onde se aprova", async () => {
       const id = await lead("em_conversa");
       await banco.db.query(
         `insert into public.acoes (lead_id, perfil_id, tipo, origem, status, agendada_para, idempotency_key)
          values ($1::uuid, $2::uuid, 'dm', 'ia', 'aguardando_aprovacao', $3, $4)`,
         [id, juliano, AGORA, randomUUID()],
       );
-      expect(await comoDuda((tx) => precisaDeVoce(tx, AGORA))).toEqual([
-        { id: "aprovacao", texto: "1 resposta esperando aprovação", detalhe: null, href: "/aprovacao", acao: "Revisar" },
+      expect(await comoDuda((tx) => precisaDeVoce(tx))).toEqual([
+        { id: `aprovacao-${id}`, texto: "Maria Souza, Acme", detalhe: "O SDR escreveu e espera você aprovar.", href: `/chats/${id}`, acao: "Revisar" },
       ]);
     });
 
@@ -127,7 +127,7 @@ describe("Dashboard (SDR-47)", () => {
       await banco.db.query("update public.perfis set status = 'pausado', motivo_pausa = 'Aceite abaixo de 15%' where id = $1::uuid", [
         juliano,
       ]);
-      expect(await comoDuda((tx) => precisaDeVoce(tx, AGORA))).toEqual([
+      expect(await comoDuda((tx) => precisaDeVoce(tx))).toEqual([
         {
           id: `conta-${juliano}`,
           texto: "A conta de Juliano está pausada",
@@ -138,7 +138,7 @@ describe("Dashboard (SDR-47)", () => {
       ]);
 
       await banco.db.query("update public.perfis set unipile_status = 'CREDENTIALS' where id = $1::uuid", [juliano]);
-      expect(await comoDuda((tx) => precisaDeVoce(tx, AGORA))).toEqual([
+      expect(await comoDuda((tx) => precisaDeVoce(tx))).toEqual([
         expect.objectContaining({ href: `/settings/linkedin#conta-${juliano}`, acao: "Reconectar" }),
       ]);
     });
@@ -148,7 +148,7 @@ describe("Dashboard (SDR-47)", () => {
       await banco.db.query("update public.perfis set casa = true where id = $1::uuid", [casa]);
       await banco.db.query("insert into public.operador_perfis (operador_id, perfil_id) values ($1::uuid, $2::uuid)", [duda, casa]);
 
-      expect(await comoDuda((tx) => precisaDeVoce(tx, AGORA))).toEqual([]);
+      expect(await comoDuda((tx) => precisaDeVoce(tx))).toEqual([]);
       const contas = await comoDuda((tx) => saudeDosPerfis(tx, AGORA));
       expect(contas.map((conta) => conta.id)).not.toContain(casa);
       expect(contas.find((conta) => conta.id === juliano)).toMatchObject({ status: "ativo", modoResposta: expect.any(String) });
@@ -162,7 +162,7 @@ describe("Dashboard (SDR-47)", () => {
       const perfilDeFora = await criarPerfilNaOrganizacao(banco.db, { organizacaoId: outra, slug: "fora" });
       const deFora = await criarOperador(banco.db, { organizacaoId: outra, perfilIds: [perfilDeFora] });
 
-      const itens = await comOperador(banco.db, deFora, (tx) => precisaDeVoce(tx, AGORA));
+      const itens = await comOperador(banco.db, deFora, (tx) => precisaDeVoce(tx));
       expect(itens.map((item) => item.id)).toEqual([`conta-${perfilDeFora}`]);
     });
   });

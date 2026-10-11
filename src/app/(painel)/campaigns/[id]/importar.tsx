@@ -11,17 +11,17 @@ import {
   type LinhaInvalida,
   type PessoaImportada,
 } from "@/domain/importacao";
-import { importarArquivo, importarBuscaDaUnipile, type RespostaDaImportacao } from "./acoes";
+import { importarArquivo, importarBuscaDaUnipile, type RespostaDaImportacao } from "../acoes-de-importacao";
 
 export type OpcaoDeCampanha = { id: string; nome: string; perfil: string };
 
 type Previa = { arquivoNome: string; pessoas: PessoaImportada[]; invalidas: LinhaInvalida[] };
 
-function Resultado({ resposta, campanhaId, destino }: { resposta: RespostaDaImportacao; campanhaId: string; destino?: string }) {
+function Resultado({ resposta, destino }: { resposta: RespostaDaImportacao; destino: string }) {
   if (!resposta.ok) return <Aviso tom="erro">{resposta.erro}</Aviso>;
   const r = resposta.resumo;
   const numeros: [string, number][] = [
-    ["Novos na triagem", r.novos],
+    ["Novos para você decidir", r.novos],
     ["Bloqueados", r.bloqueados],
     ["Duplicados", r.duplicados],
     ["Com opt-out (não entraram)", r.optouts],
@@ -40,8 +40,8 @@ function Resultado({ resposta, campanhaId, destino }: { resposta: RespostaDaImpo
           </div>
         ))}
       </dl>
-      <Link href={destino ?? `/triagem?campanha=${campanhaId}`} className="link mt-3 inline-block">
-        {destino ? "Ver os leads" : "Ir para a triagem"}
+      <Link href={destino} className="link mt-3 inline-block">
+        Ver os leads
       </Link>
     </Aviso>
   );
@@ -54,8 +54,8 @@ export function FormularioImportacao({
 }: {
   campanhas: OpcaoDeCampanha[];
   inicial?: string;
-  /** Para onde levam os leads importados. Sem ele, a triagem antiga. */
-  destinoDosLeads?: string;
+  /** Para onde levam os leads importados. */
+  destinoDosLeads: string;
 }) {
   const [campanhaId, setCampanhaId] = useState(
     campanhas.some((c) => c.id === inicial) ? inicial! : (campanhas[0]?.id ?? ""),
@@ -221,7 +221,7 @@ export function FormularioImportacao({
         </div>
       </section>
 
-      {resposta && <Resultado resposta={resposta} campanhaId={campanhaId} destino={destinoDosLeads} />}
+      {resposta && <Resultado resposta={resposta} destino={destinoDosLeads} />}
     </div>
   );
 }

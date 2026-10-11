@@ -1,7 +1,6 @@
 "use client";
 
 import { Info } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Aviso } from "@/components/aviso";
@@ -124,9 +123,7 @@ export function EditorDeCampanha({
               Ângulo de abertura
               <p className="text-sm font-normal text-tinta">
                 {campanha.angulo}{" "}
-                <Link href={`/publicos/${campanha.publico.id}`} className="link text-xs">
-                  vem do público {campanha.publico.nome}
-                </Link>
+                <span className="text-xs text-tinta-fraca">vem do público {campanha.publico.nome}</span>
               </p>
             </div>
           ) : (

@@ -1,8 +1,8 @@
-import { CalendarCheck, ExternalLink, Hand, Star, Undo2, X } from "lucide-react";
+import { CalendarCheck, ExternalLink, Hand, RotateCcw, Star, Undo2, UserRound, X } from "lucide-react";
 import { ROTULO_DO_ESTADO } from "@/domain/estados";
 import { colunaDoEstado } from "@/domain/pipeline";
 import type { ChatDoLead } from "@/server/chats/chats";
-import { devolverAoSdrDoChat, marcarConversa, registrarOptoutDaConversa } from "./acoes";
+import { assumirParadoDoChat, devolverAoSdrDoChat, marcarConversa, registrarOptoutDaConversa, tentarDeNovoDoChat } from "./acoes";
 
 /** Os dados do lead ao lado da conversa (§4.8) e o que a pessoa pode fazer com ela. */
 export function PainelDoLead({ chat }: { chat: ChatDoLead }) {
@@ -35,6 +35,26 @@ export function PainelDoLead({ chat }: { chat: ChatDoLead }) {
         <ExternalLink aria-hidden />
         Perfil no LinkedIn
       </a>
+
+      {lead.parado && (
+        <div className="flex flex-col gap-2 rounded-xl border border-atencao/40 bg-atencao/[0.06] p-3">
+          <p className="text-[13px]">A sequência parou: {lead.parado}</p>
+          <form action={tentarDeNovoDoChat}>
+            <input type="hidden" name="leadId" value={lead.id} />
+            <button type="submit" className="botao botao-pequeno w-full justify-start">
+              <RotateCcw aria-hidden />
+              Tentar de novo (você aprova antes)
+            </button>
+          </form>
+          <form action={assumirParadoDoChat}>
+            <input type="hidden" name="leadId" value={lead.id} />
+            <button type="submit" className="botao botao-pequeno w-full justify-start">
+              <UserRound aria-hidden />
+              Assumir a conversa
+            </button>
+          </form>
+        </div>
+      )}
 
       {lead.estado === "escalado_humano" && (
         <form action={devolverAoSdrDoChat} className="flex flex-col gap-2 border-t border-linha pt-4">

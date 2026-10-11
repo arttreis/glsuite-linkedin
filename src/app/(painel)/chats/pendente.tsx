@@ -16,7 +16,8 @@ export function RespostaParaAprovar({ pendente }: { pendente: RespostaPendente }
   return (
     <li className="ml-auto w-full max-w-[85%] rounded-2xl rounded-tr-md border border-dashed border-destaque/50 bg-destaque/[0.04] px-4 py-3 text-sm">
       <p className="text-[11px] font-medium uppercase tracking-wide text-destaque">
-        O SDR quer responder{pendente.toque ? ` (${pendente.toque})` : ""}
+        {pendente.tipo === "convite" ? "O SDR quer mandar o convite" : "O SDR quer responder"}
+        {pendente.toque ? ` (${pendente.toque})` : ""}
       </p>
       {pendente.motivo && <p className="mt-1 text-[13px] text-atencao">{pendente.motivo}</p>}
       <form action={enviarPendente} className="mt-2 flex flex-col gap-2">

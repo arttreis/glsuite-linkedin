@@ -5,15 +5,12 @@ import type { Publico } from "@/domain/publico";
 import { sequencia } from "@/domain/sequencia";
 import { salvarCampanha } from "@/server/campanhas/campanhas";
 import { comOperador } from "@/server/db/operador";
-import { despachar } from "@/server/despachante/despachante";
 import { importarPessoas } from "@/server/importacao/importar";
 import { calcularFunil } from "@/server/metricas/funil";
 import { comecarAAbordar, contasDoPublico } from "@/server/publicos/abordagem";
-import { aprovarLeads } from "@/server/triagem/triagem";
 import { criarBancoDeTeste, type BancoDeTeste } from "../support/banco";
 import { SP } from "../support/despacho";
 import {
-  ativarPerfil,
   criarCampanha,
   criarLead,
   criarOperador,
@@ -22,7 +19,6 @@ import {
   idDoPerfil,
   SEQUENCIA_PADRAO,
 } from "../support/fixtures";
-import { UnipileFalso } from "../support/unipile-falso";
 
 const AGORA = instanteLocal("2026-10-07", "10:00", SP);
 
