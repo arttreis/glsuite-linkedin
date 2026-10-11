@@ -16,7 +16,42 @@ export type SdrDaOrganizacao = { id: string; versao: number; sdr: Sdr; atualizad
 
 export type ResultadoDoSdr = { ok: true; sdr: SdrDaOrganizacao } | { ok: false; erro: string };
 
-type Origem = "ia" | "humano" | "ajuste" | "desfazer";
+export type Origem = "ia" | "humano" | "ajuste" | "desfazer";
+
+/** A versão do SDR e a última mudança, para o Dashboard (§4.9). */
+export type ResumoDoSdr = {
+  versao: number;
+  ultimaMudanca: { origem: Origem; resumo: string | null; pedido: string | null; em: Date; por: string | null } | null;
+};
+
+export async function resumoDoSdr(db: Db, organizacaoId: string): Promise<ResumoDoSdr | null> {
+  const [linha] = await db.query<{
+    versao: number;
+    origem: Origem | null;
+    resumo: string | null;
+    pedido: string | null;
+    em: Date | null;
+    por: string | null;
+  }>(
+    `select s.versao, v.origem, v.resumo, v.pedido, v.em, o.nome as por
+       from public.sdrs s
+       left join lateral (
+         select sv.origem, sv.resumo, sv.pedido, sv.em, sv.por from public.sdr_versoes sv
+          where sv.sdr_id = s.id order by sv.versao desc limit 1
+       ) v on true
+       left join public.operadores o on o.id = v.por
+      where s.organizacao_id = $1::uuid`,
+    [organizacaoId],
+  );
+  if (!linha) return null;
+  return {
+    versao: linha.versao,
+    ultimaMudanca:
+      linha.origem && linha.em
+        ? { origem: linha.origem, resumo: linha.resumo, pedido: linha.pedido, em: linha.em, por: linha.por }
+        : null,
+  };
+}
 
 /** O SDR da organização na versão atual, ou null se ela ainda não tem. Roda como o operador ou como sistema. */
 export async function obterSdr(db: Db, organizacaoId: string): Promise<SdrDaOrganizacao | null> {

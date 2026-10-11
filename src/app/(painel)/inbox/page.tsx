@@ -9,7 +9,7 @@ import { listarConversasExternas } from "@/server/conversas/externas";
 import { listarConversas } from "@/server/conversas/inbox";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { exigirOperadorLiberado } from "@/server/supabase/servidor";
+import { exigirOperadorNoApp } from "@/server/supabase/servidor";
 import { importarHistoricoDoPainel } from "./acoes";
 import { ProximaResposta } from "./proxima";
 import { SeloDoSla } from "./sla";
@@ -27,7 +27,7 @@ const quando = (valor: Date | null) =>
   valor ? new Date(valor).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) : "";
 
 export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
-  const operador = await exigirOperadorLiberado();
+  const operador = await exigirOperadorNoApp();
   const params = await searchParams;
   const estado = typeof params.estado === "string" ? params.estado : "abertas";
   // As conversas fora de campanha não têm estado de lead: aparecem em "Abertas" e "Todas".

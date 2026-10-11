@@ -104,6 +104,17 @@
     box-shadow: 0 24px 48px -28px rgb(0 0 0 / 0.7);
   }
 
+  /* O elemento marcante de cada tela: borda com luz menta na diagonal. */
+  .cartao-vitrine {
+    background:
+      radial-gradient(120% 90% at 0% 0%, rgb(95 227 154 / 0.09), transparent 55%) padding-box,
+      linear-gradient(180deg, #151917, #0f1211) padding-box,
+      linear-gradient(135deg, rgb(95 227 154 / 0.5), rgb(255 255 255 / 0.07) 38%, rgb(255 255 255 / 0.04)) border-box;
+    box-shadow:
+      0 32px 64px -36px rgb(95 227 154 / 0.28),
+      0 24px 48px -28px rgb(0 0 0 / 0.7);
+  }
+
   /* Trecho recuado dentro de um cartão: citação, prévia, roteiro. */
   .recuo {
     border: 1px solid var(--color-linha);
@@ -503,61 +514,6 @@
 
   /* Navegação lateral */
 
-  .grupo-nav-titulo {
-    display: flex;
-    width: 100%;
-    align-items: center;
-    justify-content: space-between;
-    border-radius: 0.5rem;
-    padding: 0.375rem 0.5rem;
-    font-size: 0.6875rem;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-tinta-fraca);
-    cursor: pointer;
-  }
-  .grupo-nav-titulo:hover {
-    color: var(--color-tinta-suave);
-  }
-  .grupo-nav-titulo svg {
-    width: 0.875rem;
-    height: 0.875rem;
-    transition: transform 0.2s;
-  }
-  .grupo-nav-titulo[aria-expanded="false"] svg {
-    transform: rotate(-90deg);
-  }
-
-  /* Linhas de árvore: tronco contínuo e um galho curvo para cada item. */
-  .arvore {
-    margin: 0.25rem 0 0 0.875rem;
-    padding-left: 0.875rem;
-  }
-  .arvore > li {
-    position: relative;
-    padding: 0.125rem 0;
-  }
-  .arvore > li::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: -0.875rem;
-    width: 0.625rem;
-    height: 50%;
-    border-bottom: 1px solid var(--color-linha-forte);
-    border-left: 1px solid var(--color-linha-forte);
-    border-bottom-left-radius: 0.5rem;
-  }
-  .arvore > li:not(:last-child)::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    bottom: 0;
-    left: -0.875rem;
-    border-left: 1px solid var(--color-linha-forte);
-  }
-
   .item-nav {
     display: flex;
     align-items: center;
@@ -598,32 +554,6 @@
   }
   .item-nav[aria-current="page"] svg {
     color: var(--color-destaque);
-  }
-
-  /* Ficha: um fato curto do dia, em pílula, ao pé da saudação do Início. */
-  .ficha {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    height: 2rem;
-    border: 1px solid rgb(255 255 255 / 0.09);
-    border-radius: 999px;
-    background: linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.015));
-    padding: 0 0.875rem;
-    font-size: 0.8125rem;
-    white-space: nowrap;
-    color: var(--color-tinta-suave);
-  }
-  .ficha svg {
-    width: 0.875rem;
-    height: 0.875rem;
-    flex-shrink: 0;
-    color: var(--color-tinta-fraca);
-  }
-  .ficha strong {
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
-    color: var(--color-tinta);
   }
 
   /* Medidores: o menta também pinta o quanto do limite já foi usado. */

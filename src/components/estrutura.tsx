@@ -9,9 +9,7 @@ import { Navegacao } from "./navegacao";
 export type OperadorDaSessao = {
   nome: string;
   email: string;
-  papel: "admin" | "operador";
   organizacao: string;
-  emPrimeirosPassos: boolean;
 };
 
 function PainelLateral({ operador, aoFechar }: { operador: OperadorDaSessao; aoFechar?: () => void }) {
@@ -26,7 +24,7 @@ function PainelLateral({ operador, aoFechar }: { operador: OperadorDaSessao; aoF
         )}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-1">
-        <Navegacao admin={operador.papel === "admin"} emPrimeirosPassos={operador.emPrimeirosPassos} aoNavegar={aoFechar} />
+        <Navegacao aoNavegar={aoFechar} />
       </div>
       <div className="mt-3 rounded-xl border border-linha bg-superficie-alta p-3">
         <div className="flex items-center gap-3">

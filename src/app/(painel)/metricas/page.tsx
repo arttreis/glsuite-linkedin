@@ -2,7 +2,7 @@ import { Cabecalho } from "@/components/cabecalho";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { calcularFunil, referencia, type LinhaDoFunil } from "@/server/metricas/funil";
-import { exigirOperadorLiberado } from "@/server/supabase/servidor";
+import { exigirOperadorNoApp } from "@/server/supabase/servidor";
 import { FunilDaCasa } from "./funil-da-casa";
 
 const pct = (valor: number) => `${Math.round(valor * 100)}%`;
@@ -85,7 +85,7 @@ function Tabela({
 }
 
 export default async function MetricasPage() {
-  const operador = await exigirOperadorLiberado();
+  const operador = await exigirOperadorNoApp();
   const funil = await comOperador(obterDb(), operador.id, (tx) => calcularFunil(tx));
 
   return (

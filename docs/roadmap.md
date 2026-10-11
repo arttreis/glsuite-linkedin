@@ -10,21 +10,26 @@ abordagem → permissão → LinkedIn) e o app em cinco telas (Dashboard, Chats,
 Pipeline, Campanhas, Configurações), sobre o mesmo motor. Produção em
 https://sdr.glsuite.io.
 
+O Marco A (SDR-40 a 46) está em produção desde 10/10, com as migrations
+aplicadas. A GuessLess foi zerada no mesmo dia para refazer o primeiro acesso
+(ficaram a organização, os operadores e a conta da casa). As URLs passaram a
+usar slug em inglês (#25), e as rotas antigas redirecionam.
+
 ## 1 · Código (tickets da §9)
 
 | Onda | Ticket | Depende de | Código | PR / merge | Aceite com serviço real |
 |---|---|---|---|---|---|
-| 1 | SDR-40 Acesso por domínio, organização nova e moldura do primeiro acesso | — | ✅ | ⏳ PR aberto | ⛔ `SUPABASE_SECRET_KEY` (T-5) |
-| 2 | SDR-41 Análise do site: negócio, produto e mercado | 40 | ✅ | ⏳ PR aberto | — |
-| 2 | SDR-47 Menu novo e Dashboard | 40 | 🔜 | — | — |
-| 3 | SDR-42 O SDR da organização | 41 | ✅ | ⏳ PR aberto | — |
-| 3 | SDR-44 Leads: público e prévia pela conta da casa | 41 | ✅ | ⏳ PR aberto | ⛔ testar a busca com a conta da casa |
+| 1 | SDR-40 Acesso por domínio, organização nova e moldura do primeiro acesso | — | ✅ | ✅ #17, em produção | ⛔ `SUPABASE_SECRET_KEY` (T-5) |
+| 2 | SDR-41 Análise do site: negócio, produto e mercado | 40 | ✅ | ✅ #18, em produção | — |
+| 2 | SDR-47 Menu novo e Dashboard | 40 | ✅ | ⏳ PR aberto | — |
+| 3 | SDR-42 O SDR da organização | 41 | ✅ | ✅ #19, em produção | — |
+| 3 | SDR-44 Leads: público e prévia pela conta da casa | 41 | ✅ | ✅ #21, em produção | ⛔ testar a busca com a conta da casa |
 | 3 | SDR-48 Chats: a réplica das DMs | 47 | 🔜 | — | — |
 | 3 | SDR-49 Pipeline | 47 | 🔜 | — | — |
-| 4 | SDR-43 Chat de teste: você no papel de lead | 42 | ✅ | ⏳ PR aberto | — |
-| 4 | SDR-45 Abordagem recomendada e permissão | 42, 44 | ✅ | ⏳ PR aberto | — |
+| 4 | SDR-43 Chat de teste: você no papel de lead | 42 | ✅ | ✅ #20, em produção | — |
+| 4 | SDR-45 Abordagem recomendada e permissão | 42, 44 | ✅ | ✅ #22, em produção | — |
 | 4 | SDR-52 O SDR responde sozinho | 42, 48 | 🔜 | — | ⛔ Resend (T-4) |
-| 5 | SDR-46 Vincular o LinkedIn e começar | 45 | ✅ | ⏳ PR aberto | ⛔ vincular uma conta real pela Unipile |
+| 5 | SDR-46 Vincular o LinkedIn e começar | 45 | ✅ | ✅ #23, em produção | ⛔ vincular uma conta real pela Unipile |
 | 5 | SDR-50 Campanhas | 45, 47 | 🔜 | — | — |
 | 5 | SDR-51 Configurações | 43, 47 | 🔜 | — | — |
 | 6 | SDR-53 Sai o que ficou para trás (RD, praças, telas antigas) | 46, 48 a 52 | 🔜 | — | — |
@@ -39,7 +44,7 @@ Legenda: ✅ feito · 🔜 a fazer · ⏳ aguardando · ⛔ bloqueado por algo e
 | T-2 | Chave da Anthropic na Vercel | análise, SDR, chat de teste, nota, abordagem | Arthur | ✅ 10/10 |
 | T-3 | Domínio de produção nas Redirect URLs do Auth do GL Suite | login | Arthur | aberta |
 | T-4 | Resend com domínio verificado | aviso de "o SDR chamou você" | Arthur | aberta |
-| T-5 | `SUPABASE_SECRET_KEY` do GL Suite na Vercel | primeiro acesso de e-mail novo | Arthur | aberta |
+| T-5 | `SUPABASE_SECRET_KEY` do GL Suite na Vercel | primeiro acesso de e-mail novo | Arthur | aberta: não está na Vercel em 10/10 |
 | D1 | Qual conta é a conta da casa | SDR-44 | Arthur | ✅ 10/10: a do Arthur, só busca |
 | D2 | Tamanho da prévia por organização | SDR-44 | Arthur | padrão 25 |
 | D3 | Rampa e teto de conta nova | SDR-46 | Arthur | padrão 8 · 12 · 15 convites/dia, 75/semana |
