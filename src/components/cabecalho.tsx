@@ -20,7 +20,7 @@ export function Cabecalho({
         {voltar && (
           <Link
             href={voltar.href}
-            className="mb-2 inline-flex items-center gap-1.5 text-[13px] text-tinta-suave transition-colors hover:text-tinta"
+            className="mb-2 flex w-fit items-center gap-1.5 text-[13px] text-tinta-suave transition-colors hover:text-tinta"
           >
             <ArrowLeft className="size-3.5" aria-hidden />
             {voltar.rotulo}

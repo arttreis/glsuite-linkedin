@@ -125,6 +125,7 @@ export function BuscaDaCampanha({
   tetoDoDia,
   suspensaAte,
   atalhos,
+  destinoDosLeads,
 }: {
   campanhaId: string;
   inicial: BuscaDoPublico;
@@ -133,6 +134,8 @@ export function BuscaDaCampanha({
   tetoDoDia: number;
   suspensaAte: string | null;
   atalhos: { regioes: string[]; setores: string[] };
+  /** Para onde levam os leads que a busca trouxe. Sem ele, a triagem antiga. */
+  destinoDosLeads?: string;
 }) {
   const [busca, setBusca] = useState<BuscaDoPublico>(inicial);
   const [quantidade, setQuantidade] = useState(Math.min(25, saldoHoje));
@@ -227,8 +230,8 @@ export function BuscaDaCampanha({
         <Aviso tom={retorno.tom}>
           {retorno.texto}{" "}
           {retorno.triar && (
-            <Link href={`/triagem?campanha=${campanhaId}`} className="link">
-              Ir para a triagem
+            <Link href={destinoDosLeads ?? `/triagem?campanha=${campanhaId}`} className="link">
+              {destinoDosLeads ? "Ver os leads" : "Ir para a triagem"}
             </Link>
           )}
         </Aviso>

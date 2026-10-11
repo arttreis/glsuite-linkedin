@@ -17,7 +17,7 @@ export type OpcaoDeCampanha = { id: string; nome: string; perfil: string };
 
 type Previa = { arquivoNome: string; pessoas: PessoaImportada[]; invalidas: LinhaInvalida[] };
 
-function Resultado({ resposta, campanhaId }: { resposta: RespostaDaImportacao; campanhaId: string }) {
+function Resultado({ resposta, campanhaId, destino }: { resposta: RespostaDaImportacao; campanhaId: string; destino?: string }) {
   if (!resposta.ok) return <Aviso tom="erro">{resposta.erro}</Aviso>;
   const r = resposta.resumo;
   const numeros: [string, number][] = [
@@ -40,14 +40,23 @@ function Resultado({ resposta, campanhaId }: { resposta: RespostaDaImportacao; c
           </div>
         ))}
       </dl>
-      <Link href={`/triagem?campanha=${campanhaId}`} className="link mt-3 inline-block">
-        Ir para a triagem
+      <Link href={destino ?? `/triagem?campanha=${campanhaId}`} className="link mt-3 inline-block">
+        {destino ? "Ver os leads" : "Ir para a triagem"}
       </Link>
     </Aviso>
   );
 }
 
-export function FormularioImportacao({ campanhas, inicial }: { campanhas: OpcaoDeCampanha[]; inicial?: string }) {
+export function FormularioImportacao({
+  campanhas,
+  inicial,
+  destinoDosLeads,
+}: {
+  campanhas: OpcaoDeCampanha[];
+  inicial?: string;
+  /** Para onde levam os leads importados. Sem ele, a triagem antiga. */
+  destinoDosLeads?: string;
+}) {
   const [campanhaId, setCampanhaId] = useState(
     campanhas.some((c) => c.id === inicial) ? inicial! : (campanhas[0]?.id ?? ""),
   );
@@ -212,7 +221,7 @@ export function FormularioImportacao({ campanhas, inicial }: { campanhas: OpcaoD
         </div>
       </section>
 
-      {resposta && <Resultado resposta={resposta} campanhaId={campanhaId} />}
+      {resposta && <Resultado resposta={resposta} campanhaId={campanhaId} destino={destinoDosLeads} />}
     </div>
   );
 }

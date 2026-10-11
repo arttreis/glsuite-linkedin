@@ -11,6 +11,7 @@ import { dossieConfirmado } from "@/server/oferta/oferta";
 import type { EscritorDeFluxo } from "./escritor";
 import { entradaDoFluxo, promptDoFluxo, VERSAO_DO_PROMPT_DO_FLUXO } from "./prompts-do-fluxo";
 import { obterPublico, type Resultado } from "./publicos";
+import { obterSdr } from "@/server/sdr/sdr";
 
 const somar = (a: Uso, b: Uso): Uso => ({
   entrada: a.entrada + b.entrada,
@@ -76,13 +77,15 @@ export async function gerarFluxo(
     if (!publico) return { erro: "Público não encontrado." };
     const dossie = await dossieConfirmado(tx, campanha.organizacao_id);
     if (!dossie) return { erro: "Confirme o dossiê da oferta antes: as mensagens saem dele." };
+    // Com o SDR montado, a campanha fala na voz dele (§4.11, como no primeiro acesso).
+    const sdr = await obterSdr(tx, campanha.organizacao_id);
     return {
       publico,
       dossie,
       contexto: await contextoDoPerfil(tx, campanha.perfil_id),
       exemplo: await lerConfiguracao(tx, "template_exemplo"),
       nome: campanha.nome,
-      voz: campanha.voz_md,
+      voz: sdr ? `${sdr.sdr.voz}\nComo abre a conversa: ${sdr.sdr.abertura}` : campanha.voz_md,
     };
   });
   if ("erro" in entrada) return { ok: false, erro: entrada.erro! };

@@ -1521,6 +1521,44 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
 - O chat de teste segue a mesma regra: pergunta de preço vira a nota "Aqui o
   SDR pararia e chamaria você".
 
+### SDR-50 · Campanhas
+
+- A campanha virou o centro: `/campaigns/[id]` com as abas `?tab=audience`
+  (Público), `leads`, `approach` (Abordagem), `sdr` (Instruções do SDR) e
+  `results` (Resultados). A aba padrão é Leads. A tela antiga de Públicos
+  continua até o SDR-53; os componentes de busca, edição de público e
+  importação vêm de lá, com um destino novo para voltar à campanha.
+- **Permissão:** campanha em rascunho mostra no topo "Pode entrar em contato?",
+  com o que vai acontecer. O botão ativa a campanha, e ativar já gravava quem
+  permitiu e quando (SDR-45). Pausar, retomar e encerrar ficam no cabeçalho.
+- **Leads:** a busca pela conta da campanha (a mesma do SDR-27), a nota, e
+  "quem entra na campanha": a lista da triagem com marcar todos, colocar os
+  marcados na fila e tirar os marcados. Importar uma lista fica recolhido no
+  fim.
+- **Abordagem:** a linha do tempo é o caminho do "sim" no fluxo (convite,
+  aceite, esperas e mensagens; `domain/linha-do-tempo.ts`), com cada texto
+  editável. Salvar valida tudo (texto em branco pode ficar no rascunho, porque
+  a ativação barra) e usa o `salvarFluxo` que já existia: com lead andando,
+  nasce uma versão nova para quem entrar depois. Fluxo com desvio avisa que
+  os textos fora do caminho ficam no editor de blocos, que ficou recolhido
+  como avançado. "Escrever de novo com a IA" usa a voz do SDR quando ele
+  existe (o `gerarFluxo` passou a ler o SDR).
+- **Instruções do SDR:** texto livre de até 1000 caracteres, gravado em
+  `campanhas.instrucoes_sdr`. O agente já o punha na mensagem do usuário só
+  da campanha do lead (SDR-42); o teste do "não vaza para outra campanha" é
+  deste ticket.
+- **Resultados:** o funil da campanha (`calcularFunil` ganhou o filtro por
+  campanha), com convite de template contra convite personalizado quando há
+  os dois.
+- **Nova campanha** (`/campaigns/new`): escolher o público (os escolhidos e as
+  sugestões da IA, que viram escolhidos ao criar), pedir sugestões, ou criar
+  um do zero ali mesmo; escolher a conta. Cria em rascunho com a abordagem
+  escrita na voz do SDR e abre na aba Leads. O editor de campanha em branco
+  saiu da rota `new`.
+- A lista mostra campanha, público, conta, status e os números (para
+  decidir, na fila, convites, conversas, reuniões). A planilha-espelho (CSV)
+  ficou num botão só, do Brasil, até as praças saírem.
+
 ### Slugs de URL em inglês (10/10/2026)
 
 - Pedido do Arthur: slug de URL sempre em inglês. O código, os nomes de
