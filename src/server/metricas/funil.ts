@@ -99,7 +99,10 @@ function agrupar(bases: Base[], chaveDe: (b: Base) => string, rotulosDe: (b: Bas
   return [...grupos.entries()].map(([chave, g]) => linha(chave, g.rotulos, g.contagens, leituraMinima));
 }
 
-export async function calcularFunil(db: Db, p: { perfilId?: string | null; publicoId?: string | null } = {}): Promise<Funil> {
+export async function calcularFunil(
+  db: Db,
+  p: { perfilId?: string | null; publicoId?: string | null; campanhaId?: string | null } = {},
+): Promise<Funil> {
   const leituraMinima = await lerConfiguracao(db, "leitura_minima_toques");
   const bases = await db.query<Base>(
     `with por_lead as (
@@ -120,6 +123,7 @@ export async function calcularFunil(db: Db, p: { perfilId?: string | null; publi
          from public.leads l
         where l.estado not in ('triagem', 'rejeitado') and ($1::uuid is null or l.perfil_id = $1::uuid)
           and ($2::uuid is null or l.campanha_id in (select id from public.campanhas where publico_id = $2::uuid))
+          and ($3::uuid is null or l.campanha_id = $3::uuid)
      )
      select pf.nome as perfil, pf.praca, c.id as campanha_id, c.nome as campanha, pl.angulo, pl.variante, pu.nome as publico,
             sum(pl.toques)::int as toques,
@@ -135,7 +139,7 @@ export async function calcularFunil(db: Db, p: { perfilId?: string | null; publi
        left join public.publicos pu on pu.id = c.publico_id
       group by pf.nome, pf.praca, pf.slug, c.id, c.nome, pl.angulo, pl.variante, pu.nome
       order by array_position(array['arthur', 'juliano', 'luiz', 'jp'], pf.slug), c.nome, pl.angulo, pl.variante`,
-    [p.perfilId ?? null, p.publicoId ?? null],
+    [p.perfilId ?? null, p.publicoId ?? null, p.campanhaId ?? null],
   );
 
   return {

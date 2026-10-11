@@ -25,7 +25,10 @@ export async function sugerirPublicosDoPainel(): Promise<Resultado<{ quantidade:
     { db: obterDb(), sugeridor, agora: () => new Date() },
     { organizacaoId: operador.organizacaoId, operadorId: operador.id },
   );
-  if (resultado.ok) revalidatePath("/publicos");
+  if (resultado.ok) {
+    revalidatePath("/publicos");
+    revalidatePath("/campaigns/new");
+  }
   return resultado;
 }
 

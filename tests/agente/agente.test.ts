@@ -420,6 +420,21 @@ describe("agente de conversa (SDR-10)", () => {
       expect(chamada.sistema).not.toContain("evento de novembro");
     });
 
+    it("a instrução de uma campanha não vaza para a conversa de outra (SDR-50)", async () => {
+      await gravar();
+      const comInstrucao = await pessoaResponde("Me conta mais?");
+      await banco.db.query(
+        "update public.campanhas set instrucoes_sdr = 'Fale do evento de novembro' where id = (select campanha_id from public.leads where id = $1::uuid)",
+        [comInstrucao.leadId],
+      );
+      const semInstrucao = await pessoaResponde("Como funciona?");
+
+      await rodar(semInstrucao.mensagemId!);
+      const chamada = modelo.chamadas.filter((c) => c.etapa === "rascunhar").at(-1)!;
+      expect(chamada.entrada).not.toContain("evento de novembro");
+      expect(chamada.entrada).not.toContain("Instruções desta campanha");
+    });
+
     it("sem SDR, nada muda: voz do perfil e oferta da configuração", async () => {
       await banco.db.query("update public.perfis set voz_md = 'Voz antiga do perfil' where slug = 'arthur'");
       const { mensagemId } = await pessoaResponde("Me conta mais?");

@@ -18,11 +18,14 @@ export function EditorDoPublico({
   inicial,
   status,
   provasDoDossie,
+  destino,
 }: {
   id: string | null;
   inicial: Publico;
   status: "novo" | "sugerido" | "ativo";
   provasDoDossie: string[];
+  /** Para onde voltar depois de salvar. Sem ele, a página do público. */
+  destino?: string;
 }) {
   const router = useRouter();
   const [p, setP] = useState<Publico>(inicial);
@@ -42,7 +45,8 @@ export function EditorDoPublico({
         return;
       }
       const msg = status === "novo" ? "Público criado e escolhido." : ativar ? "Público salvo e escolhido." : "Público salvo.";
-      router.push(`/publicos/${resultado.id}?msg=${encodeURIComponent(msg)}`);
+      const base = destino ?? `/publicos/${resultado.id}`;
+      router.push(`${base}${base.includes("?") ? "&" : "?"}msg=${encodeURIComponent(msg)}`);
     });
 
   const alternarProva = (texto: string, marcada: boolean) =>
