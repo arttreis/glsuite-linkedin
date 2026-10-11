@@ -37,7 +37,7 @@ function ItemParaAprovar({ item }: { item: ItemDaFila }) {
         <div className="flex min-w-0 items-center gap-3">
           <Avatar nome={item.pessoa} />
           <div className="min-w-0">
-            <Link href={`/inbox/${item.leadId}`} className="link font-medium">
+            <Link href={`/chats/${item.leadId}`} className="link font-medium">
               {item.pessoa}
             </Link>
             <p className="text-xs text-tinta-fraca">
@@ -119,7 +119,7 @@ function Parado({ lead }: { lead: LeadParado }) {
         <div className="flex min-w-0 items-center gap-3">
           <Avatar nome={lead.pessoa} />
           <div className="min-w-0">
-            <Link href={`/inbox/${lead.leadId}`} className="link font-medium">
+            <Link href={`/chats/${lead.leadId}`} className="link font-medium">
               {lead.pessoa}
             </Link>
             <p className="text-xs text-tinta-fraca">

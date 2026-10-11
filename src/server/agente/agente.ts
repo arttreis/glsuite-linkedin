@@ -195,7 +195,7 @@ async function escalar(db: Db, ctx: Contexto, p: { rascunhoId: string; motivo: s
     perfilId: ctx.perfil.id,
     incluirAdmin: false,
     assunto: `[SDR] A conversa com ${ctx.lead.nome} precisa de você (${ctx.perfil.nome})`,
-    texto: `O agente passou a conversa para um humano.\n\nMotivo: ${p.motivo}\n\nResponda pela inbox do painel.`,
+    texto: `O agente passou a conversa para um humano.\n\nMotivo: ${p.motivo}\n\nResponda pelo Chats do Kakou.`,
   });
 }
 

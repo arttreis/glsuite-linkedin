@@ -24,12 +24,15 @@ const CONECTADOS: readonly EstadoDoLead[] = [
   "escalado_humano",
 ];
 
+/** Estados em que o SDR ainda conduz: quem responde tira ele da conversa (§4.7). */
+const COM_O_SDR: readonly EstadoDoLead[] = ["aceito", "em_sequencia", "em_conversa", "qualificado"];
+
 /**
- * Resposta escrita pelo operador no painel (§9 SDR-09). Passa pelo validador
- * como texto humano, sai na hora pela Unipile e entra no histórico com
+ * Resposta escrita pela pessoa no Chats (§4.8). Passa pelo validador como
+ * texto humano, sai na hora pela Unipile e entra no histórico com
  * autor = humano. A chave vem do formulário: clicar duas vezes não manda duas
- * mensagens. Se a régua ainda rodava para o lead, ela para (a conversa é do
- * humano).
+ * mensagens. Quem responde assume a conversa: a régua e o que o SDR deixou
+ * para aprovar param, e o lead vai para `escalado_humano` (§4.7).
  */
 export async function responderManualmente(
   deps: { db: Db; unipile: ClienteUnipile; agora: Date },
@@ -100,9 +103,9 @@ export async function responderManualmente(
 
   await db.transacao(async (tx) => {
     const tarefaFeita = await concluirTarefaManual(tx, { leadId: p.leadId, texto, agora, ator: p.operadorId, como: "painel" });
-    if (!tarefaFeita && (lead.estado === "aceito" || lead.estado === "em_sequencia")) {
+    if (!tarefaFeita && COM_O_SDR.includes(lead.estado)) {
       await cancelarPendentes(tx, p.leadId, "conversa assumida pelo operador");
-      await transicionarLead(tx, { leadId: p.leadId, para: "escalado_humano", ator: p.operadorId, agora, motivo: "respondido pelo painel" });
+      await transicionarLead(tx, { leadId: p.leadId, para: "escalado_humano", ator: p.operadorId, agora, motivo: "respondido pelo Chats" });
     }
     await tx.query("update public.leads set dono_conversa_id = coalesce(dono_conversa_id, $2::uuid) where id = $1::uuid", [
       p.leadId,

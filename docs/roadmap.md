@@ -21,10 +21,10 @@ usar slug em inglês (#25), e as rotas antigas redirecionam.
 |---|---|---|---|---|---|
 | 1 | SDR-40 Acesso por domínio, organização nova e moldura do primeiro acesso | — | ✅ | ✅ #17, em produção | ⛔ `SUPABASE_SECRET_KEY` (T-5) |
 | 2 | SDR-41 Análise do site: negócio, produto e mercado | 40 | ✅ | ✅ #18, em produção | — |
-| 2 | SDR-47 Menu novo e Dashboard | 40 | ✅ | ⏳ PR aberto | — |
+| 2 | SDR-47 Menu novo e Dashboard | 40 | ✅ | ✅ #26, em produção | — |
 | 3 | SDR-42 O SDR da organização | 41 | ✅ | ✅ #19, em produção | — |
 | 3 | SDR-44 Leads: público e prévia pela conta da casa | 41 | ✅ | ✅ #21, em produção | ⛔ testar a busca com a conta da casa |
-| 3 | SDR-48 Chats: a réplica das DMs | 47 | 🔜 | — | — |
+| 3 | SDR-48 Chats: a réplica das DMs | 47 | ✅ | ⏳ PR aberto | — |
 | 3 | SDR-49 Pipeline | 47 | 🔜 | — | — |
 | 4 | SDR-43 Chat de teste: você no papel de lead | 42 | ✅ | ✅ #20, em produção | — |
 | 4 | SDR-45 Abordagem recomendada e permissão | 42, 44 | ✅ | ✅ #22, em produção | — |

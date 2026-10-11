@@ -66,7 +66,7 @@ describe("Dashboard (SDR-47)", () => {
           id: `conversa-${ana}`,
           texto: "Ana Lima, Loja da Ana",
           detalhe: "O SDR chamou você: pediu preço do atacado",
-          href: `/inbox/${ana}`,
+          href: `/chats/${ana}`,
           acao: "Responder",
         },
       ]);
@@ -90,7 +90,7 @@ describe("Dashboard (SDR-47)", () => {
       await mensagem(bia, "entrada", antes(HORA));
 
       expect(await comoDuda((tx) => precisaDeVoce(tx, AGORA))).toEqual([
-        expect.objectContaining({ href: `/inbox/${bia}`, detalhe: "Esperando a sua resposta." }),
+        expect.objectContaining({ href: `/chats/${bia}`, detalhe: "Esperando a sua resposta." }),
       ]);
     });
 
@@ -105,8 +105,8 @@ describe("Dashboard (SDR-47)", () => {
 
       const itens = await comoDuda((tx) => precisaDeVoce(tx, AGORA));
       expect(itens.map((item) => item.href)).toEqual([
-        ...leads.slice(2).reverse().map((id) => `/inbox/${id}`),
-        "/inbox",
+        ...leads.slice(2).reverse().map((id) => `/chats/${id}`),
+        "/chats?filter=needs-you",
       ]);
       expect(itens.at(-1)!.texto).toBe("Mais 2 conversas esperando você");
     });

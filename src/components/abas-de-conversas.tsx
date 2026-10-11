@@ -1,12 +1,12 @@
 import Link from "next/link";
 
 const ABAS = [
-  { href: "/inbox", rotulo: "Inbox" },
+  { href: "/chats", rotulo: "Chats" },
   { href: "/aprovacao", rotulo: "Aprovação" },
   { href: "/tarefas", rotulo: "Tarefas manuais" },
 ] as const;
 
-/** Conversas (§4.10): inbox, aprovação e tarefas manuais são abas do mesmo lugar no menu. */
+/** Chats, aprovação e tarefas manuais são abas do mesmo lugar no menu, até a aprovação e as tarefas saírem (SDR-53). */
 export function AbasDeConversas({ atual }: { atual: (typeof ABAS)[number]["href"] }) {
   return (
     <nav aria-label="Conversas" className="segmentos mb-5">

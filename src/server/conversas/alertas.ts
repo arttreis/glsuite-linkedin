@@ -39,7 +39,7 @@ export async function alertarNovaMensagem(
       ``,
       `"${trecho(p.texto)}"`,
       ``,
-      `SLA: responder em até 4 horas úteis no fuso do perfil. A conversa está na inbox do painel.`,
+      `SLA: responder em até 4 horas úteis no fuso do perfil. A conversa está nos Chats do Kakou.`,
     ].join("\n"),
   });
 }
@@ -58,7 +58,7 @@ export async function alertarSlasEstourados(db: Db, agora: Date): Promise<number
       texto: [
         `A mensagem de ${conversa.pessoa}${conversa.empresa ? ` (${conversa.empresa})` : ""} passou de 4 horas úteis sem retorno.`,
         conversa.aguardandoAprovacao > 0 ? `Há ${conversa.aguardandoAprovacao} rascunho(s) esperando aprovação na fila.` : "",
-        `Responda pela inbox do painel.`,
+        `Responda pelo Chats do Kakou.`,
       ]
         .filter(Boolean)
         .join("\n"),

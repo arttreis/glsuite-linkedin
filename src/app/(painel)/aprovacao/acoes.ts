@@ -30,7 +30,7 @@ async function exigirLead(operadorId: string, valor: FormDataEntryValue | null):
 
 function voltar(mensagem: string): never {
   revalidatePath("/aprovacao");
-  revalidatePath("/inbox");
+  revalidatePath("/chats");
   redirect(`/aprovacao?msg=${encodeURIComponent(mensagem)}`);
 }
 

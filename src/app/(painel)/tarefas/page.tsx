@@ -47,7 +47,7 @@ export default async function TarefasPage({ searchParams }: PageProps<"/tarefas"
                       </a>
                       <p className="text-xs text-tinta-fraca">
                         {t.cargo ?? "sem cargo"}, {t.empresa ?? "sem empresa"}, perfil {t.perfil} ·{" "}
-                        <Link href={`/inbox/${t.leadId}`} className="link">
+                        <Link href={`/chats/${t.leadId}`} className="link">
                           ver conversa
                         </Link>
                       </p>
