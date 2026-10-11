@@ -1,6 +1,5 @@
 import type { Db } from "@/server/db/tipos";
 import { transicionarLead } from "@/server/leads/transicoes";
-import { enfileirarEventoRd } from "@/server/rd/sincronizar";
 import { cancelarPendentes } from "@/server/acoes/cancelar";
 
 export type Desfecho = "qualificado" | "reuniao_marcada" | "encerrado_nao" | "escalado_humano" | "em_conversa";
@@ -26,10 +25,6 @@ export async function marcarDesfecho(
       await tx.query("update public.leads set reuniao_em = $2 where id = $1::uuid", [p.leadId, p.reuniaoEm]);
     }
     if (p.para === "encerrado_nao") await cancelarPendentes(tx, p.leadId, "disse não");
-    if (p.para === "qualificado") await enfileirarEventoRd(tx, { leadId: p.leadId, etapa: "04" });
-    if (p.para === "reuniao_marcada") {
-      await enfileirarEventoRd(tx, { leadId: p.leadId, etapa: "05", dados: { reuniao_em: p.reuniaoEm?.toISOString() ?? null } });
-    }
     await tx.query("update public.leads set dono_conversa_id = coalesce(dono_conversa_id, $2::uuid) where id = $1::uuid", [
       p.leadId,
       p.operadorId,

@@ -46,29 +46,6 @@ export const ESQUEMAS_DE_CONFIGURACAO = {
     max_por_dia: z.number().int().min(0),
     proporcao_personalizada: z.number().min(0).max(1),
   }),
-  rd_station: z.object({
-    ativo: z.boolean(),
-    pipeline_id: z.string().nullable(),
-    etapas: z.object({
-      "01": z.string().nullable(),
-      "02": z.string().nullable(),
-      "03": z.string().nullable(),
-      "04": z.string().nullable(),
-      "05": z.string().nullable(),
-    }),
-    campos: z.object({
-      nicho: z.string().nullable(),
-      fonte: z.string().nullable(),
-      praca: z.string().nullable(),
-      originador: z.string().nullable(),
-      angulo: z.string().nullable(),
-      dono_conversa: z.string().nullable(),
-      data_reuniao: z.string().nullable(),
-    }),
-    valores: z.object({ fonte: z.string(), praca: z.string() }),
-    usuarios: z.record(z.string(), z.string()),
-    deal_source_id: z.string().nullable(),
-  }),
 } as const;
 
 export type ChaveDeConfiguracao = keyof typeof ESQUEMAS_DE_CONFIGURACAO;

@@ -7,7 +7,6 @@ import { registrarEvento } from "@/server/eventos";
 import { avaliarErrosDeLimite } from "@/server/guardas/guardas";
 import { transicionarLead } from "@/server/leads/transicoes";
 import { pausarPerfil } from "@/server/perfis/pausa";
-import { enfileirarEventoRd } from "@/server/rd/sincronizar";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
 import { classificarErro, ErroUnipile } from "@/server/unipile/erros";
 import type { PerfilDoDespachante } from "./perfis";
@@ -102,11 +101,6 @@ export async function registrarSucesso(
         proximoPasso.texto,
         proximoPasso.data,
       ]);
-      await enfileirarEventoRd(tx, {
-        leadId: reserva.lead_id,
-        etapa: "02",
-        dados: { proximo_passo: proximoPasso.texto, proximo_passo_em: proximoPasso.data },
-      });
       await agendarAcao(tx, {
         leadId: reserva.lead_id,
         perfilId: perfil.id,

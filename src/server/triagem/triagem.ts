@@ -6,7 +6,6 @@ import { fluxoDaCampanha } from "@/server/fluxo/fluxos";
 import { entrarNoFluxo, perguntaSeEConexao } from "@/server/fluxo/motor";
 import { transicionarLead } from "@/server/leads/transicoes";
 import { sortearVariante } from "@/server/pesquisa/variante";
-import { enfileirarEventoRd } from "@/server/rd/sincronizar";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
 import { motivoDeBloqueio, temOptout } from "./regras";
 
@@ -136,7 +135,6 @@ export async function aprovarLeads(
         ator: p.operadorId,
         jaConectado,
       });
-      await enfileirarEventoRd(tx, { leadId: lead.id, etapa: "01" });
       return null;
     });
 

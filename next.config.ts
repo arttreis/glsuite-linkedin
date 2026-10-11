@@ -22,6 +22,7 @@ const nextConfig: NextConfig = {
       { source: "/settings/organization", destination: "/settings/team", permanent: false },
       { source: "/perfis", destination: "/settings/linkedin", permanent: false },
       { source: "/oferta", destination: "/settings/company", permanent: false },
+      { source: "/integracoes", destination: "/settings/linkedin", permanent: false },
       { source: "/configuracoes", destination: "/settings", permanent: false },
       { source: "/auth/sair", destination: "/auth/logout", permanent: false },
       { source: "/inbox", destination: "/chats", permanent: false },

@@ -15,7 +15,6 @@ import { criarAjustadorDeSdrClaude, criarGeradorDeSdrClaude } from "@/server/sdr
 import type { GeradorDeSdr } from "@/server/sdr/sdr";
 import type { AjustadorDeSdr } from "@/server/sdr/teste";
 import { criarEnviadorResend } from "@/server/alertas/resend";
-import { criarClienteRd, type ClienteRd } from "@/server/rd/cliente";
 import { criarClienteUnipile, type ClienteUnipile } from "@/server/unipile/cliente";
 
 const envUnipile = lerEnv(
@@ -173,19 +172,6 @@ export function obterAjustadorDeSdr(): AjustadorDeSdr | null {
       : null;
   }
   return ajustadorDeSdr;
-}
-
-const envRd = lerEnv(z.object({ RD_STATION_TOKEN: z.string().min(1).optional() }));
-
-let rd: ClienteRd | null | undefined;
-
-/** Cliente do RD Station CRM, ou null sem token (trava T-6). */
-export function obterClienteRd(): ClienteRd | null {
-  if (rd === undefined) {
-    const token = envRd().RD_STATION_TOKEN;
-    rd = token ? criarClienteRd({ token }) : null;
-  }
-  return rd;
 }
 
 const envCron = lerEnv(z.object({ CRON_SECRET: z.string().min(16) }));
