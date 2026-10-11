@@ -29,8 +29,8 @@ export async function gerarLinkDeConexao(
     contaParaReconectar: perfil.unipile_account_id ?? undefined,
     nome: perfil.id,
     notifyUrl: notify.toString(),
-    sucessoUrl: new URL(`${p.voltarPara ?? "/perfis"}?conexao=ok`, deps.urlApp).toString(),
-    falhaUrl: new URL(`${p.voltarPara ?? "/perfis"}?conexao=falhou`, deps.urlApp).toString(),
+    sucessoUrl: new URL(`${p.voltarPara ?? "/settings/linkedin"}?conexao=ok`, deps.urlApp).toString(),
+    falhaUrl: new URL(`${p.voltarPara ?? "/settings/linkedin"}?conexao=falhou`, deps.urlApp).toString(),
     expiraEm: new Date(p.agora.getTime() + 30 * 60_000),
   });
 }

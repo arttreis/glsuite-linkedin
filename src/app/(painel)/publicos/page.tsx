@@ -121,7 +121,7 @@ export default async function PublicosPage({ searchParams }: PageProps<"/publico
         {!temDossie && (
           <Aviso tom="atencao" className="mb-5">
             Os públicos saem do dossiê da oferta, e ele ainda não foi confirmado.{" "}
-            <Link href="/oferta" className="link">
+            <Link href="/settings/company" className="link">
               Confirmar o dossiê
             </Link>
           </Aviso>

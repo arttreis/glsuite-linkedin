@@ -135,7 +135,7 @@ export async function precisaDeVoce(db: Db, agora: Date): Promise<ItemDoPrecisa[
         id: `conta-${conta.id}`,
         texto: `O LinkedIn de ${conta.nome} precisa ser reconectado`,
         detalhe: conta.unipile_status ? `A Unipile informa ${conta.unipile_status}.` : "A conta não está vinculada.",
-        href: `/perfis#perfil-${conta.id}`,
+        href: `/settings/linkedin#conta-${conta.id}`,
         acao: "Reconectar",
       });
     } else if (conta.status === "pausado") {

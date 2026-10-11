@@ -6,10 +6,11 @@ import { ErroDoModelo } from "@/server/agente/modelo";
 import { listarConversas } from "@/server/conversas/inbox";
 import { despachar } from "@/server/despachante/despachante";
 import { registrarMensagem } from "@/server/reacoes/mensagem";
+import { trocarModo } from "@/server/perfis/modo";
 import { gravarVersaoDoSdr } from "@/server/sdr/sdr";
 import { criarBancoDeTeste, type BancoDeTeste } from "../support/banco";
 import { leadsComAcao, SP } from "../support/despacho";
-import { ativarPerfil, criarCampanha, criarLead, criarPessoa, idDaOrganizacaoGuessless, type SlugPerfil } from "../support/fixtures";
+import { ativarPerfil, criarCampanha, criarLead, criarOperador, criarPessoa, idDaOrganizacaoGuessless, idDoPerfil, type SlugPerfil } from "../support/fixtures";
 import { ModeloFalso } from "../support/modelo-falso";
 import { UnipileFalso } from "../support/unipile-falso";
 
@@ -166,6 +167,15 @@ describe("agente de conversa (SDR-10)", () => {
     expect(alerta!.assunto).toContain("O SDR chamou você");
     expect(alerta!.texto).toContain(motivo);
     expect(alerta!.texto).toContain(`/chats/${leadId}`);
+  });
+
+  it("trocar o modo em Configurações vale para a próxima resposta (SDR-51)", async () => {
+    const { leadId, mensagemId } = await pessoaResponde("Me conta mais?", { modo: "automatico" });
+    const operador = await criarOperador(banco.db, { papel: "admin" });
+    await trocarModo(banco.db, { perfilId: await idDoPerfil(banco.db, "arthur"), para: "aprovacao", operadorId: operador, agora: AGORA });
+
+    expect(await rodar(mensagemId!)).toBe("na_fila");
+    expect((await acoesDaIa(leadId))[0]!.status).toBe("aguardando_aprovacao");
   });
 
   it("depois que a conversa passa para você, o SDR não responde mais nela (SDR-52)", async () => {

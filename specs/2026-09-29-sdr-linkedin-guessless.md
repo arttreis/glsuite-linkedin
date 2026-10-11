@@ -1558,6 +1558,40 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
 - A lista mostra campanha, público, conta, status e os números (para
   decidir, na fila, convites, conversas, reuniões). A planilha-espelho (CSV)
   ficou num botão só, do Brasil, até as praças saírem.
+### SDR-51 · Configurações
+
+- Abas em rotas próprias: `/settings/company` (Empresa), `/settings/sdr`,
+  `/settings/linkedin` e `/settings/team` (Equipe). `/settings` abre a
+  Empresa. `/perfis`, `/oferta` e `/settings/organization` saíram e
+  redirecionam para a aba que os substitui. O retorno do hosted auth fora do
+  primeiro acesso volta para `/settings/linkedin`.
+- **Empresa:** o mesmo editor da análise do primeiro acesso, que passou a
+  receber a ação de confirmar. Aqui confirmar só grava a versão confirmada,
+  sem renomear a organização e sem seguir para o SDR. "Ler o site de novo"
+  gera um rascunho que só vale depois de confirmado (§4.2); a análise de antes
+  continua valendo enquanto a leitura roda.
+- **SDR:** os campos do §4.3, editáveis, e salvar vira versão nova. "Testar no
+  chat" abre `/settings/sdr/test`, o mesmo chat do primeiro acesso sem o
+  "Ficou bom, seguir" (`comSeguir={false}`). O histórico mostra cada versão
+  com origem, quem, quando, pedido e resumo; "Voltar para esta" grava a versão
+  antiga como versão nova (origem `desfazer`), sem perder nada. O modo de
+  resposta de cada conta fica aqui, porque é sobre como o SDR responde
+  (§4.12), e vale para a próxima resposta: o agente lê o modo na hora. A
+  organização sem SDR (§4.1) vê "Montar o SDR".
+- **LinkedIn:** cada conta com o status, o tipo de conta, a rampa, o teto
+  semanal e a janela (só leitura); pausar, retomar e reconectar. A primeira
+  ativação continua no Dashboard, com o checklist. "Vincular outra conta" cria
+  uma conta pausada, com a rampa padrão e o SDR respondendo sozinho, operada
+  por quem vincula (`contaNovaDoLinkedin`): uma conta dela ainda sem LinkedIn
+  é reaproveitada, e dois cliques não criam duas. As ferramentas de admin
+  (status, webhooks, eval) vieram de Perfis.
+- **Equipe:** o nome da organização, e para cada membro o papel e as contas
+  que opera. Só o admin muda, e o servidor confere (`equipe.ts`): mesma
+  organização, só contas dela (sem a da casa), e a organização nunca fica sem
+  admin. Convidar alguém continua com o suporte, porque criar usuário no Auth
+  depende da `SUPABASE_SECRET_KEY` (T-5).
+- O `AtualizarSozinho` compartilhado passou a não recarregar com a aba
+  escondida, e os Chats usam ele.
 
 ### Slugs de URL em inglês (10/10/2026)
 

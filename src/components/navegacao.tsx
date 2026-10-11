@@ -15,7 +15,7 @@ const ITENS: Item[] = [
   { href: "/chats", rotulo: "Chats", icone: MessagesSquare, tambem: ["/aprovacao", "/tarefas"] },
   { href: "/pipeline", rotulo: "Pipeline", icone: Kanban },
   { href: "/campaigns", rotulo: "Campanhas", icone: Megaphone, tambem: ["/publicos", "/triagem", "/importar"] },
-  { href: "/settings", rotulo: "Configurações", icone: Settings, tambem: ["/perfis", "/integracoes", "/oferta"] },
+  { href: "/settings", rotulo: "Configurações", icone: Settings, tambem: ["/integracoes"] },
 ];
 
 function ativo(item: Item, caminho: string): boolean {
