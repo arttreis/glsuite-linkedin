@@ -6,7 +6,7 @@ import { useState, useTransition } from "react";
 import { Aviso } from "@/components/aviso";
 import { ListaDeFrases } from "@/components/campos-de-edicao";
 import type { BuscaDoPublico } from "@/domain/busca";
-import { procurarParametrosDoPainel, rodarBuscaDoPainel, salvarBuscaDoPainel } from "./acoes";
+import { procurarParametrosDoPainel, rodarBuscaDoPainel, salvarBuscaDoPainel } from "../acoes-do-publico";
 
 type Parametro = BuscaDoPublico["regioes"][number];
 type Tipo = "LOCATION" | "INDUSTRY";
@@ -115,7 +115,7 @@ function Escolha({
 /**
  * A busca do público no LinkedIn, na aba Leads (§4.13). Monta com os cargos do
  * público; região e setor vêm da lista do LinkedIn. O que a busca trouxer vai
- * para a triagem da campanha, pelas regras de importação.
+ * para "quem entra na campanha", pelas regras de importação.
  */
 export function BuscaDaCampanha({
   campanhaId,
@@ -134,8 +134,8 @@ export function BuscaDaCampanha({
   tetoDoDia: number;
   suspensaAte: string | null;
   atalhos: { regioes: string[]; setores: string[] };
-  /** Para onde levam os leads que a busca trouxe. Sem ele, a triagem antiga. */
-  destinoDosLeads?: string;
+  /** Para onde levam os leads que a busca trouxe. */
+  destinoDosLeads: string;
 }) {
   const [busca, setBusca] = useState<BuscaDoPublico>(inicial);
   const [quantidade, setQuantidade] = useState(Math.min(25, saldoHoje));
@@ -168,7 +168,7 @@ export function BuscaDaCampanha({
       const r = resultado.resumo;
       setRetorno({
         tom: "ok",
-        texto: `${resultado.resultados} pessoas encontradas: ${r.novos} novas na triagem, ${r.bloqueados} bloqueadas, ${r.duplicados} repetidas, ${r.optouts} com opt-out (não entraram).`,
+        texto: `${resultado.resultados} pessoas encontradas: ${r.novos} novas para você decidir, ${r.bloqueados} bloqueadas, ${r.duplicados} repetidas, ${r.optouts} com opt-out (não entraram).`,
         triar: r.novos > 0,
       });
     });
@@ -230,8 +230,8 @@ export function BuscaDaCampanha({
         <Aviso tom={retorno.tom}>
           {retorno.texto}{" "}
           {retorno.triar && (
-            <Link href={destinoDosLeads ?? `/triagem?campanha=${campanhaId}`} className="link">
-              {destinoDosLeads ? "Ver os leads" : "Ir para a triagem"}
+            <Link href={destinoDosLeads} className="link">
+              Ver os leads
             </Link>
           )}
         </Aviso>

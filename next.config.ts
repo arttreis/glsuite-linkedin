@@ -23,6 +23,13 @@ const nextConfig: NextConfig = {
       { source: "/perfis", destination: "/settings/linkedin", permanent: false },
       { source: "/oferta", destination: "/settings/company", permanent: false },
       { source: "/integracoes", destination: "/settings/linkedin", permanent: false },
+      // Telas antigas (SDR-53): cada uma leva à tela nova que a substitui.
+      { source: "/publicos/:caminho*", destination: "/campaigns", permanent: false },
+      { source: "/triagem", destination: "/campaigns", permanent: false },
+      { source: "/importar", destination: "/campaigns", permanent: false },
+      { source: "/aprovacao", destination: "/chats?filter=needs-you", permanent: false },
+      { source: "/tarefas", destination: "/chats", permanent: false },
+      { source: "/metricas", destination: "/", permanent: false },
       { source: "/configuracoes", destination: "/settings", permanent: false },
       { source: "/auth/sair", destination: "/auth/logout", permanent: false },
       { source: "/inbox", destination: "/chats", permanent: false },

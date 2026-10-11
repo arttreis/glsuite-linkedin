@@ -1605,6 +1605,22 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   reunião) só deixaram de enfileirar; o resto do que fazem não mudou. A
   reaplicação das migrations continua idempotente: as antigas recriam a
   tabela, e a `20261011020000_sem_rd_station` tira de novo.
+- **2/3, telas antigas:** saem Públicos, Triagem, Importar, Aprovação,
+  Tarefas e Resultados (`/metricas`), e as abas Conversas. Cada rota antiga
+  redireciona para a tela que a substitui: públicos, triagem e importar vão
+  para Campanhas; aprovação vai para Chats com "Precisa de você"; tarefas vão
+  para Chats; resultados, para o Dashboard. Os componentes que continuam
+  (busca, editor e resumo do público, sugerir públicos, importar lista)
+  mudaram para Campanhas, com as ações deles (`acoes-do-publico.ts`,
+  `acoes-de-importacao.ts`).
+- O que a Aprovação resolvia foi para o Chats. Convite esperando aprovação
+  aparece no fim da conversa, como a resposta. Lead com a sequência parada
+  mostra o motivo no painel do lead, com "Tentar de novo" (o toque volta para
+  aprovar ali) e "Assumir a conversa".
+- O "Precisa de você" lista cada lead com resposta para aprovar ou sequência
+  parada (até 5, o resto vai para os Chats) e, por campanha, quem espera você
+  decidir (até 3 campanhas, cada uma leva à aba Leads dela). O item de tarefas
+  manuais saiu: só existia para a Espanha, que sai na parte 3.
 
 ### Slugs de URL em inglês (10/10/2026)
 

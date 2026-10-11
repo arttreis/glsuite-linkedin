@@ -7,8 +7,8 @@ import { comOperador } from "@/server/db/operador";
 import { dossieConfirmado } from "@/server/oferta/oferta";
 import { listarPublicos } from "@/server/publicos/publicos";
 import { exigirOperadorNoApp } from "@/server/supabase/servidor";
-import { BotaoSugerir } from "../../publicos/botao-sugerir";
-import { EditorDoPublico } from "../../publicos/editor";
+import { EditorDoPublico } from "../editor-do-publico";
+import { BotaoSugerir } from "./botao-sugerir";
 import { criarCampanhaDoPainel } from "../acoes";
 
 const EM_BRANCO: Publico = {

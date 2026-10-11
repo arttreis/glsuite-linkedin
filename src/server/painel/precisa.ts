@@ -38,7 +38,7 @@ type Conta = {
  * `comOperador`: o RLS limita tudo às contas que ela opera. A conta da casa
  * só busca e nunca aparece aqui.
  */
-export async function precisaDeVoce(db: Db, agora: Date): Promise<ItemDoPrecisa[]> {
+export async function precisaDeVoce(db: Db): Promise<ItemDoPrecisa[]> {
   // A conversa precisa de você quando está com humano (o SDR chamou ou você
   // assumiu) e a última mensagem é da pessoa.
   const chamando = await db.query<ConversaChamando & { total: number }>(
@@ -88,36 +88,52 @@ export async function precisaDeVoce(db: Db, agora: Date): Promise<ItemDoPrecisa[
     });
   }
 
-  const [n] = await db.query<{ aprovacao: number; parados: number; tarefas: number; triagem: number }>(
-    `select
-       (select count(*)::int from public.acoes where status = 'aguardando_aprovacao') as aprovacao,
-       (select count(*)::int from public.leads l
-         where l.revisao_motivo is not null
-           and l.estado in ('na_fila', 'convite_enviado', 'aceito', 'em_sequencia')
-           and not exists (select 1 from public.acoes a
-                            where a.lead_id = l.id and a.status in ('pendente', 'aguardando_aprovacao', 'enviando'))
-       ) as parados,
-       (select count(*)::int from public.acoes
-         where tipo = 'tarefa_manual' and status = 'pendente' and agendada_para <= $1::timestamptz) as tarefas,
-       (select count(*)::int from public.leads where estado = 'triagem' and bloqueio_motivo is null) as triagem`,
-    [agora],
+  // Resposta para aprovar e lead parado se resolvem na conversa do lead.
+  const decidir = await db.query<{ lead_id: string; nome: string; empresa: string | null; motivo: string | null; tipo: "aprovacao" | "parado"; total: number }>(
+    `with pendentes as (
+       select l.id as lead_id, pe.nome, pe.empresa, 'aprovacao' as tipo,
+              (select a.motivo_revisao from public.acoes a
+                where a.lead_id = l.id and a.status = 'aguardando_aprovacao' order by a.criada_em desc limit 1) as motivo,
+              (select max(a.criada_em) from public.acoes a where a.lead_id = l.id and a.status = 'aguardando_aprovacao') as em
+         from public.leads l
+         join public.pessoas pe on pe.id = l.pessoa_id
+         join public.perfis p on p.id = l.perfil_id
+        where not p.casa and exists (select 1 from public.acoes a where a.lead_id = l.id and a.status = 'aguardando_aprovacao')
+       union all
+       select l.id, pe.nome, pe.empresa, 'parado', l.revisao_motivo, l.atualizado_em
+         from public.leads l
+         join public.pessoas pe on pe.id = l.pessoa_id
+         join public.perfis p on p.id = l.perfil_id
+        where not p.casa and l.revisao_motivo is not null
+          and l.estado in ('na_fila', 'convite_enviado', 'aceito', 'em_sequencia')
+          and not exists (select 1 from public.acoes a
+                           where a.lead_id = l.id and a.status in ('pendente', 'aguardando_aprovacao', 'enviando'))
+     )
+     select lead_id, nome, empresa, motivo, tipo, count(*) over ()::int as total
+       from pendentes
+      order by em desc
+      limit ${CONVERSAS_UMA_A_UMA}`,
   );
-  if (n!.aprovacao > 0) {
+  for (const d of decidir) {
     itens.push({
-      id: "aprovacao",
-      texto: plural(n!.aprovacao, "resposta esperando aprovação", "respostas esperando aprovação"),
-      detalhe: null,
-      href: "/aprovacao",
-      acao: "Revisar",
+      id: `${d.tipo}-${d.lead_id}`,
+      texto: d.empresa ? `${d.nome}, ${d.empresa}` : d.nome,
+      detalhe:
+        d.tipo === "aprovacao"
+          ? d.motivo ?? "O SDR escreveu e espera você aprovar."
+          : `A sequência parou${d.motivo ? `: ${d.motivo}` : "."}`,
+      href: `/chats/${d.lead_id}`,
+      acao: d.tipo === "aprovacao" ? "Revisar" : "Decidir",
     });
   }
-  if (n!.parados > 0) {
+  const outras = (decidir[0]?.total ?? 0) - decidir.length;
+  if (outras > 0) {
     itens.push({
-      id: "parados",
-      texto: plural(n!.parados, "lead parado precisando de decisão", "leads parados precisando de decisão"),
+      id: "decidir",
+      texto: `Mais ${plural(outras, "resposta ou lead esperando você", "respostas ou leads esperando você")}`,
       detalhe: null,
-      href: "/aprovacao",
-      acao: "Decidir",
+      href: "/chats?filter=needs-you",
+      acao: "Abrir os Chats",
     });
   }
 
@@ -150,22 +166,24 @@ export async function precisaDeVoce(db: Db, agora: Date): Promise<ItemDoPrecisa[
     }
   }
 
-  if (n!.tarefas > 0) {
+  // Quem a busca ou a importação trouxe espera você decidir, na campanha.
+  const triar = await db.query<{ id: string; nome: string; n: number }>(
+    `select c.id, c.nome, count(*)::int as n
+       from public.leads l
+       join public.campanhas c on c.id = l.campanha_id
+       join public.perfis p on p.id = l.perfil_id
+      where not p.casa and l.estado = 'triagem' and l.bloqueio_motivo is null
+      group by c.id, c.nome
+      order by n desc
+      limit 3`,
+  );
+  for (const campanha of triar) {
     itens.push({
-      id: "tarefas",
-      texto: plural(n!.tarefas, "mensagem para escrever à mão hoje", "mensagens para escrever à mão hoje"),
+      id: `triagem-${campanha.id}`,
+      texto: `${plural(campanha.n, "pessoa", "pessoas")} para decidir em ${campanha.nome}`,
       detalhe: null,
-      href: "/tarefas",
-      acao: "Ver tarefas",
-    });
-  }
-  if (n!.triagem > 0) {
-    itens.push({
-      id: "triagem",
-      texto: plural(n!.triagem, "pessoa esperando triagem", "pessoas esperando triagem"),
-      detalhe: null,
-      href: "/triagem",
-      acao: "Triar",
+      href: `/campaigns/${campanha.id}?tab=leads`,
+      acao: "Decidir",
     });
   }
   return itens;

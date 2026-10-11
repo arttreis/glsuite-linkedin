@@ -160,7 +160,7 @@ export type ItemDoFio =
   | { tipo: "mensagem"; id: string; quem: QuemEscreveu; texto: string; em: Date }
   | { tipo: "marco"; id: string; texto: string; em: Date; destaque: boolean };
 
-export type RespostaPendente = { id: string; texto: string; motivo: string | null; toque: string | null };
+export type RespostaPendente = { id: string; tipo: "dm" | "convite"; texto: string; motivo: string | null; toque: string | null };
 
 export type ChatDoLead = {
   lead: {
@@ -179,6 +179,8 @@ export type ChatDoLead = {
     modoResposta: string;
     chatId: string | null;
     optout: boolean;
+    /** A sequência parou e espera uma decisão (tentar de novo ou assumir). */
+    parado: string | null;
   };
   fio: ItemDoFio[];
   pendentes: RespostaPendente[];
@@ -228,10 +230,15 @@ export async function abrirChat(db: Db, leadId: string): Promise<ChatDoLead | nu
     chat_id: string | null;
     optout: boolean;
     aceito_em: Date | null;
+    parado: string | null;
   }>(
     `select l.id, l.estado, pe.nome, pe.cargo, pe.empresa, pe.localizacao, pe.url_publica as url, l.nota,
             c.nome as campanha, pf.nome as conta, pf.id as conta_id, pf.status as conta_status, pf.modo_resposta,
-            l.chat_id, (pe.optout_em is not null or l.estado = 'optout') as optout, l.aceito_em
+            l.chat_id, (pe.optout_em is not null or l.estado = 'optout') as optout, l.aceito_em,
+            case when l.estado in ('na_fila', 'convite_enviado', 'aceito', 'em_sequencia')
+                  and not exists (select 1 from public.acoes a
+                                   where a.lead_id = l.id and a.status in ('pendente', 'aguardando_aprovacao', 'enviando'))
+                 then l.revisao_motivo end as parado
        from public.leads l
        join public.pessoas pe on pe.id = l.pessoa_id
        join public.campanhas c on c.id = l.campanha_id
@@ -258,9 +265,9 @@ export async function abrirChat(db: Db, leadId: string): Promise<ChatDoLead | nu
     [leadId],
   );
   const pendentes = await db.query<RespostaPendente>(
-    `select id, coalesce(texto_final, texto_gerado, '') as texto, motivo_revisao as motivo, toque
+    `select id, tipo, coalesce(texto_final, texto_gerado, '') as texto, motivo_revisao as motivo, toque
        from public.acoes
-      where lead_id = $1::uuid and status = 'aguardando_aprovacao' and tipo = 'dm'
+      where lead_id = $1::uuid and status = 'aguardando_aprovacao' and tipo in ('dm', 'convite')
       order by agendada_para, criada_em`,
     [leadId],
   );
@@ -295,6 +302,7 @@ export async function abrirChat(db: Db, leadId: string): Promise<ChatDoLead | nu
       modoResposta: lead.modo_resposta,
       chatId: lead.chat_id,
       optout: lead.optout,
+      parado: lead.parado,
     },
     fio,
     pendentes,

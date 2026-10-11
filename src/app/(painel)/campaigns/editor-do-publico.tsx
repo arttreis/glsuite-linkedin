@@ -7,7 +7,7 @@ import { useState, useTransition } from "react";
 import { Aviso } from "@/components/aviso";
 import { ListaDeFrases, Secao } from "@/components/campos-de-edicao";
 import { NOME_DA_PRACA, PRACAS, type Praca, type Publico } from "@/domain/publico";
-import { salvarPublicoDoPainel } from "./acoes";
+import { salvarPublicoDoPainel } from "./acoes-do-publico";
 
 /**
  * O público como formulário (§4.12). Provas só do dossiê confirmado: a lista
@@ -24,8 +24,8 @@ export function EditorDoPublico({
   inicial: Publico;
   status: "novo" | "sugerido" | "ativo";
   provasDoDossie: string[];
-  /** Para onde voltar depois de salvar. Sem ele, a página do público. */
-  destino?: string;
+  /** Para onde voltar depois de salvar (e no cancelar). */
+  destino: string;
 }) {
   const router = useRouter();
   const [p, setP] = useState<Publico>(inicial);
@@ -45,7 +45,7 @@ export function EditorDoPublico({
         return;
       }
       const msg = status === "novo" ? "Público criado e escolhido." : ativar ? "Público salvo e escolhido." : "Público salvo.";
-      const base = destino ?? `/publicos/${resultado.id}`;
+      const base = destino;
       router.push(`${base}${base.includes("?") ? "&" : "?"}msg=${encodeURIComponent(msg)}`);
     });
 
@@ -217,7 +217,7 @@ export function EditorDoPublico({
               {status === "novo" ? "Criar público" : "Salvar"}
             </button>
           )}
-          <Link href={id ? `/publicos/${id}` : "/publicos"} className="botao">
+          <Link href={destino} className="botao">
             Cancelar
           </Link>
         </div>
