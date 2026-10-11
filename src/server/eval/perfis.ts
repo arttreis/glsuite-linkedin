@@ -14,7 +14,6 @@ export const PERFIS_DO_EVAL = {
     voz: null,
     regras: null,
     palavrasProibidas: ["agência", "marketing", "growth", "tráfego"],
-    rodape: null,
     limiteNotaConvite: 300,
   },
   juliano: {
@@ -24,7 +23,6 @@ export const PERFIS_DO_EVAL = {
     voz: null,
     regras: null,
     palavrasProibidas: ["agência", "marketing", "growth", "tráfego"],
-    rodape: null,
     limiteNotaConvite: 300,
   },
   luiz: {
@@ -34,7 +32,6 @@ export const PERFIS_DO_EVAL = {
     voz: null,
     regras: null,
     palavrasProibidas: ["agency", "marketing", "growth", "traffic"],
-    rodape: "or tell me to stop and I will",
     limiteNotaConvite: 300,
   },
   jp: {
@@ -44,7 +41,6 @@ export const PERFIS_DO_EVAL = {
     voz: null,
     regras: null,
     palavrasProibidas: ["agencia", "marketing", "growth", "tráfico"],
-    rodape: null,
     limiteNotaConvite: 300,
   },
 } as const satisfies Record<string, EntradaDoAgente["perfil"]>;

@@ -1,11 +1,9 @@
 import { limparEdicao } from "@/domain/edicao";
 import {
   explicarErroDoPublico,
-  PRACAS,
   provasForaDoDossie,
   publico as esquemaDoPublico,
   publicosDaSugestao,
-  type Praca,
   type Publico,
 } from "@/domain/publico";
 import { ErroDoModelo } from "@/server/agente/modelo";
@@ -38,13 +36,12 @@ type LinhaDoPublico = {
   angulo: string;
   provas: string[];
   quem_nao_e: string;
-  praca: Praca;
   origem: "ia" | "humano";
   status: StatusDoPublico;
   desatualizado: boolean;
 };
 
-const COLUNAS = `p.id, p.nome, p.quem, p.empresa, p.por_que, p.angulo, p.provas, p.quem_nao_e, p.praca, p.origem, p.status,
+const COLUNAS = `p.id, p.nome, p.quem, p.empresa, p.por_que, p.angulo, p.provas, p.quem_nao_e, p.origem, p.status,
   coalesce(o.confirmado_em > p.dossie_base_em, false) as desatualizado`;
 
 const DE_PUBLICOS = `public.publicos p left join public.ofertas o on o.organizacao_id = p.organizacao_id`;
@@ -58,7 +55,6 @@ const doBanco = (linha: LinhaDoPublico): PublicoSalvo => ({
   angulo: linha.angulo,
   provas: linha.provas,
   quem_nao_e: linha.quem_nao_e,
-  praca: linha.praca,
   origem: linha.origem,
   status: linha.status,
   desatualizado: linha.desatualizado,
@@ -89,16 +85,6 @@ export async function publicoParaCampanha(db: Db, id: string): Promise<PublicoSa
   return encontrado?.status === "ativo" ? encontrado : null;
 }
 
-/** Praças em que a organização tem conta. Sem conta nenhuma, o Brasil. */
-async function pracasDaOrganizacao(db: Db, organizacaoId: string): Promise<Praca[]> {
-  const linhas = await db.query<{ praca: Praca }>(
-    "select distinct praca from public.perfis where organizacao_id = $1::uuid",
-    [organizacaoId],
-  );
-  const pracas = PRACAS.filter((praca) => linhas.some((linha) => linha.praca === praca));
-  return pracas.length > 0 ? pracas : ["domestico"];
-}
-
 async function confirmadoEm(db: Db, organizacaoId: string): Promise<Date | null> {
   const [linha] = await db.query<{ confirmado_em: Date | null }>(
     "select confirmado_em from public.ofertas where organizacao_id = $1::uuid",
@@ -124,7 +110,6 @@ export async function sugerirPublicos(
     const escolhidos = (await listarPublicos(tx, p.organizacaoId)).filter((pub) => pub.status === "ativo");
     return {
       dossie,
-      pracas: await pracasDaOrganizacao(tx, p.organizacaoId),
       jaEscolhidos: escolhidos,
       baseEm: await confirmadoEm(tx, p.organizacaoId),
     };
@@ -140,7 +125,7 @@ export async function sugerirPublicos(
     return { ok: false, erro: `Não consegui sugerir públicos: ${motivo}.` };
   }
 
-  const { publicos, descartados } = publicosDaSugestao(resposta.saida, entrada.dossie, entrada.pracas);
+  const { publicos, descartados } = publicosDaSugestao(resposta.saida, entrada.dossie);
   if (publicos.length === 0) return { ok: false, erro: "A IA não trouxe nenhum público aproveitável. Tente de novo." };
 
   const agora = deps.agora();
@@ -151,7 +136,7 @@ export async function sugerirPublicos(
         `insert into public.publicos
            (organizacao_id, nome, quem, empresa, por_que, angulo, provas, quem_nao_e, praca, origem, status,
             dossie_base_em, criado_por, criado_em, atualizado_em)
-         values ($1::uuid, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6, $7::jsonb, $8, $9, 'ia', 'sugerido', $10, $11::uuid, $12, $12)`,
+         values ($1::uuid, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6, $7::jsonb, $8, 'domestico', 'ia', 'sugerido', $9, $10::uuid, $11, $11)`,
         [
           p.organizacaoId,
           pub.nome,
@@ -161,7 +146,6 @@ export async function sugerirPublicos(
           pub.angulo,
           JSON.stringify(pub.provas),
           pub.quem_nao_e,
-          pub.praca,
           entrada.baseEm,
           p.operadorId,
           agora,
@@ -211,8 +195,8 @@ export async function salvarPublico(
       `insert into public.publicos
          (organizacao_id, nome, quem, empresa, por_que, angulo, provas, quem_nao_e, praca, origem, status,
           dossie_base_em, escolhido_por, escolhido_em, criado_por, criado_em, atualizado_em)
-       values ($1::uuid, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6, $7::jsonb, $8, $9, 'humano', 'ativo',
-               $10, $11::uuid, $12, $11::uuid, $12, $12)
+       values ($1::uuid, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6, $7::jsonb, $8, 'domestico', 'humano', 'ativo',
+               $9, $10::uuid, $11, $10::uuid, $11, $11)
        returning id`,
       [
         p.organizacaoId,
@@ -223,7 +207,6 @@ export async function salvarPublico(
         pub.angulo,
         JSON.stringify(pub.provas),
         pub.quem_nao_e,
-        pub.praca,
         baseEm,
         p.operadorId,
         p.agora,
@@ -238,14 +221,14 @@ export async function salvarPublico(
     `with antes as (select id, status from public.publicos where id = $1::uuid and organizacao_id = $2::uuid)
      update public.publicos p
         set nome = $3, quem = $4::jsonb, empresa = $5::jsonb, por_que = $6::jsonb, angulo = $7, provas = $8::jsonb,
-            quem_nao_e = $9, praca = $10, dossie_base_em = $11, editado_por = $12::uuid, editado_em = $13,
-            atualizado_em = $13,
-            status = case when $14 and antes.status = 'sugerido' then 'ativo' else antes.status end,
-            escolhido_por = case when $14 and antes.status = 'sugerido' then $12::uuid else p.escolhido_por end,
-            escolhido_em = case when $14 and antes.status = 'sugerido' then $13 else p.escolhido_em end
+            quem_nao_e = $9, dossie_base_em = $10, editado_por = $11::uuid, editado_em = $12,
+            atualizado_em = $12,
+            status = case when $13 and antes.status = 'sugerido' then 'ativo' else antes.status end,
+            escolhido_por = case when $13 and antes.status = 'sugerido' then $11::uuid else p.escolhido_por end,
+            escolhido_em = case when $13 and antes.status = 'sugerido' then $12 else p.escolhido_em end
        from antes
       where p.id = antes.id and antes.status <> 'arquivado'
-      returning ($14 and antes.status = 'sugerido') as ativou`,
+      returning ($13 and antes.status = 'sugerido') as ativou`,
     [
       p.id,
       p.organizacaoId,
@@ -256,7 +239,6 @@ export async function salvarPublico(
       pub.angulo,
       JSON.stringify(pub.provas),
       pub.quem_nao_e,
-      pub.praca,
       baseEm,
       p.operadorId,
       p.agora,

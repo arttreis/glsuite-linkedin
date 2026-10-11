@@ -25,8 +25,8 @@ export default async function SdrPage({ searchParams }: PageProps<"/settings/sdr
   const { sdr, historico, contas } = await comOperador(obterDb(), operador.id, async (tx) => ({
     sdr: await obterSdr(tx, operador.organizacaoId),
     historico: await historicoDoSdr(tx, operador.organizacaoId),
-    contas: await tx.query<{ id: string; nome: string; modo_resposta: "aprovacao" | "automatico"; praca: string }>(
-      "select id, nome, modo_resposta, praca from public.perfis where not casa and public.pode_ver_perfil(id) order by nome",
+    contas: await tx.query<{ id: string; nome: string; modo_resposta: "aprovacao" | "automatico" }>(
+      "select id, nome, modo_resposta from public.perfis where not casa and public.pode_ver_perfil(id) order by nome",
     ),
   }));
 
@@ -82,7 +82,7 @@ export default async function SdrPage({ searchParams }: PageProps<"/settings/sdr
                   <span className="text-sm font-medium">{conta.nome}</span>
                   <span className="flex items-center gap-2">
                     <select name="modo" defaultValue={conta.modo_resposta} aria-label={`Modo de resposta de ${conta.nome}`} className="campo campo-pequeno w-auto">
-                      {conta.praca !== "espanha" && <option value="automatico">O SDR responde sozinho</option>}
+                      <option value="automatico">O SDR responde sozinho</option>
                       <option value="aprovacao">Aprovo cada resposta</option>
                     </select>
                     <button type="submit" className="botao botao-pequeno">

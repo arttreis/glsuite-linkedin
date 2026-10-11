@@ -13,7 +13,7 @@ import type { Classificacao } from "./modelo";
  * nunca do lead: é estável e vai para o cache. Lead, instruções da campanha e
  * conversa vão na mensagem do usuário.
  */
-export const VERSAO_DOS_PROMPTS = "2026-10-10.1";
+export const VERSAO_DOS_PROMPTS = "2026-10-11.1";
 
 export type PerfilDoAgente = {
   nome: string;
@@ -22,7 +22,6 @@ export type PerfilDoAgente = {
   voz: string | null;
   regras: string | null;
   palavrasProibidas: readonly string[];
-  rodape: string | null;
 };
 
 export type MensagemDoHistorico = { direcao: "entrada" | "saida"; autor: string; texto: string; em: Date };
@@ -75,10 +74,6 @@ export function promptDeRascunho(p: {
 }): string {
   const { perfil, sdr } = p;
   const proibidas = perfil.palavrasProibidas.length > 0 ? perfil.palavrasProibidas.join(", ") : "(nenhuma)";
-  const regrasDaPraca =
-    perfil.praca === "canada" && perfil.rodape
-      ? `\n- Toda mensagem termina com a frase de saída, exatamente: "${perfil.rodape}". É exigência legal (CASL).`
-      : "";
 
   const inicio = sdr
     ? `Você escreve, em nome de ${perfil.nome}, as respostas de uma conversa de prospecção B2B no LinkedIn.
@@ -126,7 +121,7 @@ Regras da casa (valem sempre):`;
 - Não peça reunião cedo demais: só proponha quando a pessoa mostrar interesse.
 - Se perguntarem de onde veio o contato, diga a verdade: pelo perfil público no LinkedIn, como contato profissional.
 - Nunca puxe a conversa para WhatsApp, e-mail ou telefone. Só se a própria pessoa pedir.
-- Responda no idioma da última mensagem da pessoa.${regrasDaPraca}
+- Responda no idioma da última mensagem da pessoa.
 ${regrasDoPerfil}
 Como decidir (campo "acao"):
 - responder: a conversa continua. Escreva a mensagem.

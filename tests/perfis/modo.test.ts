@@ -3,7 +3,7 @@ import { VERSAO_DOS_PROMPTS } from "@/server/agente/prompts";
 import { avaliarModosAutomaticos, registrarEval, trocarModo } from "@/server/perfis/modo";
 import { executarTick } from "@/server/tick";
 import { criarBancoDeTeste, type BancoDeTeste } from "../support/banco";
-import { ativarPerfil, criarCampanha, criarLead, criarOperador, criarPessoa, idDoPerfil } from "../support/fixtures";
+import { ativarPerfil, criarCampanha, criarLead, criarOperador, criarPessoa } from "../support/fixtures";
 import { UnipileFalso } from "../support/unipile-falso";
 
 const AGORA = new Date("2026-10-15T15:00:00Z");
@@ -109,14 +109,6 @@ describe("modo automático por perfil (SDR-17)", () => {
       ).rejects.toThrow(/versão 2020-01-01.1/);
       await expect(registrarEval(banco.db, { relatorio: { qualquer: 1 }, operadorId: operador, agora: AGORA })).rejects.toThrow(
         /relatorio.json/,
-      );
-    });
-
-    it("na Espanha o automático não existe", async () => {
-      const jp = await idDoPerfil(banco.db, "jp");
-
-      await expect(trocarModo(banco.db, { perfilId: jp, para: "automatico", operadorId: operador, agora: AGORA })).rejects.toThrow(
-        /Espanha/,
       );
     });
 

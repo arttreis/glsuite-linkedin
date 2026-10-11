@@ -50,7 +50,6 @@ async function carregarContexto(db: Db, mensagemId: string): Promise<Contexto | 
     voz_md: string | null;
     regras_md: string | null;
     palavras_proibidas: string[];
-    rodape_obrigatorio: string | null;
     limite_nota_convite: number;
     link_agenda: string | null;
     nome: string;
@@ -64,7 +63,7 @@ async function carregarContexto(db: Db, mensagemId: string): Promise<Contexto | 
   }>(
     `select l.id as lead_id, l.estado, pe.provider_id, pf.modo_resposta as modo, pf.id as perfil_id, pf.nome as perfil_nome,
             pf.organizacao_id, c.instrucoes_sdr,
-            pf.praca, pf.idioma, pf.voz_md, pf.regras_md, pf.palavras_proibidas, pf.rodape_obrigatorio,
+            pf.praca, pf.idioma, pf.voz_md, pf.regras_md, pf.palavras_proibidas,
             pf.limite_nota_convite, pf.link_agenda,
             pe.nome, pe.cargo, pe.empresa, pe.localizacao, c.nome as campanha, l.angulo, c.nicho, l.pesquisa
        from public.mensagens m
@@ -106,7 +105,6 @@ async function carregarContexto(db: Db, mensagemId: string): Promise<Contexto | 
       voz: linha.voz_md,
       regras: linha.regras_md,
       palavrasProibidas: linha.palavras_proibidas,
-      rodape: linha.rodape_obrigatorio,
       limiteNotaConvite: linha.limite_nota_convite,
     },
     linkDeAgenda: sdr?.sdr.link_agenda ?? responsavel?.link_agenda ?? linha.link_agenda,

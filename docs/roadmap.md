@@ -31,8 +31,8 @@ usar slug em inglês (#25), e as rotas antigas redirecionam.
 | 4 | SDR-52 O SDR responde sozinho | 42, 48 | ✅ | ✅ #29, em produção | ⛔ Resend (T-4) para o e-mail |
 | 5 | SDR-46 Vincular o LinkedIn e começar | 45 | ✅ | ✅ #23, em produção | ⛔ vincular uma conta real pela Unipile |
 | 5 | SDR-50 Campanhas | 45, 47 | ✅ | ✅ #30, em produção | — |
-| 5 | SDR-51 Configurações | 43, 47 | ✅ | ⏳ PR aberto | — |
-| 6 | SDR-53 Sai o que ficou para trás (RD, praças, telas antigas) | 46, 48 a 52 | 🔜 | — | — |
+| 5 | SDR-51 Configurações | 43, 47 | ✅ | ✅ #31, em produção | — |
+| 6 | SDR-53 Sai o que ficou para trás (RD, praças, telas antigas) | 46, 48 a 52 | ✅ | RD ✅ #32; telas antigas e praças ⏳ PR aberto | — |
 
 Legenda: ✅ feito · 🔜 a fazer · ⏳ aguardando · ⛔ bloqueado por algo externo.
 

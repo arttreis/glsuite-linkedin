@@ -284,15 +284,6 @@ describe("agente de conversa (SDR-10)", () => {
     expect(conversa!.sla).toBeNull();
   });
 
-  it("no Canadá, DM sem a frase de saída é barrada", async () => {
-    await ativarPerfil(banco.db, "luiz", { ativadoEm: "2026-10-01T11:00:00Z", accountId: "acc-luiz" });
-    const { leadId, mensagemId } = await pessoaResponde("Sounds interesting, tell me more.", { perfil: "luiz", conta: "acc-luiz" });
-    modelo.decisoes.push({ acao: "responder", mensagem: "Great! Happy to share how we look at channel margin.", motivo: "interest", estagio_sugerido: "03", confianca: 0.9 });
-    await rodar(mensagemId!);
-    expect(modelo.chamadas.find((c) => c.etapa === "rascunhar")!.sistema).toContain("or tell me to stop and I will");
-    expect((await acoesDaIa(leadId))[0]!.motivo_revisao).toContain("DM do Canadá precisa trazer a saída");
-  });
-
   it("o prompt de sistema é o mesmo para todos os leads do perfil (cache)", async () => {
     const a = await pessoaResponde("Me conta mais?");
     const b = await pessoaResponde("Como funciona?");

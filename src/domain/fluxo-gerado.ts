@@ -24,10 +24,7 @@ export type EstiloDoFluxo = "casa" | "pergunta";
 
 const MENSAGENS = ["T2", "T3", "T4"] as const;
 
-/**
- * O fluxo padrão da praça com os textos gerados. Na Espanha a mensagem não sai
- * sozinha (§4.5): cada uma vira tarefa manual, com o texto como roteiro.
- */
+/** O fluxo padrão com os textos gerados. */
 export function fluxoComTextos(praca: Praca, textos: TextosDoFluxo): Fluxo {
   const padrao = fluxoPadrao(praca);
   return {
@@ -36,7 +33,6 @@ export function fluxoComTextos(praca: Praca, textos: TextosDoFluxo): Fluxo {
       if (node.tipo === "convite") return { ...node, template: textos.convite.trim() };
       if (node.tipo !== "mensagem") return node;
       const texto = textos.mensagens[MENSAGENS.indexOf(node.id as (typeof MENSAGENS)[number])]?.trim() ?? "";
-      if (praca === "espanha") return { id: node.id, tipo: "tarefa" as const, roteiro: texto, posicao: node.posicao };
       return { ...node, template: texto };
     }),
   };

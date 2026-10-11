@@ -9,7 +9,6 @@ import { validarMensagem, type ContextoDeValidacao, type Praca, type Violacao } 
 export type ContextoDoPerfil = {
   praca: Praca;
   palavrasProibidas: readonly string[];
-  rodapeObrigatorio: string | null;
   limiteNotaConvite: number;
   linkDeAgenda?: string | null;
 };
@@ -27,7 +26,6 @@ export function contextoDeValidacao(
     palavrasProibidas: perfil.palavrasProibidas,
     tetoCaracteres: passo ? tetoDoPasso(passo) : undefined,
     limiteNotaConvite: passo?.tipo === "convite" ? perfil.limiteNotaConvite : undefined,
-    frasesDescadastro: perfil.rodapeObrigatorio ? [perfil.rodapeObrigatorio] : [],
     linkDeAgenda: perfil.linkDeAgenda ?? null,
   };
 }

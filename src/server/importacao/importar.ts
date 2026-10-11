@@ -166,9 +166,6 @@ export async function importarPessoas(
     [p.campanhaId],
   );
   if (!campanha) throw new Error("Campanha não encontrada");
-  if (campanha.praca === "espanha" && !(await lerConfiguracao(db, "travas")).dpa_espanha) {
-    throw new Error("Trava T-4: o DPA ainda não foi assinado. Nenhum dado de pessoa na Espanha pode ser gravado.");
-  }
 
   const { resolvidas, semProviderId } = await resolverProviderIds(
     p.pessoas,

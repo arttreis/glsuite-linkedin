@@ -66,9 +66,6 @@ async function revalidar(
     return { tipo: "cancelar", motivo: `lead fora da régua (${lead.estado})` };
   }
   if (lead.optout_em || (await temOptout(tx, acao.provider_id))) return { tipo: "cancelar", motivo: "opt-out" };
-  if (perfil.praca === "espanha" && acao.tipo === "dm" && acao.origem !== "humano") {
-    return { tipo: "cancelar", motivo: "Espanha: DM é manual, nunca automática (§4.5)" };
-  }
   if (acao.toque && !lead.angulo) return { tipo: "cancelar", motivo: "toque sem ângulo registrado" };
 
   if (acao.toque) {

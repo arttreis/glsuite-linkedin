@@ -2,8 +2,9 @@ import type { EtapaDaRampa } from "./rampa";
 
 /**
  * O que precisa estar resolvido fora do sistema antes da primeira ativação de
- * um perfil (§8, e D3 para o Arthur pela §12). A conta conectada o sistema
- * checa sozinho; cada item daqui o operador confirma um a um, no painel.
+ * um perfil (D3 para o Arthur e T-2 para o Juliano, do épico anterior). A
+ * conta conectada o sistema checa sozinho; cada item daqui o operador confirma
+ * um a um, no painel.
  */
 export type Trava = { id: string; texto: string; dono: string };
 
@@ -14,17 +15,6 @@ export function travasDaAtivacao(perfil: { slug: string; nome: string; praca: st
   }
   if (perfil.slug === "juliano") {
     travas.push({ id: "T-2", texto: "Juliano de acordo com a IA rascunhar respostas em nome dele", dono: "Juliano" });
-  }
-  const internacional = { canada: { pais: "do Canadá", lei: "CASL" }, espanha: { pais: "da Espanha", lei: "LSSI" } }[perfil.praca];
-  if (internacional) {
-    travas.push(
-      { id: "T-1", texto: `Unipile confirmou que o IP da conta sai ${internacional.pais}`, dono: "Arthur" },
-      { id: "T-3", texto: "Acordo de parceria com cláusula de automação assinado", dono: "Arthur" },
-    );
-    if (perfil.praca === "espanha") {
-      travas.push({ id: "T-4", texto: "DPA assinado (necessário para gravar nomes europeus)", dono: "Arthur" });
-    }
-    travas.push({ id: "T-5", texto: `Postura ${internacional.lei} confirmada com fonte local`, dono: perfil.nome });
   }
   return travas;
 }

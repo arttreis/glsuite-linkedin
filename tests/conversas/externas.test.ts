@@ -50,12 +50,6 @@ describe("inbox com todas as conversas (SDR-20)", () => {
     expect(await externas(outro)).toEqual([]);
   });
 
-  it("Espanha sem DPA não grava conversa fora de campanha", async () => {
-    expect(await registrarMensagem(banco.db, mensagem({ accountId: "acc-jp", chatId: "chat-jp" }), AGORA)).toEqual({ tipo: "ignorada" });
-    const [n] = await banco.db.query<{ n: number }>("select count(*)::int as n from public.mensagens");
-    expect(n!.n).toBe(0);
-  });
-
   it("se a pessoa vira lead e fala de novo, a conversa e o histórico passam para o lead", async () => {
     await registrarMensagem(banco.db, mensagem({ messageId: "antiga" }), AGORA);
     const campanha = await criarCampanha(banco.db);

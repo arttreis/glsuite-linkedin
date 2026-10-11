@@ -16,12 +16,6 @@ describe("fluxo gerado pelo público", () => {
     expect(textos).toEqual({ T1: TEXTOS.convite, T2: "Obrigado por aceitar.", T3: "Como vocês medem a margem por canal?", T4: "Fico por aqui." });
   });
 
-  it("na Espanha nenhuma mensagem sai sozinha: viram tarefas manuais com o texto como roteiro", () => {
-    const fluxo = fluxoComTextos("espanha", TEXTOS);
-    expect(fluxo.nodes.some((n) => n.tipo === "mensagem")).toBe(false);
-    expect(fluxo.nodes.filter((n) => n.tipo === "tarefa").map((n) => (n.tipo === "tarefa" ? n.roteiro : ""))).toEqual(TEXTOS.mensagens);
-  });
-
   it("número citado tem que estar numa prova do público", () => {
     const provas = ["Margem 12% maior em 6 meses"];
     expect(numerosForaDasProvas("Lojas como a sua ganharam 12% de margem.", provas)).toEqual([]);

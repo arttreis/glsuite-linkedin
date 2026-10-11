@@ -55,7 +55,6 @@ export function EditorDeCampanha({
   const [salvando, iniciar] = useTransition();
 
   const perfil = perfis.find((p) => p.id === campanha.perfilId);
-  const espanha = perfil?.contexto.praca === "espanha";
   const problemasDeCopy = useMemo(
     () => (perfil ? validarCopyDoFluxo(campanha.fluxo, perfil.contexto, exemplo) : []),
     [campanha.fluxo, perfil, exemplo],
@@ -184,7 +183,6 @@ export function EditorDeCampanha({
             <span>
               O caminho de cada lead, do Início até um Fim. Nos textos, use só {"{{first_name}}"} e {"{{company}}"}; a prévia
               usa valores longos de exemplo ({exemplo.first_name}, {exemplo.company}).
-              {espanha && " Na Espanha, cada Mensagem vira tarefa manual: o texto é o roteiro de apoio do JP."}
             </span>
           </p>
         </div>
@@ -210,7 +208,6 @@ export function EditorDeCampanha({
           onChange={mudarFluxo}
           problemasDeCopy={problemasDeCopy}
           problemasDoFluxo={problemasDoFluxo}
-          espanha={espanha}
         />
       </section>
 

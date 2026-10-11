@@ -120,23 +120,19 @@ async function devolverPendentesParaFila(db: Db, perfilId: string, motivo: strin
 
 /**
  * Troca o modo de resposta da conta (§4.7). É um ato humano, registrado em
- * `eventos` com o operador, e vale para a próxima resposta. Na Espanha a DM é
- * escrita à mão até as regras por praça saírem (SDR-53).
+ * `eventos` com o operador, e vale para a próxima resposta.
  */
 export async function trocarModo(
   db: Db,
   p: { perfilId: string; para: ModoDeResposta; operadorId: string; agora: Date },
 ): Promise<void> {
   await db.transacao(async (tx) => {
-    const [perfil] = await tx.query<{ modo_resposta: ModoDeResposta; praca: string }>(
-      "select modo_resposta, praca from public.perfis where id = $1::uuid for update",
+    const [perfil] = await tx.query<{ modo_resposta: ModoDeResposta }>(
+      "select modo_resposta from public.perfis where id = $1::uuid for update",
       [p.perfilId],
     );
     if (!perfil) throw new ErroDeModo(["Perfil não encontrado."]);
     if (perfil.modo_resposta === p.para) throw new ErroDeModo([`O perfil já está em ${p.para}.`]);
-    if (p.para === "automatico" && perfil.praca === "espanha") {
-      throw new ErroDeModo(["Na Espanha a DM é escrita à mão: o SDR não responde sozinho neste perfil."]);
-    }
 
     await tx.query("update public.perfis set modo_resposta = $2, modo_desde = $3 where id = $1::uuid", [
       p.perfilId,

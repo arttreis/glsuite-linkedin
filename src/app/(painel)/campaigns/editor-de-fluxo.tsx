@@ -33,7 +33,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { Aviso } from "@/components/aviso";
 import {
   ROTULO_DO_TIPO,
   tetoDoBloco,
@@ -51,12 +50,11 @@ type Props = {
   onChange(f: Fluxo): void;
   problemasDeCopy: ProblemaDoBloco[];
   problemasDoFluxo: ProblemaDoFluxo[];
-  espanha: boolean;
 };
 
 /** Erro de copy impede salvar; problema de forma só impede ativar. */
 type Gravidade = "erro" | "atencao";
-type DadosDoBloco = { node: NodeDoFluxo; problema: Gravidade | null; espanha: boolean };
+type DadosDoBloco = { node: NodeDoFluxo; problema: Gravidade | null };
 type BlocoDoCanvas = Node<DadosDoBloco, "bloco">;
 type Selecao = { tipo: "bloco" | "seta"; id: string } | null;
 
@@ -104,7 +102,7 @@ function resumoDoBloco(node: NodeDoFluxo): string {
 }
 
 function BlocoDoFluxo({ data, selected }: NodeProps<BlocoDoCanvas>) {
-  const { node, problema, espanha } = data;
+  const { node, problema } = data;
   const Icone = ICONE_DO_TIPO[node.tipo];
   const borda = selected
     ? "border-destaque shadow-[0_0_0_3px_rgb(95_227_154/0.18)]"
@@ -126,7 +124,6 @@ function BlocoDoFluxo({ data, selected }: NodeProps<BlocoDoCanvas>) {
         {problema === "atencao" && <TriangleAlert className="size-4 shrink-0 text-atencao" aria-label="Bloco incompleto" />}
       </div>
       <p className="mt-1 line-clamp-2 text-xs text-tinta-suave">{resumoDoBloco(node)}</p>
-      {node.tipo === "mensagem" && espanha && <span className="etiqueta etiqueta-atencao mt-2">Manual na Espanha</span>}
       {node.tipo === "condicao" ? (
         <>
           <span className="absolute bottom-1.5 left-1/4 -translate-x-1/2 text-[11px] text-ok">sim</span>
@@ -162,7 +159,6 @@ const PALETA: { chave: string; rotulo: string; Icone: LucideIcon; criar(id: stri
     criar: (id, posicao) => ({ id, posicao, tipo: "condicao", condicao: "conectado" }),
   },
   { chave: "mensagem", rotulo: "Mensagem", Icone: MessageSquare, criar: (id, posicao) => ({ id, posicao, tipo: "mensagem", template: "" }) },
-  { chave: "tarefa", rotulo: "Tarefa manual", Icone: ClipboardList, criar: (id, posicao) => ({ id, posicao, tipo: "tarefa", roteiro: "" }) },
   { chave: "fim", rotulo: "Fim", Icone: Flag, criar: (id, posicao) => ({ id, posicao, tipo: "fim", resultado: "sem_resposta" }) },
 ];
 
@@ -186,7 +182,7 @@ export function EditorDeFluxo(props: Props) {
   );
 }
 
-function Canvas({ fluxo, onChange, problemasDeCopy, problemasDoFluxo, espanha }: Props) {
+function Canvas({ fluxo, onChange, problemasDeCopy, problemasDoFluxo }: Props) {
   const reactFlow = useReactFlow<BlocoDoCanvas, Edge>();
   const moldura = useRef<HTMLDivElement>(null);
   const [selecao, setSelecao] = useState<Selecao>(null);
@@ -209,12 +205,12 @@ function Canvas({ fluxo, onChange, problemasDeCopy, problemasDoFluxo, espanha }:
         id: node.id,
         type: "bloco",
         position: arrastando[node.id] ?? node.posicao ?? { x: 0, y: indice * DESCIDA },
-        data: { node, problema: gravidade.get(node.id) ?? null, espanha },
+        data: { node, problema: gravidade.get(node.id) ?? null },
         selected: selecao?.tipo === "bloco" && selecao.id === node.id,
         deletable: node.tipo !== "inicio",
         ...(medidas[node.id] ? { measured: medidas[node.id] } : {}),
       })),
-    [fluxo.nodes, arrastando, gravidade, espanha, selecao, medidas],
+    [fluxo.nodes, arrastando, gravidade, selecao, medidas],
   );
 
   const edges = useMemo<Edge[]>(
@@ -423,7 +419,6 @@ function Canvas({ fluxo, onChange, problemasDeCopy, problemasDoFluxo, espanha }:
               node={nodeSelecionado}
               copy={problemasDeCopy.find((p) => p.toque === nodeSelecionado.id)}
               forma={problemasDoFluxo.filter((p) => p.nodeId === nodeSelecionado.id)}
-              espanha={espanha}
               aoTrocar={trocar}
               aoApagar={() => apagar([nodeSelecionado.id], [])}
             />
@@ -479,14 +474,12 @@ function PainelDoBloco({
   node,
   copy,
   forma,
-  espanha,
   aoTrocar,
   aoApagar,
 }: {
   node: NodeDoFluxo;
   copy: ProblemaDoBloco | undefined;
   forma: ProblemaDoFluxo[];
-  espanha: boolean;
   aoTrocar(novo: NodeDoFluxo): void;
   aoApagar(): void;
 }) {
@@ -583,9 +576,6 @@ function PainelDoBloco({
     case "mensagem":
       campos = (
         <>
-          {espanha && (
-            <Aviso tom="atencao">Na Espanha, a mensagem vira tarefa manual para o JP: este texto é o roteiro de apoio.</Aviso>
-          )}
           <label className="rotulo">
             Texto da mensagem
             <textarea

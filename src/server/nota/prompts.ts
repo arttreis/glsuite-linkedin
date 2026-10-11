@@ -1,4 +1,4 @@
-import { NOME_DA_PRACA, type Publico } from "@/domain/publico";
+import type { Publico } from "@/domain/publico";
 
 /** Sobe quando o prompt da nota muda: vai gravado em cada lote. */
 export const VERSAO_DO_PROMPT_DA_NOTA = "nota-1";
@@ -13,7 +13,7 @@ export type PessoaParaNota = {
 export function promptDaNota(p: Publico): string {
   return `Você dá uma nota de aderência de 0 a 100 a pessoas encontradas numa busca do LinkedIn, contra um público-alvo de prospecção B2B. A nota diz o quanto a pessoa parece ser desse público, só com o que a busca trouxe: cargo ou headline, empresa e local. Você não tem o perfil completo; não invente o que não está ali.
 
-O público: ${p.nome} (${NOME_DA_PRACA[p.praca]})
+O público: ${p.nome}
 - Cargos que servem: ${p.quem.cargos.join(", ")}${p.quem.senioridade ? `. Senioridade: ${p.quem.senioridade}` : ""}
 - Empresa: ${[p.empresa.setores.join(", "), p.empresa.porte, p.empresa.regiao].filter(Boolean).join(" · ")}
 - Dor que a oferta resolve: ${p.por_que.dor}

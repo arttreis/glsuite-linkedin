@@ -43,7 +43,6 @@ const PUBLICO: Publico = {
   angulo: "A margem que o marketplace esconde.",
   provas: ["Margem 12% maior em 6 meses"],
   quem_nao_e: "Analistas sem decisão de orçamento.",
-  praca: "domestico",
 };
 
 const sugerido = (nome: string, parcial: Partial<SugestaoDePublicos["publicos"][number]> = {}) => ({
@@ -129,13 +128,12 @@ describe("públicos sugeridos a partir do dossiê (SDR-25)", () => {
     ]);
     // A prova 9 não existe no dossiê: some.
     expect(publicos[0]!.provas).toEqual(["Atende a Loja X"]);
-    // A IA recebe as provas numeradas e as praças em que a GuessLess tem conta.
+    // A IA recebe as provas numeradas.
     expect(sugeridor.entradas[0]).toContain("1. [cliente] Atende a Loja X");
-    expect(sugeridor.entradas[0]).toContain("domestico (Brasil), canada (Canadá), espanha (Espanha)");
     const [evento] = await banco.db.query<{ payload: { quantidade: number; versao_prompt: string } }>(
       "select payload from public.eventos where tipo = 'publicos_sugeridos'",
     );
-    expect(evento!.payload).toMatchObject({ quantidade: 3, versao_prompt: "publicos-1" });
+    expect(evento!.payload).toMatchObject({ quantidade: 3, versao_prompt: "publicos-2" });
   });
 
   it("toda prova de um público existe no dossiê confirmado", async () => {
@@ -147,16 +145,14 @@ describe("públicos sugeridos a partir do dossiê (SDR-25)", () => {
     expect(await listar()).toEqual([]);
   });
 
-  it("público tem uma praça só, e a sugestão fica nas praças em que a organização tem conta", async () => {
+  it("o público não tem praça: a sugestão de outra organização entra inteira (SDR-53)", async () => {
     const outra = await criarOrganizacao(banco.db);
     const deFora = await criarOperador(banco.db, { papel: "admin", organizacaoId: outra });
     await confirmarDossie(banco.db, outra, AGORA);
-    // Sem conta nenhuma, a organização prospecta no Brasil: o público do Canadá sai.
-    const sugeridor = sugeridorFalso({ publicos: [sugerido("Brasil"), sugerido("Canadá", { praca: "canada" })] });
+    const sugeridor = sugeridorFalso({ publicos: [sugerido("Lojas do Sul"), sugerido("Lojas do Norte")] });
 
-    expect(await sugerir(sugeridor, outra, deFora)).toEqual({ ok: true, quantidade: 1 });
-    expect((await listar(outra, deFora)).map((p) => [p.nome, p.praca])).toEqual([["Brasil", "domestico"]]);
-    expect(await salvar({ ...PUBLICO, praca: ["domestico", "canada"] })).toMatchObject({ ok: false });
+    expect(await sugerir(sugeridor, outra, deFora)).toEqual({ ok: true, quantidade: 2 });
+    expect((await listar(outra, deFora)).map((p) => p.nome).sort()).toEqual(["Lojas do Norte", "Lojas do Sul"]);
   });
 
   it("público sugerido não vira campanha sem escolha humana", async () => {
@@ -193,7 +189,7 @@ describe("públicos sugeridos a partir do dossiê (SDR-25)", () => {
       ["B", "arquivado"],
     ]);
     // A IA sabe o que já foi escolhido, para não repetir.
-    expect(sugeridor.entradas[0]).toContain("Públicos já escolhidos:\n- A (Brasil)");
+    expect(sugeridor.entradas[0]).toContain("Públicos já escolhidos:\n- A: ");
   });
 
   it("falha da IA não apaga as sugestões anteriores", async () => {
