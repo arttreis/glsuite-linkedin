@@ -22,8 +22,6 @@ export type ContextoDeValidacao = {
   tetoCaracteres?: number;
   /** Limite do LinkedIn para a nota do convite (200 na conta gratuita, 300 na paga). */
   limiteNotaConvite?: number;
-  /** Frases de descadastro aceitas (Canadá, §4.5). */
-  frasesDescadastro?: readonly string[];
   /** Único link que a IA pode mandar numa conversa (link de agenda). */
   linkDeAgenda?: string | null;
 };
@@ -36,7 +34,6 @@ export type RegraDoValidador =
   | "teto_caracteres"
   | "limite_nota_convite"
   | "escrita_a_mao"
-  | "descadastro"
   | "token_nao_resolvido"
   | "escalada_canal"
   | "link_nao_permitido";
@@ -98,12 +95,6 @@ function palavraProibidaEncontrada(texto: string, palavras: readonly string[]): 
   return null;
 }
 
-const temDescadastro = (texto: string, frases: readonly string[]) => {
-  const limpo = (valor: string) => normalizar(valor).replace(/[^\p{L}\p{N} ]/gu, "").trim();
-  const alvo = limpo(texto);
-  return frases.some((frase) => limpo(frase) !== "" && alvo.includes(limpo(frase)));
-};
-
 export function validarMensagem(texto: string, ctx: ContextoDeValidacao): ResultadoDaValidacao {
   const violacoes: Violacao[] = [];
   const conteudo = texto.trim();
@@ -154,14 +145,6 @@ export function validarMensagem(texto: string, ctx: ContextoDeValidacao): Result
 
   if (ctx.origem !== "humano" && ESCRITA_A_MAO.some((padrao) => padrao.test(normalizar(conteudo)))) {
     violacoes.push({ regra: "escrita_a_mao", mensagem: "Afirma que a mensagem foi escrita à mão. Não pode." });
-  }
-
-  if (ctx.praca === "canada" && ctx.tipo === "dm" && !temDescadastro(conteudo, ctx.frasesDescadastro ?? [])) {
-    const exemplo = ctx.frasesDescadastro?.[0] ?? "or tell me to stop and I will";
-    violacoes.push({
-      regra: "descadastro",
-      mensagem: `DM do Canadá precisa trazer a saída (ex.: "${exemplo}").`,
-    });
   }
 
   if (ctx.origem === "ia") {

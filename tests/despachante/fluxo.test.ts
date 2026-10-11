@@ -120,19 +120,6 @@ describe("despachante: régua, revalidação e erros", () => {
       expect((await acoesDoLead(leadId!))[0]).toMatchObject({ status: "cancelada", erro: "opt-out" });
     });
 
-    it("na Espanha nenhuma DM automática sai", async () => {
-      await ativarPerfil(banco.db, "jp", { ativadoEm: "2026-10-01T09:00:00Z", accountId: "acc-jp" });
-      await banco.db.query(
-        `update public.perfis set rampa = '[{"semana":1,"convites_dia":4,"dms_dia":5}]' where slug = 'jp'`,
-      );
-      const campanha = await criarCampanha(banco.db, { perfil: "jp" });
-      const [leadId] = await leadsComAcao(banco.db, { campanhaId: campanha, perfil: "jp", quantidade: 1, estado: "aceito", toque: "T2", desde: SEGUNDA_10H });
-      // 16h em Madri: janela aberta e a ação (agendada para 15h de Madri) já venceu.
-      await despachar({ db: banco.db, unipile, agora: instanteLocal("2026-10-05", "16:00", "Europe/Madrid"), aleatorio: () => 0.5 });
-      expect((await acoesDoLead(leadId!))[0]).toMatchObject({ status: "cancelada", erro: "Espanha: DM é manual, nunca automática (§4.5)" });
-      expect(unipile.chamadasDe("iniciarConversa")).toHaveLength(0);
-    });
-
     it("segura o convite enquanto a empresa está em cooldown por outro perfil", async () => {
       const campanhaJuliano = await criarCampanha(banco.db, { perfil: "juliano" });
       const colega = await criarPessoa(banco.db, { dono: "juliano", empresa: "Acme", empresaChave: "acme" });

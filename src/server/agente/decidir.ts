@@ -23,7 +23,6 @@ export type EntradaDoAgente = {
     voz: string | null;
     regras: string | null;
     palavrasProibidas: string[];
-    rodape: string | null;
     limiteNotaConvite: number;
   };
   linkDeAgenda: string | null;
@@ -86,7 +85,6 @@ function validarTextoDaIa(ctx: EntradaDoAgente, texto: string): ResultadoDaValid
       {
         praca: ctx.perfil.praca,
         palavrasProibidas: ctx.perfil.palavrasProibidas,
-        rodapeObrigatorio: ctx.perfil.rodape,
         limiteNotaConvite: ctx.perfil.limiteNotaConvite,
         linkDeAgenda: ctx.linkDeAgenda,
       },

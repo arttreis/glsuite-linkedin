@@ -64,9 +64,8 @@ describe("dataset do eval (§7.1)", () => {
     expect(caso("br-15").esperado.reuniao).toBe(false);
   });
 
-  it("usa o perfil do seed de cada praça (Canadá com a frase de saída da CASL)", () => {
+  it("usa o perfil do seed de cada praça", () => {
     expect(caso("br-01").entrada.perfil.nome).toBe("Arthur");
-    expect(caso("ca-01").entrada.perfil.rodape).toBe("or tell me to stop and I will");
     expect(caso("es-01").entrada.perfil.idioma).toBe("es");
     expect(caso("es-01").entrada.linkDeAgenda).toBe("https://cal.com/juliano-guessless/30min");
   });
@@ -148,8 +147,8 @@ describe("rodada e relatório", () => {
     // "Pare de me mandar mensagem" é opt-out por regra: nenhuma chamada de modelo nem de juiz.
     expect(execucoes[0]).toMatchObject({ acao: "registrar_optout", chamadas: [] });
     expect(modelo.chamadas.filter((c) => c.etapa === "classificar")).toHaveLength(2);
-    // O Canadá exige a frase de saída; o texto padrão do modelo falso não tem, e o validador pega.
-    expect(execucoes[2]!.notas?.validador?.passou).toBe(false);
+    // Sem a regra de saída do Canadá (SDR-53), o texto padrão do modelo falso passa no validador.
+    expect(execucoes[2]!.notas?.validador?.passou).toBe(true);
     expect(juiz.chamadas[0]).toContain("Ação decidida pelo agente: responder");
   });
 

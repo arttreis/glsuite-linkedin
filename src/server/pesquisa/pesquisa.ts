@@ -65,7 +65,6 @@ type Pendente = {
   voz_md: string | null;
   regras_md: string | null;
   palavras_proibidas: string[];
-  rodape_obrigatorio: string | null;
   limite_nota_convite: number;
 };
 
@@ -96,7 +95,7 @@ export async function processarPesquisasPendentes(
     `select a.id as acao_id, a.lead_id, a.perfil_id, a.tentativas, l.pesquisa, pe.provider_id, pe.primeiro_nome,
             pe.nome, pe.cargo, pe.empresa, pe.localizacao, c.angulo, a.toque,
             pf.unipile_account_id as account_id, pf.unipile_status, pf.nome as perfil_nome, pf.praca, pf.idioma,
-            pf.fuso, pf.janela, pf.voz_md, pf.regras_md, pf.palavras_proibidas, pf.rodape_obrigatorio,
+            pf.fuso, pf.janela, pf.voz_md, pf.regras_md, pf.palavras_proibidas,
             pf.limite_nota_convite
        from public.acoes a
        join public.leads l on l.id = a.lead_id
@@ -204,7 +203,6 @@ async function escreverT1(
   const perfilDeValidacao = {
     praca: p.praca,
     palavrasProibidas: p.palavras_proibidas,
-    rodapeObrigatorio: p.rodape_obrigatorio,
     limiteNotaConvite: p.limite_nota_convite,
   };
   const contexto = { ...contextoDeValidacao(perfilDeValidacao, t1, "ia"), tipo: "convite" as const };
@@ -216,7 +214,6 @@ async function escreverT1(
       voz: p.voz_md,
       regras: p.regras_md,
       palavrasProibidas: p.palavras_proibidas,
-      rodape: p.rodape_obrigatorio,
     },
     angulo: p.angulo,
     tetoCaracteres: Math.min(contexto.tetoCaracteres ?? p.limite_nota_convite, p.limite_nota_convite),

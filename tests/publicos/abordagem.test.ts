@@ -30,7 +30,6 @@ const PUBLICO: Publico = {
   angulo: "A margem que o marketplace esconde",
   provas: [],
   quem_nao_e: "",
-  praca: "domestico",
 };
 
 describe("campanha nasce do público (SDR-26)", () => {
@@ -43,8 +42,8 @@ describe("campanha nasce do público (SDR-26)", () => {
     const pub = { ...PUBLICO, ...p };
     const [criado] = await banco.db.query<{ id: string }>(
       `insert into public.publicos (organizacao_id, nome, quem, empresa, por_que, angulo, provas, quem_nao_e, praca, origem, status)
-       values ($1::uuid, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6, '[]'::jsonb, '', $7, 'ia', $8) returning id`,
-      [guessless, pub.nome, JSON.stringify(pub.quem), JSON.stringify(pub.empresa), JSON.stringify(pub.por_que), pub.angulo, pub.praca, p.status ?? "ativo"],
+       values ($1::uuid, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6, '[]'::jsonb, '', 'domestico', 'ia', $7) returning id`,
+      [guessless, pub.nome, JSON.stringify(pub.quem), JSON.stringify(pub.empresa), JSON.stringify(pub.por_que), pub.angulo, p.status ?? "ativo"],
     );
     return criado!.id;
   }
@@ -66,16 +65,12 @@ describe("campanha nasce do público (SDR-26)", () => {
     operador = await criarOperador(banco.db, { papel: "admin", nome: "Arthur" });
   });
 
-  it("conta de outra praça não aparece para o público e não abre campanha", async () => {
+  it("qualquer conta da organização aborda o público: a praça saiu (SDR-53)", async () => {
     const publico = await criarPublico();
 
     const contas = await comOperador(banco.db, operador, (tx) => contasDoPublico(tx, publico));
-    expect(contas.map((c) => c.nome)).toEqual(["Arthur", "Juliano"]);
-
-    expect(await abordar(publico, "luiz")).toEqual({
-      ok: false,
-      erro: "Esta conta não trabalha este público: é de outra praça ou você não a opera.",
-    });
+    expect(contas.map((c) => c.nome)).toEqual(["Arthur", "Juliano", "Luiz", "JP"]);
+    expect(await abordar(publico, "luiz")).toMatchObject({ ok: true, criada: true });
   });
 
   it("público sugerido não abre campanha", async () => {

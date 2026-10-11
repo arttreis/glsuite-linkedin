@@ -69,7 +69,6 @@ function entradaDoTeste(ctx: Contexto, segmento: string, itens: readonly ItemDoT
       voz: null,
       regras: null,
       palavrasProibidas: [],
-      rodape: null,
       limiteNotaConvite: 300,
     },
     linkDeAgenda: ctx.sdr.sdr.link_agenda,

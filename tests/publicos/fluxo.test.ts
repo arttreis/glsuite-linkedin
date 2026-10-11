@@ -150,38 +150,6 @@ describe("fluxo gerado pelo público (SDR-29)", () => {
     await expect(ativar(campanhaId)).rejects.toThrow("T2: Cita 40%, 30, que não está nas provas do público.");
   });
 
-  it("no Canadá, toda mensagem termina com a saída", async () => {
-    const campanhaId = await campanhaDoPublico("luiz", "canada");
-    const saida = "or tell me to stop and I will";
-    const ingles = {
-      convite: "Hi {{first_name}}, I follow fashion retail and would like to connect.",
-      mensagens: ["Thanks for connecting. Margins often vanish in marketplace fees.", "Does {{company}} track margin per channel?", "I will leave it here."],
-      motivo: "margin",
-    };
-    const comSaida = { ...ingles, mensagens: ingles.mensagens.map((m) => `${m} ${saida}`) };
-    const escritor = escritorFalso(ingles, comSaida);
-
-    expect(await gerar(campanhaId, escritor)).toEqual({ ok: true, problemas: [] });
-    expect(escritor.chamadas[0]!.sistema).toContain(`termina exatamente com a frase de saída: "${saida}"`);
-    const t = await textos(campanhaId);
-    for (const toque of ["T2", "T3", "T4"]) expect(t[toque]).toMatch(new RegExp(`${saida}$`));
-  });
-
-  it("na Espanha, nenhuma mensagem automática: as três viram tarefa manual com roteiro", async () => {
-    const campanhaId = await campanhaDoPublico("jp", "espanha");
-    const espanhol = {
-      convite: "Hola {{first_name}}, sigo el comercio de moda y me gustaría conectar.",
-      mensagens: ["Gracias por aceptar.", "¿En {{company}} miden el margen por canal?", "Lo dejo aquí."],
-      motivo: "margen",
-    };
-
-    expect(await gerar(campanhaId, escritorFalso(espanhol))).toEqual({ ok: true, problemas: [] });
-
-    const fluxo = await fluxoDaCampanha(banco.db, campanhaId);
-    expect(fluxo!.nodes.some((n) => n.tipo === "mensagem")).toBe(false);
-    expect((await textos(campanhaId)).T2).toBe("tarefa: Gracias por aceptar.");
-  });
-
   it("a variante do prompt de referência pede pergunta já na primeira mensagem", async () => {
     const campanhaId = await campanhaDoPublico("arthur");
     const escritor = escritorFalso(BONS);

@@ -42,12 +42,12 @@ async function estadoDoLead(db: Db, leadId: string): Promise<string | null> {
   return lead?.estado ?? null;
 }
 
-/** Agenda a mensagem ou a tarefa do bloco. Na Espanha toda mensagem vira tarefa manual (§4.5). */
+/** Agenda a mensagem ou a tarefa do bloco. */
 async function agendarTexto(ctx: Contexto, node: Extract<NodeDoFluxo, { tipo: "mensagem" | "tarefa" }>, quando: Date) {
-  const manual = node.tipo === "tarefa" || ctx.perfil.praca === "espanha";
+  const manual = node.tipo === "tarefa";
   let roteiro: string | null = null;
   if (manual) {
-    const modelo = node.tipo === "tarefa" ? node.roteiro : node.template;
+    const modelo = node.roteiro;
     const [pessoa] = await ctx.db.query<{ primeiro_nome: string | null; empresa: string | null }>(
       "select pe.primeiro_nome, pe.empresa from public.leads l join public.pessoas pe on pe.id = l.pessoa_id where l.id = $1::uuid",
       [ctx.leadId],

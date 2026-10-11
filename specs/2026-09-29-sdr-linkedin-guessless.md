@@ -1621,6 +1621,26 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   parada (até 5, o resto vai para os Chats) e, por campanha, quem espera você
   decidir (até 3 campanhas, cada uma leva à aba Leads dela). O item de tarefas
   manuais saiu: só existia para a Espanha, que sai na parte 3.
+- **3/3, regras por praça:**
+  - **Canadá:** saem a regra do validador que exigia a frase de saída na DM,
+    as instruções de rodapé nos prompts do agente e do fluxo, e o rodapé no
+    contexto de validação.
+  - **Espanha:** a DM não vira mais tarefa manual (no fluxo gerado, no motor
+    e na reserva do despachante), e saem a trava de DPA (configuração
+    `travas`), os avisos no editor e o bloqueio do automático.
+  - **Público:** sai o campo de praça (esquema, sugestão da IA, editor e
+    prompts), e qualquer conta da organização aborda qualquer público.
+  - **O que fica no perfil:** `perfis.praca` como a chave do calendário de
+    feriados ("fuso e feriados ficam no perfil"). A praça ainda escolhe o tom
+    padrão e o idioma dos prompts, e o eval segue com casos por praça, porque
+    é ferramenta interna.
+  - **Banco:** as colunas `perfis.rodape_obrigatorio` e `publicos.praca` ficam
+    sem uso, porque migrations anteriores ainda as citam e a reaplicação tem
+    de continuar idempotente. O público novo grava `domestico`.
+  - **Editor de blocos:** o bloco "Tarefa manual" saiu da paleta, porque só
+    existia para a Espanha. Fluxo antigo com tarefa continua abrindo e rodando.
+  - Os prompts mudaram de versão: agente `2026-10-11.1`, fluxo `fluxo-2`,
+    públicos `publicos-2`.
 
 ### Slugs de URL em inglês (10/10/2026)
 

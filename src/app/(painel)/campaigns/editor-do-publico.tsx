@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Aviso } from "@/components/aviso";
 import { ListaDeFrases, Secao } from "@/components/campos-de-edicao";
-import { NOME_DA_PRACA, PRACAS, type Praca, type Publico } from "@/domain/publico";
+import type { Publico } from "@/domain/publico";
 import { salvarPublicoDoPainel } from "./acoes-do-publico";
 
 /**
@@ -114,17 +114,6 @@ export function EditorDoPublico({
             />
           </label>
         </div>
-        <label className="rotulo">
-          Praça
-          <select value={p.praca} onChange={(e) => mudar({ praca: e.target.value as Praca })} className="campo w-48" disabled={pendente}>
-            {PRACAS.map((praca) => (
-              <option key={praca} value={praca}>
-                {NOME_DA_PRACA[praca]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <p className="text-xs text-tinta-fraca">A praça define o idioma, as regras do país e quais contas do LinkedIn trabalham este público.</p>
       </Secao>
 
       <Secao titulo="Por que precisa" ajuda="O que o site não diz pode entrar aqui. Sem número e sem promessa no resultado.">

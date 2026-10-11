@@ -12,17 +12,6 @@ describe("travas da primeira ativação (§8)", () => {
     expect(ids({ slug: "juliano", nome: "Juliano", praca: "domestico", modoResposta: "aprovacao" })).toEqual(["T-2"]);
     expect(ids({ slug: "juliano", nome: "Juliano", praca: "domestico", modoResposta: "automatico" })).toEqual(["T-2"]);
   });
-
-  it("Canadá espera IP, parceria e CASL; o dono da T-5 é o próprio perfil", () => {
-    const travas = travasDaAtivacao({ slug: "luiz", nome: "Luiz", praca: "canada", modoResposta: "aprovacao" });
-    expect(travas.map((trava) => trava.id)).toEqual(["T-1", "T-3", "T-5"]);
-    expect(travas[0]!.texto).toContain("do Canadá");
-    expect(travas.at(-1)).toMatchObject({ texto: expect.stringContaining("CASL"), dono: "Luiz" });
-  });
-
-  it("Espanha espera também o DPA (T-4)", () => {
-    expect(ids({ slug: "jp", nome: "JP", praca: "espanha", modoResposta: "aprovacao" })).toEqual(["T-1", "T-3", "T-4", "T-5"]);
-  });
 });
 
 describe("resumo da rampa", () => {

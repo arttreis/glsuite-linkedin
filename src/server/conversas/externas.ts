@@ -1,7 +1,6 @@
 import { contextoDeValidacao } from "@/domain/campanha";
 import { validarMensagem, type Violacao } from "@/domain/validador";
 import { contextoDoPerfil } from "@/server/campanhas/perfil";
-import { lerConfiguracao } from "@/server/configuracoes";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
@@ -13,12 +12,6 @@ import type { MensagemRecebida } from "@/server/unipile/webhooks";
  */
 
 type PerfilDaConversa = { id: string; praca: string };
-
-/** Perfil da Espanha só grava conversa fora de campanha com o DPA assinado (trava T-4). */
-async function podeGravar(db: Db, perfil: PerfilDaConversa): Promise<boolean> {
-  if (perfil.praca !== "espanha") return true;
-  return (await lerConfiguracao(db, "travas")).dpa_espanha;
-}
 
 type Contraparte = { providerId: string | null; nome: string | null; url?: string | null };
 
@@ -45,7 +38,6 @@ export async function gravarMensagemExterna(
   db: Db,
   p: { perfil: PerfilDaConversa; m: MensagemRecebida; contraparte: string | null; agora: Date },
 ): Promise<boolean> {
-  if (!(await podeGravar(db, p.perfil))) return false;
   const { m } = p;
   const em = m.em ? new Date(m.em) : p.agora;
   const nome = m.enviadaPelaConta
@@ -175,9 +167,6 @@ export async function importarHistorico(
     [p.perfilId],
   );
   if (!perfil?.unipile_account_id) return { conversas: 0, mensagens: 0, motivo: "O LinkedIn deste perfil não está conectado." };
-  if (!(await podeGravar(db, perfil))) {
-    return { conversas: 0, mensagens: 0, motivo: "Sem o DPA assinado, o perfil da Espanha não guarda conversas fora de campanha." };
-  }
 
   const max = p.maxConversas ?? 100;
   const resultado: ResultadoDoHistorico = { conversas: 0, mensagens: 0 };

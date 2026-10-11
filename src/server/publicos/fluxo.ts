@@ -100,7 +100,6 @@ export async function gerarFluxo(
       praca: contexto.praca,
       voz: entrada.voz,
       palavrasProibidas: contexto.palavrasProibidas,
-      rodape: contexto.rodapeObrigatorio,
       limiteNotaConvite: contexto.limiteNotaConvite,
     },
   });

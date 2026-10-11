@@ -14,10 +14,9 @@ export async function dadosDoEditor(operadorId: string) {
       nome: string;
       praca: Praca;
       palavras_proibidas: string[];
-      rodape_obrigatorio: string | null;
       limite_nota_convite: number;
     }>(`
-      select id, nome, praca, palavras_proibidas, rodape_obrigatorio, limite_nota_convite
+      select id, nome, praca, palavras_proibidas, limite_nota_convite
         from public.perfis
        where public.pode_ver_perfil(id)
        order by array_position(array['arthur', 'juliano', 'luiz', 'jp'], slug)`);
@@ -29,7 +28,6 @@ export async function dadosDoEditor(operadorId: string) {
         contexto: {
           praca: p.praca,
           palavrasProibidas: p.palavras_proibidas,
-          rodapeObrigatorio: p.rodape_obrigatorio,
           limiteNotaConvite: p.limite_nota_convite,
         },
       })),

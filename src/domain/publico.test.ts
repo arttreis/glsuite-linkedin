@@ -34,7 +34,6 @@ const PUBLICO: Publico = {
   angulo: "A margem que o marketplace esconde.",
   provas: ["Margem 12% maior em 6 meses"],
   quem_nao_e: "Analistas sem decisão de orçamento.",
-  praca: "domestico",
 };
 
 const sugerido = (parcial: Partial<SugestaoDePublicos["publicos"][number]> = {}): SugestaoDePublicos["publicos"][number] => ({
@@ -45,23 +44,19 @@ const sugerido = (parcial: Partial<SugestaoDePublicos["publicos"][number]> = {})
 
 describe("publicosDaSugestao", () => {
   it("troca o número da prova pelo texto do dossiê e ignora número fora da lista", () => {
-    const { publicos } = publicosDaSugestao({ publicos: [sugerido({ provas: [1, 7, 1, -1] })] }, DOSSIE, ["domestico"]);
+    const { publicos } = publicosDaSugestao({ publicos: [sugerido({ provas: [1, 7, 1, -1] })] }, DOSSIE);
     expect(publicos[0]!.provas).toEqual(["Atende a Loja X"]);
   });
 
-  it("descarta público de praça sem conta e o que não cabe no esquema", () => {
-    const resultado = publicosDaSugestao(
-      { publicos: [sugerido(), sugerido({ praca: "espanha" }), sugerido({ nome: "" })] },
-      DOSSIE,
-      ["domestico"],
-    );
+  it("descarta o que não cabe no esquema", () => {
+    const resultado = publicosDaSugestao({ publicos: [sugerido(), sugerido({ nome: "" })] }, DOSSIE);
     expect(resultado.publicos).toHaveLength(1);
-    expect(resultado.descartados).toBe(2);
+    expect(resultado.descartados).toBe(1);
   });
 
   it("fica com no máximo 5", () => {
     const seis = Array.from({ length: 6 }, (_, i) => sugerido({ nome: `Público ${i}` }));
-    expect(publicosDaSugestao({ publicos: seis }, DOSSIE, ["domestico"])).toMatchObject({ descartados: 1 });
+    expect(publicosDaSugestao({ publicos: seis }, DOSSIE)).toMatchObject({ descartados: 1 });
   });
 });
 
@@ -73,10 +68,6 @@ describe("provasForaDoDossie", () => {
 });
 
 describe("público", () => {
-  it("tem uma praça só", () => {
-    expect(publico.safeParse({ ...PUBLICO, praca: ["domestico", "canada"] }).success).toBe(false);
-  });
-
   it("explica o erro pela seção e pelo campo", () => {
     const erro = (entrada: unknown) => explicarErroDoPublico(publico.safeParse(limparEdicao(entrada)).error!);
     expect(erro({ ...PUBLICO, quem: { cargos: [" "], senioridade: "" } })).toBe("Quem, cargos: precisa de pelo menos 1.");

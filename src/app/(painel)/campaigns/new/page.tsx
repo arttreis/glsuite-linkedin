@@ -19,7 +19,6 @@ const EM_BRANCO: Publico = {
   angulo: "",
   provas: [],
   quem_nao_e: "",
-  praca: "domestico",
 };
 
 /**

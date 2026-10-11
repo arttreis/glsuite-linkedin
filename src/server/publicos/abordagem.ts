@@ -27,7 +27,7 @@ export type ContaDoPublico = {
 
 /**
  * As contas que trabalham o público: as da praça dele que o operador opera
- * (§4.13). Conta de outra praça não aparece. Roda como o operador.
+ * (§4.13). Roda como o operador.
  */
 export async function contasDoPublico(db: Db, publicoId: string): Promise<ContaDoPublico[]> {
   const linhas = await db.query<{
@@ -52,7 +52,7 @@ export async function contasDoPublico(db: Db, publicoId: string): Promise<ContaD
             (select count(*) from public.acoes a join public.leads l on l.id = a.lead_id
               where l.campanha_id = c.id and a.status = 'aguardando_aprovacao')::int as aguardando
        from public.publicos pu
-       join public.perfis pf on pf.organizacao_id = pu.organizacao_id and pf.praca = pu.praca
+       join public.perfis pf on pf.organizacao_id = pu.organizacao_id
        left join public.campanhas c on c.publico_id = pu.id and c.perfil_id = pf.id
       where pu.id = $1::uuid and public.pode_ver_perfil(pf.id) and not pf.casa
       order by array_position(array['arthur', 'juliano', 'luiz', 'jp'], pf.slug), pf.nome`,
@@ -102,7 +102,7 @@ export async function comecarAAbordar(
   if (!publico) return { ok: false, erro: "Escolha o público antes de começar a abordar." };
 
   const conta = (await contasDoPublico(db, p.publicoId)).find((c) => c.perfilId === p.perfilId);
-  if (!conta) return { ok: false, erro: "Esta conta não trabalha este público: é de outra praça ou você não a opera." };
+  if (!conta) return { ok: false, erro: "Você não opera esta conta." };
   if (conta.campanha) return { ok: true, campanhaId: conta.campanha.id, criada: false };
 
   const [criada] = await db.query<{ id: string }>(
@@ -114,12 +114,12 @@ export async function comecarAAbordar(
       publico.angulo,
       publico.nome,
       p.perfilId,
-      posT4DaPraca(publico.praca),
+      posT4DaPraca("domestico"),
       p.operadorId,
       publico.id,
     ],
   );
-  await salvarFluxo(db, { campanhaId: criada!.id, fluxo: fluxoPadrao(publico.praca), operadorId: p.operadorId });
+  await salvarFluxo(db, { campanhaId: criada!.id, fluxo: fluxoPadrao("domestico"), operadorId: p.operadorId });
   await registrarEvento(db, {
     tipo: "campanha_criada",
     entidade: "campanha",

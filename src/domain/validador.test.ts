@@ -14,7 +14,6 @@ const CANADA: ContextoDeValidacao = {
   ...BRASIL,
   praca: "canada",
   palavrasProibidas: ["agency", "marketing", "growth", "traffic"],
-  frasesDescadastro: ["or tell me to stop and I will"],
 };
 
 const regras = (texto: string, ctx: ContextoDeValidacao = BRASIL): RegraDoValidador[] =>
@@ -115,24 +114,6 @@ describe("validador de copy (§4.2)", () => {
     });
   });
 
-  describe("descadastro nos perfis do Canadá", () => {
-    it("bloqueia DM sem a saída", () => {
-      expect(regras("Hi Anna, quick idea for Acme.", CANADA)).toContain("descadastro");
-    });
-
-    it("aceita com a frase, sem ligar para caixa e pontuação", () => {
-      expect(regras("Hi Anna, quick idea for Acme. Or tell me to stop, and I will.", CANADA)).toEqual([]);
-    });
-
-    it("vale para qualquer DM do Canadá, inclusive a humana, mas não para a nota do convite", () => {
-      expect(regras("Sure, let's talk.", { ...CANADA, origem: "humano", toque: null })).toContain("descadastro");
-      expect(regras("Hi Anna", { ...CANADA, toque: "T1", tipo: "convite" })).not.toContain("descadastro");
-    });
-
-    it("não se aplica ao Brasil", () => {
-      expect(regras("Oi Ana", BRASIL)).not.toContain("descadastro");
-    });
-  });
 
   it("bloqueia variável que sobrou sem preencher", () => {
     expect(regras("Oi {{first_name}}")).toContain("token_nao_resolvido");

@@ -37,7 +37,7 @@ export type Toque = (typeof TOQUES)[number];
  * travar ao ativar. O envio valida de novo, com o perfil de verdade.
  */
 export function contextoDoPrimeiroAcesso(linkDeAgenda: string | null): ContextoDoPerfil {
-  return { praca: "domestico", palavrasProibidas: [], rodapeObrigatorio: null, limiteNotaConvite: LIMITE_DA_CONTA_GRATUITA, linkDeAgenda };
+  return { praca: "domestico", palavrasProibidas: [], limiteNotaConvite: LIMITE_DA_CONTA_GRATUITA, linkDeAgenda };
 }
 
 type LinhaDaAbordagem = {
@@ -119,7 +119,7 @@ export async function gerarAbordagem(
     publico,
     dossie: analise,
     estilo: "casa",
-    perfil: { nome: p.nome, praca: "domestico", voz, palavrasProibidas: [], rodape: null, limiteNotaConvite: contexto.limiteNotaConvite },
+    perfil: { nome: p.nome, praca: "domestico", voz, palavrasProibidas: [], limiteNotaConvite: contexto.limiteNotaConvite },
   });
 
   let escrita;

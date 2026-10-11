@@ -2,11 +2,6 @@ import { z } from "zod";
 import type { Dossie } from "./dossie";
 import { explicarErroDeEdicao } from "./edicao";
 
-export const PRACAS = ["domestico", "canada", "espanha"] as const;
-export type Praca = (typeof PRACAS)[number];
-
-export const NOME_DA_PRACA: Record<Praca, string> = { domestico: "Brasil", canada: "Canadá", espanha: "Espanha" };
-
 const quem = z.object({
   cargos: z.array(z.string().min(1).max(80)).min(1).max(10),
   senioridade: z.string().max(200),
@@ -27,7 +22,7 @@ const porQue = z.object({
 /**
  * Público (§4.12): uma hipótese de venda, quem compra e por quê. O dossiê é
  * fato do site; o público é interpretação. Pode dizer por que alguém precisa,
- * mas prova só vem do dossiê, e cada público tem uma praça só.
+ * mas prova só vem do dossiê.
  */
 export const publico = z.object({
   nome: z.string().min(1).max(80),
@@ -38,7 +33,6 @@ export const publico = z.object({
   /** Textos de provas do dossiê confirmado. */
   provas: z.array(z.string().min(1).max(300)).max(12),
   quem_nao_e: z.string().max(400),
-  praca: z.enum(PRACAS),
 });
 export type Publico = z.infer<typeof publico>;
 
@@ -61,14 +55,13 @@ export const MAX_SUGESTOES = 5;
 export function publicosDaSugestao(
   sugestao: SugestaoDePublicos,
   d: Dossie,
-  pracasPermitidas: readonly Praca[],
 ): { publicos: Publico[]; descartados: number } {
   const publicos: Publico[] = [];
   let descartados = 0;
   for (const item of sugestao.publicos) {
     const provas = [...new Set(item.provas)].flatMap((n) => (d.provas[n] ? [d.provas[n].texto] : []));
     const lido = publico.safeParse({ ...item, provas });
-    if (!lido.success || !pracasPermitidas.includes(lido.data.praca) || publicos.length >= MAX_SUGESTOES) {
+    if (!lido.success || publicos.length >= MAX_SUGESTOES) {
       descartados++;
       continue;
     }
@@ -91,7 +84,6 @@ const SECOES: Record<string, string> = {
   angulo: "Ângulo",
   provas: "Provas",
   quem_nao_e: "Quem não é",
-  praca: "Praça",
 };
 
 const CAMPOS: Record<string, string> = {
