@@ -9,7 +9,6 @@ import { despachar } from "@/server/despachante/despachante";
 import { importarPessoas } from "@/server/importacao/importar";
 import { calcularFunil } from "@/server/metricas/funil";
 import { comecarAAbordar, contasDoPublico } from "@/server/publicos/abordagem";
-import { processarEventosRd } from "@/server/rd/sincronizar";
 import { aprovarLeads } from "@/server/triagem/triagem";
 import { criarBancoDeTeste, type BancoDeTeste } from "../support/banco";
 import { SP } from "../support/despacho";
@@ -23,7 +22,6 @@ import {
   idDoPerfil,
   SEQUENCIA_PADRAO,
 } from "../support/fixtures";
-import { RdFalso } from "../support/rd-falso";
 import { UnipileFalso } from "../support/unipile-falso";
 
 const AGORA = instanteLocal("2026-10-07", "10:00", SP);
@@ -121,36 +119,6 @@ describe("campanha nasce do público (SDR-26)", () => {
     expect(campanha!.nome).toBe(`${PUBLICO.nome} (2)`);
   });
 
-  it("o ângulo da campanha e do RD é o texto do público", async () => {
-    await banco.db.query("update public.configuracoes set valor = $1::jsonb where chave = 'rd_station'", [
-      JSON.stringify({
-        ativo: true,
-        pipeline_id: "funil-servico",
-        etapas: { "01": "e01", "02": "e02", "03": "e03", "04": "e04", "05": "e05" },
-        campos: { nicho: "cf-nicho", fonte: "cf-fonte", praca: "cf-praca", originador: "cf-originador", angulo: "cf-angulo", dono_conversa: "cf-dono", data_reuniao: "cf-reuniao" },
-        valores: { fonte: "LinkedIn", praca: "Doméstico" },
-        usuarios: { arthur: "rd-user-arthur" },
-        deal_source_id: "fonte-linkedin",
-      }),
-    ]);
-    await ativarPerfil(banco.db, "arthur", { ativadoEm: "2026-10-01T11:00:00Z", accountId: "acc-arthur" });
-    const campanhaId = await campanhaCriada(await criarPublico(), "arthur");
-    // O fluxo padrão abre com convite sem nota: dá para mandar sem o fluxo gerado (SDR-29).
-    await banco.db.query("update public.campanhas set status = 'ativa' where id = $1::uuid", [campanhaId]);
-    const pessoaId = await criarPessoa(banco.db, { dono: "arthur", nome: "Carla Mendes", empresa: "Loja Sul" });
-    const leadId = await criarLead(banco.db, { pessoaId, campanhaId });
-    await aprovarLeads(banco.db, { leadIds: [leadId], operadorId: operador, agora: AGORA });
-
-    const rd = new RdFalso();
-    await processarEventosRd({ db: banco.db, rd, agora: AGORA });
-    await despachar({ db: banco.db, unipile: new UnipileFalso(), agora: AGORA, aleatorio: () => 0.5 });
-    await processarEventosRd({ db: banco.db, rd, agora: AGORA });
-
-    const [negociacao] = [...rd.negociacoes.values()];
-    expect(negociacao!.etapaId).toBe("e02");
-    expect(negociacao!.campos.get("cf-nicho")).toBe(PUBLICO.nome);
-    expect(negociacao!.campos.get("cf-angulo")).toBe(PUBLICO.angulo);
-  });
 
   it("a mesma pessoa não entra por duas contas do mesmo público (§4.7)", async () => {
     const publico = await criarPublico();

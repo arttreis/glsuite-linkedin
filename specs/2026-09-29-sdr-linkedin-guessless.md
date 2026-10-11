@@ -1593,6 +1593,19 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
 - O `AtualizarSozinho` compartilhado passou a não recarregar com a aba
   escondida, e os Chats usam ele.
 
+### SDR-53 · Sai o que ficou para trás
+
+Em três PRs, para cada um ser revisável e publicável sozinho.
+
+- **1/3, RD Station:** saem o cliente e a sincronização (`server/rd`), a fila
+  `rd_eventos`, a coluna `leads.rd_deal_id`, a configuração `rd_station`, a
+  variável `RD_STATION_TOKEN`, a etapa `rd` do tick e a tela de Integrações
+  (`/integracoes` redireciona para Configurações › LinkedIn). Os pontos que
+  enfileiravam eventos (triagem, convite enviado, resposta, qualificado,
+  reunião) só deixaram de enfileirar; o resto do que fazem não mudou. A
+  reaplicação das migrations continua idempotente: as antigas recriam a
+  tabela, e a `20261011020000_sem_rd_station` tira de novo.
+
 ### Slugs de URL em inglês (10/10/2026)
 
 - Pedido do Arthur: slug de URL sempre em inglês. O código, os nomes de
