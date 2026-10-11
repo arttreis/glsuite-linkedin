@@ -12,7 +12,7 @@ type Item = { href: string; rotulo: string; icone: LucideIcon; tambem?: string[]
 
 const ITENS: Item[] = [
   { href: "/", rotulo: "Dashboard", icone: LayoutDashboard, tambem: ["/metricas"] },
-  { href: "/inbox", rotulo: "Chats", icone: MessagesSquare, tambem: ["/aprovacao", "/tarefas"] },
+  { href: "/chats", rotulo: "Chats", icone: MessagesSquare, tambem: ["/aprovacao", "/tarefas"] },
   { href: "/campaigns", rotulo: "Campanhas", icone: Megaphone, tambem: ["/publicos", "/triagem", "/importar"] },
   { href: "/settings", rotulo: "Configurações", icone: Settings, tambem: ["/perfis", "/integracoes", "/oferta"] },
 ];

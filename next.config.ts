@@ -21,6 +21,9 @@ const nextConfig: NextConfig = {
       { source: "/configuracoes/organizacao", destination: "/settings/organization", permanent: false },
       { source: "/configuracoes", destination: "/settings", permanent: false },
       { source: "/auth/sair", destination: "/auth/logout", permanent: false },
+      { source: "/inbox", destination: "/chats", permanent: false },
+      { source: "/inbox/conversa/:conversa", destination: "/chats/thread/:conversa", permanent: false },
+      { source: "/inbox/:lead", destination: "/chats/:lead", permanent: false },
     ];
   },
 };

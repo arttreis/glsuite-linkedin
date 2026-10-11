@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { Violacao } from "@/domain/validador";
+import { aprovarAcao, rejeitarAcao } from "@/server/aprovacao/aprovar";
+import { devolverAoSdr } from "@/server/chats/chats";
 import { marcarDesfecho } from "@/server/conversas/desfecho";
 import { importarHistorico, responderConversaExterna } from "@/server/conversas/externas";
 import { registrarOptout } from "@/server/conversas/optout";
@@ -21,11 +23,19 @@ async function exigirLead(operadorId: string, valor: FormDataEntryValue | null):
   return visivel;
 }
 
+function voltarAoChat(leadId: string, mensagem?: string): never {
+  revalidatePath(`/chats/${leadId}`);
+  revalidatePath("/chats");
+  revalidatePath("/");
+  redirect(mensagem ? `/chats/${leadId}?msg=${encodeURIComponent(mensagem)}` : `/chats/${leadId}`);
+}
+
 export type EstadoDaResposta =
   | { status: "inicial" }
   | { status: "enviada"; em: number }
   | { status: "erro"; mensagem: string; violacoes?: Violacao[] };
 
+/** Responder pelo Chats: sai na hora e a pessoa assume a conversa (§4.7). */
 export async function responder(_anterior: EstadoDaResposta, formData: FormData): Promise<EstadoDaResposta> {
   const operador = await exigirOperador();
   const leadId = await exigirLead(operador.id, formData.get("leadId"));
@@ -37,11 +47,46 @@ export async function responder(_anterior: EstadoDaResposta, formData: FormData)
     { db: obterDb(), unipile: obterUnipile(), agora: new Date() },
     { leadId, texto: texto.data, operadorId: operador.id, chave: chave.data },
   );
-  revalidatePath(`/inbox/${leadId}`);
-  revalidatePath("/inbox");
+  revalidatePath(`/chats/${leadId}`);
+  revalidatePath("/chats");
   return resultado.ok
     ? { status: "enviada", em: Date.now() }
     : { status: "erro", mensagem: resultado.motivo, violacoes: resultado.violacoes };
+}
+
+export async function devolverAoSdrDoChat(formData: FormData) {
+  const operador = await exigirOperador();
+  const leadId = await exigirLead(operador.id, formData.get("leadId"));
+  const devolveu = await devolverAoSdr(obterDb(), { leadId, operadorId: operador.id, agora: new Date() });
+  voltarAoChat(leadId, devolveu ? undefined : "A conversa não está com você agora.");
+}
+
+async function exigirPendente(operadorId: string, valor: FormDataEntryValue | null): Promise<{ acaoId: string; leadId: string }> {
+  const acaoId = z.uuid().parse(valor);
+  const [acao] = await comOperador(obterDb(), operadorId, (tx) =>
+    tx.query<{ lead_id: string }>("select lead_id from public.acoes where id = $1::uuid", [acaoId]),
+  );
+  if (!acao) throw new Error("Resposta fora do seu acesso.");
+  return { acaoId, leadId: acao.lead_id };
+}
+
+/** Enviar a resposta que o SDR deixou para aprovar, como está ou editada (§4.7). */
+export async function enviarPendente(formData: FormData) {
+  const operador = await exigirOperador();
+  const { acaoId, leadId } = await exigirPendente(operador.id, formData.get("acaoId"));
+  const resultado = await aprovarAcao(
+    { db: obterDb(), unipile: obterUnipile(), agora: new Date() },
+    { acaoId, operadorId: operador.id, textoEditado: String(formData.get("texto") ?? "") },
+  );
+  if (!resultado.ok) voltarAoChat(leadId, [resultado.motivo, ...(resultado.violacoes ?? []).map((v) => v.mensagem)].join(" "));
+  voltarAoChat(leadId, resultado.enviada ? undefined : "Aprovada. A mensagem sai no próximo horário permitido da conta.");
+}
+
+export async function descartarPendente(formData: FormData) {
+  const operador = await exigirOperador();
+  const { acaoId, leadId } = await exigirPendente(operador.id, formData.get("acaoId"));
+  const descartou = await rejeitarAcao(obterDb(), { acaoId, operadorId: operador.id, agora: new Date(), motivo: "descartada no Chats" });
+  voltarAoChat(leadId, descartou ? "Descartada. Nada foi enviado." : "Essa resposta já tinha sido decidida.");
 }
 
 const entradaDoDesfecho = z.object({
@@ -56,7 +101,7 @@ export async function marcarConversa(formData: FormData) {
     para: formData.get("para"),
     reuniaoEm: formData.get("reuniaoEm") || undefined,
   });
-  if (para === "reuniao_marcada" && !reuniaoEm) redirect(`/inbox/${leadId}?msg=Informe a data da reunião.`);
+  if (para === "reuniao_marcada" && !reuniaoEm) voltarAoChat(leadId, "Informe a data da reunião.");
   const mudou = await marcarDesfecho(obterDb(), {
     leadId,
     para,
@@ -64,8 +109,7 @@ export async function marcarConversa(formData: FormData) {
     agora: new Date(),
     reuniaoEm: reuniaoEm ? new Date(reuniaoEm) : null,
   });
-  revalidatePath(`/inbox/${leadId}`);
-  if (!mudou) redirect(`/inbox/${leadId}?msg=Essa mudança de estado não é permitida agora.`);
+  voltarAoChat(leadId, mudou ? undefined : "Essa mudança de etapa não é permitida agora.");
 }
 
 export async function registrarOptoutDaConversa(formData: FormData) {
@@ -87,21 +131,18 @@ export async function registrarOptoutDaConversa(formData: FormData) {
     ator: operador.id,
     agora: new Date(),
   });
-  revalidatePath(`/inbox/${leadId}`);
+  voltarAoChat(leadId);
 }
 
-/** Traz da Unipile as conversas recentes dos perfis conectados que o operador opera (§4.6). */
-export async function importarHistoricoDoPainel(formData: FormData) {
+/** Traz da Unipile as conversas recentes das contas que a pessoa opera (§4.8). */
+export async function importarHistoricoDoChat() {
   const operador = await exigirOperador();
-  const perfilId = z.uuid().safeParse(formData.get("perfilId"));
   const perfis = await comOperador(obterDb(), operador.id, (tx) =>
     tx.query<{ id: string; nome: string }>(
-      `select id, nome from public.perfis
-        where public.pode_ver_perfil(id) and unipile_account_id is not null and ($1::uuid is null or id = $1::uuid)`,
-      [perfilId.success ? perfilId.data : null],
+      "select id, nome from public.perfis where public.pode_ver_perfil(id) and unipile_account_id is not null and not casa",
     ),
   );
-  if (perfis.length === 0) redirect(`/inbox?msg=${encodeURIComponent("Nenhum perfil com LinkedIn conectado para trazer conversas.")}`);
+  if (perfis.length === 0) redirect(`/chats?msg=${encodeURIComponent("Nenhuma conta com LinkedIn vinculado para trazer conversas.")}`);
 
   const partes: string[] = [];
   for (const perfil of perfis) {
@@ -112,8 +153,8 @@ export async function importarHistoricoDoPainel(formData: FormData) {
       partes.push(`${perfil.nome}: falhou (${(erro as Error).message})`);
     }
   }
-  revalidatePath("/inbox");
-  redirect(`/inbox?msg=${encodeURIComponent(partes.join(". "))}`);
+  revalidatePath("/chats");
+  redirect(`/chats?msg=${encodeURIComponent(partes.join(". "))}`);
 }
 
 export async function responderExterna(formData: FormData) {
@@ -125,10 +166,10 @@ export async function responderExterna(formData: FormData) {
   if (!visivel) throw new Error("Conversa fora do seu acesso.");
   const texto = z.string().trim().min(1).max(8000).safeParse(formData.get("texto"));
   const chave = z.uuid().safeParse(formData.get("chave"));
-  function voltar(mensagem: string): never {
-    revalidatePath(`/inbox/conversa/${conversaId}`);
-    revalidatePath("/inbox");
-    redirect(`/inbox/conversa/${conversaId}?msg=${encodeURIComponent(mensagem)}`);
+  function voltar(mensagem?: string): never {
+    revalidatePath(`/chats/thread/${conversaId}`);
+    revalidatePath("/chats");
+    redirect(mensagem ? `/chats/thread/${conversaId}?msg=${encodeURIComponent(mensagem)}` : `/chats/thread/${conversaId}`);
   }
   if (!texto.success || !chave.success) voltar("Escreva a mensagem.");
 
@@ -136,5 +177,5 @@ export async function responderExterna(formData: FormData) {
     { db: obterDb(), unipile: obterUnipile(), agora: new Date() },
     { conversaId, texto: texto.data, operadorId: operador.id, chave: chave.data },
   );
-  voltar(resultado.ok ? "Enviada pelo LinkedIn." : [resultado.motivo, ...(resultado.violacoes ?? []).map((v) => v.mensagem)].join(" "));
+  voltar(resultado.ok ? undefined : [resultado.motivo, ...(resultado.violacoes ?? []).map((v) => v.mensagem)].join(" "));
 }

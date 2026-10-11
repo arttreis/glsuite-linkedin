@@ -76,7 +76,7 @@ export async function precisaDeVoce(db: Db, agora: Date): Promise<ItemDoPrecisa[
     detalhe: c.pelo_agente
       ? `O SDR chamou você${c.motivo ? `: ${c.motivo}` : "."}`
       : "Esperando a sua resposta.",
-    href: `/inbox/${c.lead_id}`,
+    href: `/chats/${c.lead_id}`,
     acao: "Responder",
   }));
   const restantes = (chamando[0]?.total ?? 0) - chamando.length;
@@ -85,7 +85,7 @@ export async function precisaDeVoce(db: Db, agora: Date): Promise<ItemDoPrecisa[
       id: "conversas",
       texto: `Mais ${plural(restantes, "conversa esperando você", "conversas esperando você")}`,
       detalhe: null,
-      href: "/inbox",
+      href: "/chats?filter=needs-you",
       acao: "Abrir os Chats",
     });
   }

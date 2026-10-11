@@ -5,7 +5,7 @@ import { useActionState, useMemo, useState } from "react";
 import { Aviso } from "@/components/aviso";
 import { contextoDeValidacao, type ContextoDoPerfil } from "@/domain/campanha";
 import { validarMensagem } from "@/domain/validador";
-import { responder, type EstadoDaResposta } from "../acoes";
+import { responder, type EstadoDaResposta } from "./acoes";
 
 const INICIAL: EstadoDaResposta = { status: "inicial" };
 
@@ -13,15 +13,16 @@ export function FormularioDeResposta({
   leadId,
   contexto,
   bloqueio,
-  textoInicial = "",
+  aviso,
 }: {
   leadId: string;
   contexto: ContextoDoPerfil;
   bloqueio: string | null;
-  textoInicial?: string;
+  /** O que acontece ao responder, quando o SDR ainda conduz a conversa. */
+  aviso: string | null;
 }) {
   const [estado, acao, enviando] = useActionState(responder, INICIAL);
-  const [texto, setTexto] = useState(textoInicial);
+  const [texto, setTexto] = useState("");
   const [chave, setChave] = useState(() => crypto.randomUUID());
   const [ultimoEnvio, setUltimoEnvio] = useState<number | null>(null);
 
@@ -37,21 +38,28 @@ export function FormularioDeResposta({
     [texto, contexto],
   );
 
-  if (bloqueio) return <Aviso tom="atencao">{bloqueio}</Aviso>;
+  if (bloqueio) {
+    return (
+      <div className="border-t border-linha p-4">
+        <Aviso tom="atencao">{bloqueio}</Aviso>
+      </div>
+    );
+  }
 
   return (
-    <form action={acao} className="cartao flex flex-col gap-3 p-4">
+    <form action={acao} className="flex flex-col gap-2.5 border-t border-linha p-3 sm:p-4">
       <input type="hidden" name="leadId" value={leadId} />
       <input type="hidden" name="chave" value={chave} />
       <textarea
         name="texto"
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
-        rows={4}
+        rows={3}
         aria-label="Resposta"
-        placeholder="Escreva a resposta. Ela sai pelo LinkedIn do perfil, com você como autor."
-        className="campo w-full"
+        placeholder="Escreva uma mensagem"
+        className="campo w-full resize-y"
       />
+      {aviso && <p className="text-xs text-tinta-fraca">{aviso}</p>}
       {validacao?.violacoes.map((v) => (
         <p key={v.regra} className="flex items-start gap-1.5 text-sm text-erro">
           <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -75,7 +83,7 @@ export function FormularioDeResposta({
           className="botao botao-primario"
         >
           <Send aria-hidden />
-          {enviando ? "Enviando..." : "Enviar pelo LinkedIn"}
+          {enviando ? "Enviando..." : "Enviar"}
         </button>
       </div>
     </form>

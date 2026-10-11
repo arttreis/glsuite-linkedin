@@ -1430,6 +1430,47 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
   resposta das contas. Organização sem SDR vê que cada conta responde com a
   própria voz (§4.1).
 
+### SDR-48 · Chats: a réplica das DMs
+
+- Rotas: `/chats` (lista), `/chats/[leadId]` (conversa de campanha) e
+  `/chats/thread/[conversaId]` (conversa fora de campanha). `/inbox` e as
+  rotas dela redirecionam. No desktop são três colunas (lista, conversa e
+  dados do lead), cada uma com a própria rolagem. Abaixo de `xl`, os dados do
+  lead ficam num "Dados do lead" recolhido no topo da conversa. No celular, uma
+  coluna por vez.
+- Quem conduz a conversa: **com você** é `escalado_humano`, ou a conta no modo
+  manual, até o SDR-52 tirar esse modo. **Precisa de você** é com você e com
+  a última mensagem da pessoa, ou com resposta do SDR esperando aprovação. O
+  resto é **SDR conversando**. Filtros `?filter=all|sdr|you|needs-you`. A
+  conversa fora de campanha só aparece em Todas, porque não tem SDR nem prazo.
+- Marca de cada mensagem: a régua (`sistema`) e a IA (`ia`) aparecem como
+  **SDR**; `humano` aparece como **Você**, inclusive a resposta escrita
+  direto no LinkedIn. Marcos no fio: convite enviado, aceitou, o SDR chamou
+  você (com o motivo), fulano assumiu, a conta respondeu direto no LinkedIn,
+  devolveu ao SDR, qualificado, reunião marcada, disse não, opt-out, sequência
+  sem resposta e convite retirado.
+- Responder pelo Chats tira o SDR em `aceito`, `em_sequencia`, `em_conversa`
+  e `qualificado`: o lead vai para `escalado_humano`, e a régua e as
+  respostas do SDR esperando aprovação são canceladas. Em `reuniao_marcada`
+  não há transição permitida, e o SDR já não responde ali.
+- "Devolver ao SDR" só sai de `escalado_humano` e volta para `em_conversa`. O
+  SDR responde a próxima mensagem da pessoa: a varredura do agente pega
+  mensagem sem resposta, mas a mensagem que fez o SDR chamar você já tem
+  rascunho e não volta para ele.
+- No modo "aprovo cada resposta", toda DM esperando aprovação do lead (resposta
+  de conversa ou toque da régua) aparece no fim do fio, com o motivo quando o
+  validador barrou. Enviar e Editar usam a aprovação que já existia (a
+  resposta de conversa sai na hora, o toque volta para a fila do
+  despachante). Descartar é a rejeição. As abas Aprovação e Tarefas continuam
+  até o SDR-53 (leads parados e tarefas manuais).
+- A tela busca de novo a cada 15 s, só com a aba visível (`router.refresh`).
+  O selo de prazo de resposta (SLA) saiu da tela; o alerta por e-mail continua
+  até o SDR-52.
+- Os dados do lead mostram cargo, empresa, local, campanha, etapa do Pipeline
+  (colunas da §4.10 em `domain/pipeline.ts`, que o SDR-49 reaproveita), nota,
+  conta e o link do perfil. Mover no Pipeline (qualificado, reunião marcada,
+  disse não, opt-out) fica ali. A conta da casa não tem conversa no Chats.
+
 ### Slugs de URL em inglês (10/10/2026)
 
 - Pedido do Arthur: slug de URL sempre em inglês. O código, os nomes de
