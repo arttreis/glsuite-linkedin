@@ -20,8 +20,11 @@ export type ResultadoDaMensagem =
       perfilId: string;
     };
 
-/** Estados em que a régua ainda está rodando sozinha. */
-const ESTADOS_AUTOMATICOS: readonly EstadoDoLead[] = ["na_fila", "convite_enviado", "aceito", "em_sequencia"];
+/**
+ * Estados em que a régua ou o SDR ainda conduzem sozinhos. O dono que escreve
+ * direto no LinkedIn assume a conversa, como quem responde pelo Chats (§4.7).
+ */
+const ESTADOS_AUTOMATICOS: readonly EstadoDoLead[] = ["na_fila", "convite_enviado", "aceito", "em_sequencia", "em_conversa", "qualificado"];
 
 type Lead = { id: string; estado: EstadoDoLead; perfil_id: string; pessoa_id: string };
 
@@ -126,6 +129,17 @@ export async function registrarMensagem(db: Db, m: MensagemRecebida, agora: Date
         await gravar("saida", "humano");
         return { tipo: "tarefa_concluida", leadId: lead.id, perfilId: perfil.id };
       }
+
+      // Eco de uma DM que ainda está saindo: a mensagem só é gravada depois que a
+      // Unipile responde, e o webhook pode chegar antes. Não é o dono escrevendo.
+      const [emVoo] = await tx.query(
+        `select 1 from public.acoes
+          where lead_id = $1::uuid and tipo = 'dm' and status = 'enviando'
+            and btrim(coalesce(texto_final, texto_gerado, '')) = btrim($2)
+          limit 1`,
+        [lead.id, m.texto],
+      );
+      if (emVoo) return { tipo: "nossa" };
 
       await gravar("saida", "humano");
       if (ESTADOS_AUTOMATICOS.includes(lead.estado)) {

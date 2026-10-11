@@ -12,7 +12,7 @@ export function travasDaAtivacao(perfil: { slug: string; nome: string; praca: st
   if (perfil.slug === "arthur") {
     travas.push({ id: "D3", texto: "Rampa e teto deste perfil confirmados", dono: "Arthur" });
   }
-  if (perfil.slug === "juliano" && perfil.modoResposta !== "manual") {
+  if (perfil.slug === "juliano") {
     travas.push({ id: "T-2", texto: "Juliano de acordo com a IA rascunhar respostas em nome dele", dono: "Juliano" });
   }
   const internacional = { canada: { pais: "do Canadá", lei: "CASL" }, espanha: { pais: "da Espanha", lei: "LSSI" } }[perfil.praca];

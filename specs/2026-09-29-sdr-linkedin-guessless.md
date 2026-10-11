@@ -1490,6 +1490,36 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
   celular.
 - Filtros `?campaign=` e `?account=` (o de conta só aparece com mais de uma
   conta). A conta da casa fica de fora.
+### SDR-52 · O SDR responde sozinho
+
+- Dois modos por conta: `automatico` (o SDR responde sozinho, padrão da conta
+  vinculada no primeiro acesso) e `aprovacao` ("aprovo cada resposta"). O
+  `manual` saiu: a migration `20261011010000_sem_modo_manual` passa quem
+  estava nele para `aprovacao` e troca a constraint. O seed do JP passou a
+  `aprovacao` para a reaplicação das migrations continuar idempotente; a
+  Espanha segue com DM à mão pela rampa sem DM e pelas tarefas manuais, até o
+  SDR-53.
+- Ligar o automático não passa mais pela trava (eval aprovado, dias em
+  aprovação, taxa de edição). O eval continua registrável em Perfis, para
+  comparar versões de prompt. O rebaixamento automático por taxa de erro
+  continua: é uma guarda de segurança, não uma trava para ligar.
+- O SDR chama você e para de responder naquela conversa, em qualquer modo,
+  quando: o modelo decide escalar (pedido fora do comum ou item de "Quando
+  chamar você" do SDR, que já estava no prompt), a classificação aponta preço
+  ou reclamação, a confiança da decisão fica abaixo de
+  `agente.limiar_confianca`, o opt-out é ambíguo, ou ele quer marcar a reunião
+  e não há link de agenda. Antes, no automático, esses casos iam para a fila
+  de aprovação. Agora o lead vai para `escalado_humano`, nada sai, e o e-mail
+  "O SDR chamou você" traz o motivo e o link da conversa no Chats. O e-mail
+  depende da T-4 (Resend).
+- Texto barrado pelo validador continua sendo a única exceção que vira
+  resposta para aprovar, com o motivo, nos dois modos. Nunca sai sozinho.
+- O dono que escreve direto no LinkedIn também tira o SDR em `em_conversa` e
+  `qualificado`, não só na régua. Para isso não pegar a própria DM do SDR: o
+  eco que chega enquanto a ação ainda está `enviando`, com o mesmo texto, é
+  reconhecido como nosso.
+- O chat de teste segue a mesma regra: pergunta de preço vira a nota "Aqui o
+  SDR pararia e chamaria você".
 
 ### Slugs de URL em inglês (10/10/2026)
 

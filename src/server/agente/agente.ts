@@ -1,6 +1,7 @@
 import { resumoDaOferta } from "@/domain/dossie";
 import type { EstadoDoLead } from "@/domain/estados";
 import type { Praca, ResultadoDaValidacao } from "@/domain/validador";
+import { urlPublicaDoApp } from "@/lib/env";
 import { agendarAcao } from "@/server/acoes/agendar";
 import { enfileirarAlerta } from "@/server/alertas/alertas";
 import { lerConfiguracao } from "@/server/configuracoes";
@@ -18,7 +19,6 @@ export type DependenciasDoAgente = { db: Db; modelo: ModeloDeLinguagem; agora: D
 
 export type ResultadoDoAgente =
   | "ja_processado"
-  | "sugestao"
   | "na_fila"
   | "agendado"
   | "optout_registrado"
@@ -31,7 +31,7 @@ type Contexto = EntradaDoAgente & {
   leadId: string;
   estado: EstadoDoLead;
   providerId: string;
-  modo: "manual" | "aprovacao" | "automatico";
+  modo: "aprovacao" | "automatico";
   perfil: EntradaDoAgente["perfil"] & { id: string };
 };
 
@@ -194,16 +194,24 @@ async function escalar(db: Db, ctx: Contexto, p: { rascunhoId: string; motivo: s
     tipo: "revisao",
     perfilId: ctx.perfil.id,
     incluirAdmin: false,
-    assunto: `[SDR] A conversa com ${ctx.lead.nome} precisa de você (${ctx.perfil.nome})`,
-    texto: `O agente passou a conversa para um humano.\n\nMotivo: ${p.motivo}\n\nResponda pelo Chats do Kakou.`,
+    assunto: `[Kakou] O SDR chamou você na conversa com ${ctx.lead.nome} (${ctx.perfil.nome})`,
+    texto: [
+      `O SDR parou de responder ${ctx.lead.nome} e passou a conversa para você.`,
+      ``,
+      `Motivo: ${p.motivo}`,
+      ``,
+      `Responda pelo Chats: ${urlPublicaDoApp()}/chats/${ctx.leadId}`,
+      `Quando quiser, devolva a conversa ao SDR por lá.`,
+    ].join("\n"),
   });
 }
 
 /**
  * Agente de conversa (§7) para uma mensagem da pessoa. A decisão é de
- * `decidirResposta`; aqui ficam os efeitos, e o modo do perfil manda (§4.8):
- * manual → só sugestão; aprovação → fila; automático → envio agendado, e as
- * exceções vão para a fila.
+ * `decidirResposta`; aqui ficam os efeitos, e o modo da conta manda (§4.7):
+ * "aprovo cada resposta" → fila; sozinho → envio agendado. Texto barrado
+ * pelo validador vai para a fila nos dois modos; chamar você tira o SDR da
+ * conversa.
  */
 export async function processarComAgente(deps: DependenciasDoAgente, mensagemId: string): Promise<ResultadoDoAgente> {
   const { db, modelo, agora } = deps;
@@ -257,12 +265,6 @@ export async function processarComAgente(deps: DependenciasDoAgente, mensagemId:
 
     const { classificacao, decisao, texto, validacao, excecao } = desfecho;
     const base = { classificacao, decisao, texto, validacao, excecao, modelos, uso, sdrVersao };
-
-    if (ctx.modo === "manual") {
-      // A IA sugere, o humano escreve e envia (§4.8).
-      await concluir(db, rascunhoId, { ...base, resultado: "sugestao" });
-      return "sugestao";
-    }
 
     // Rascunho mais novo substitui o que ainda estava na fila para o mesmo lead.
     await db.query(

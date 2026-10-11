@@ -12,7 +12,6 @@ import { despausarPerfilDoPainel, pausarPerfilDoPainel } from "./acoes";
 export const MODO_DE_RESPOSTA: Record<SaudeDoPerfil["modoResposta"], string> = {
   automatico: "O SDR responde sozinho",
   aprovacao: "Você aprova cada resposta",
-  manual: "Você escreve as respostas",
 };
 
 /** Uso do dia contra o teto da conta; a barra fica âmbar quando o teto é atingido. */
