@@ -124,7 +124,7 @@ describe("seed", () => {
       { slug: "arthur", praca: "domestico", fuso: "America/Sao_Paulo", idioma: "pt", status: "pausado",
         teto_convites_semana: 75, modo_resposta: "aprovacao", convites: [8, 12, 15], dms: [15, 20, 25] },
       { slug: "jp", praca: "espanha", fuso: "Europe/Madrid", idioma: "es", status: "pausado",
-        teto_convites_semana: 30, modo_resposta: "manual", convites: [4, 5, 6], dms: [0, 0, 0] },
+        teto_convites_semana: 30, modo_resposta: "aprovacao", convites: [4, 5, 6], dms: [0, 0, 0] },
       { slug: "juliano", praca: "domestico", fuso: "America/Sao_Paulo", idioma: "pt", status: "pausado",
         teto_convites_semana: 100, modo_resposta: "aprovacao", convites: [8, 12, 15], dms: [15, 20, 25] },
       { slug: "luiz", praca: "canada", fuso: "America/Toronto", idioma: "en", status: "pausado",

@@ -40,7 +40,7 @@ type Conta = {
  */
 export async function precisaDeVoce(db: Db, agora: Date): Promise<ItemDoPrecisa[]> {
   // A conversa precisa de você quando está com humano (o SDR chamou ou você
-  // assumiu) ou a conta escreve à mão, e a última mensagem é da pessoa.
+  // assumiu) e a última mensagem é da pessoa.
   const chamando = await db.query<ConversaChamando & { total: number }>(
     `with abertas as (
        select l.id, l.estado, l.perfil_id,
@@ -48,9 +48,7 @@ export async function precisaDeVoce(db: Db, agora: Date): Promise<ItemDoPrecisa[
               (select max(m.em) from public.mensagens m where m.lead_id = l.id) as ultima_em
          from public.leads l
          join public.perfis p on p.id = l.perfil_id
-        where not p.casa
-          and (l.estado = 'escalado_humano'
-               or (p.modo_resposta = 'manual' and l.estado in ('em_conversa', 'qualificado', 'reuniao_marcada')))
+        where not p.casa and l.estado = 'escalado_humano'
      )
      select a.id as lead_id, pe.nome, pe.empresa,
             e.payload ->> 'motivo' as motivo,

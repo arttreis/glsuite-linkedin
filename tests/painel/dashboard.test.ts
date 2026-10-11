@@ -84,9 +84,9 @@ describe("Dashboard (SDR-47)", () => {
       expect(await comoDuda((tx) => precisaDeVoce(tx, AGORA))).toEqual([]);
     });
 
-    it("na conta que escreve à mão, a resposta da pessoa espera você", async () => {
-      await banco.db.query("update public.perfis set modo_resposta = 'manual' where id = $1::uuid", [juliano]);
+    it("conversa que você assumiu espera você quando a pessoa responde", async () => {
       const bia = await lead("em_conversa", "Bia Reis", "Ateliê");
+      await escalar(bia, duda, "respondido pelo Chats", antes(2 * HORA));
       await mensagem(bia, "entrada", antes(HORA));
 
       expect(await comoDuda((tx) => precisaDeVoce(tx, AGORA))).toEqual([

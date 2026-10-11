@@ -129,7 +129,7 @@ describe("chat de teste do SDR (SDR-43)", () => {
     expect(await obterTeste(banco.db, base())).toEqual(teste);
   });
 
-  it("o que não é resposta comum vira nota: chamar a pessoa, opt-out, ressalva de preço", async () => {
+  it("o que não é resposta comum vira nota: chamar a pessoa (também por preço) e opt-out", async () => {
     await comecar();
     modelo.decisoes.push({ acao: "escalar_humano", mensagem: null, motivo: "pediu tabela de atacado", estagio_sugerido: null, confianca: 0.9 });
     let teste = await responder("Me manda a tabela de atacado?");
@@ -137,7 +137,7 @@ describe("chat de teste do SDR (SDR-43)", () => {
 
     modelo.classificacoes.push({ categoria: "pergunta", confianca: 0.9, sinais: { preco: true, reclamacao: false, idioma: "pt" } });
     teste = await responder("Quanto custa?");
-    expect(teste.mensagens.at(-1)).toMatchObject({ tipo: "sdr", aviso: "pergunta de preço" });
+    expect(teste.mensagens.at(-1)).toMatchObject({ tipo: "nota", nota: "desfecho", texto: "Aqui o SDR pararia e chamaria Duda: pergunta de preço." });
 
     const chamadasAntes = modelo.chamadas.length;
     teste = await responder("Pare de me mandar mensagem");

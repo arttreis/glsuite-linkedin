@@ -1,4 +1,4 @@
-import { Check, FileJson, Link2, Plug, RefreshCw, TriangleAlert, Webhook } from "lucide-react";
+import { FileJson, Link2, Plug, RefreshCw, Webhook } from "lucide-react";
 import Link from "next/link";
 import { Aviso } from "@/components/aviso";
 import { Avatar } from "@/components/avatar";
@@ -6,7 +6,6 @@ import { Cabecalho } from "@/components/cabecalho";
 import { EtiquetaDoPerfil } from "@/components/etiquetas";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { avaliarGate, type Gate } from "@/server/perfis/modo";
 import { exigirOperador } from "@/server/supabase/servidor";
 import {
   atualizarStatusDasContas,
@@ -33,35 +32,9 @@ type LinhaPerfil = {
 const PRACAS: Record<string, string> = { domestico: "Brasil", canada: "Canadá", espanha: "Espanha" };
 
 const MODOS = [
-  { valor: "manual", rotulo: "Manual" },
-  { valor: "aprovacao", rotulo: "Aprovação" },
-  { valor: "automatico", rotulo: "Automático" },
+  { valor: "automatico", rotulo: "O SDR responde sozinho" },
+  { valor: "aprovacao", rotulo: "Aprovo cada resposta" },
 ] as const;
-
-/** O que falta para ligar o automático (gate da §7.1). */
-function GateDoAutomatico({ gate }: { gate: Gate }) {
-  if (gate.liberado) {
-    return (
-      <span className="flex items-center gap-1.5 text-[13px] text-ok">
-        <Check className="size-4" aria-hidden />
-        Gate do automático cumprido
-      </span>
-    );
-  }
-  return (
-    <details className="text-[13px] text-tinta-suave">
-      <summary className="inline-flex items-center gap-1.5">
-        <TriangleAlert className="size-3.5 text-atencao" aria-hidden />
-        Automático bloqueado ({gate.motivos.length})
-      </summary>
-      <ul className="mt-2 list-disc pl-5 marker:text-tinta-fraca">
-        {gate.motivos.map((motivo) => (
-          <li key={motivo}>{motivo}</li>
-        ))}
-      </ul>
-    </details>
-  );
-}
 
 const AVISOS: Record<string, { tom: "ok" | "erro"; texto: string }> = {
   ok: { tom: "ok", texto: "Conta conectada. O perfil segue pausado até alguém ativar." },
@@ -79,11 +52,6 @@ export default async function PerfisPage({ searchParams }: PageProps<"/perfis">)
         from public.perfis
        order by array_position(array['arthur', 'juliano', 'luiz', 'jp'], slug), nome`),
   );
-  const agora = new Date();
-  const gates = new Map<string, Gate>();
-  for (const perfil of perfis) {
-    if (perfil.acessivel && perfil.modo_resposta === "aprovacao") gates.set(perfil.id, await avaliarGate(obterDb(), perfil.id, agora));
-  }
   const bloqueios = typeof params.bloqueio === "string" ? [params.bloqueio] : (params.bloqueio ?? []);
   const aviso = typeof params.conexao === "string" ? AVISOS[params.conexao] : undefined;
 
@@ -170,7 +138,6 @@ export default async function PerfisPage({ searchParams }: PageProps<"/perfis">)
                       Trocar
                     </button>
                   </form>
-                  {gates.has(perfil.id) && <GateDoAutomatico gate={gates.get(perfil.id)!} />}
                 </div>
               )}
             </li>
@@ -198,7 +165,7 @@ export default async function PerfisPage({ searchParams }: PageProps<"/perfis">)
                 Resultado do eval
               </label>
               <p className="text-[13px] text-tinta-suave">
-                Suba o relatorio.json da rodada. O veredito da praça entra no gate do modo automático.
+                Suba o relatorio.json da rodada para comparar versões de prompt. Não trava mais o modo automático.
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-3">
                 <input id="relatorio" name="relatorio" type="file" accept="application/json,.json" className="campo-arquivo" />

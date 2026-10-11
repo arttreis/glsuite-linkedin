@@ -46,7 +46,7 @@ export async function atualizarStatusDasContas() {
 export async function trocarModoDoPerfil(formData: FormData) {
   const operador = await exigirOperador();
   const perfilId = z.uuid().parse(formData.get("perfilId"));
-  const para = z.enum(["manual", "aprovacao", "automatico"]).parse(formData.get("modo"));
+  const para = z.enum(["aprovacao", "automatico"]).parse(formData.get("modo"));
   await exigirAcessoAoPerfil(operador.id, perfilId);
   try {
     await trocarModo(obterDb(), { perfilId, para, operadorId: operador.id, agora: new Date() });

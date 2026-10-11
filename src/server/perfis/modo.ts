@@ -1,15 +1,14 @@
 import { z } from "zod";
 import { VERSAO_DOS_PROMPTS } from "@/server/agente/prompts";
-import { taxaDeEdicao } from "@/server/aprovacao/fila";
 import { enfileirarAlerta } from "@/server/alertas/alertas";
 import { lerConfiguracao } from "@/server/configuracoes";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 
-export type ModoDeResposta = "manual" | "aprovacao" | "automatico";
+/** Sozinho (`automatico`) ou "aprovo cada resposta" (`aprovacao`), §4.7. */
+export type ModoDeResposta = "aprovacao" | "automatico";
 
 const PRACAS = ["domestico", "canada", "espanha"] as const;
-const DIA = 86_400_000;
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 
 export class ErroDeModo extends Error {
@@ -19,9 +18,10 @@ export class ErroDeModo extends Error {
 }
 
 // ---------------------------------------------------------------------------
-// Eval aprovado (primeira metade do gate da §7.1)
+// Eval: ferramenta interna para comparar versões de prompt (§4.7). Não trava
+// mais o modo automático.
 
-/** O pedaço do relatorio.json do eval (SDR-16) que o gate precisa. */
+/** O pedaço do relatorio.json do eval (SDR-16) que fica registrado. */
 const relatorioDoEval = z.object({
   geradoEm: z.string(),
   versaoDosPrompts: z.string(),
@@ -101,59 +101,6 @@ export async function vereditoDoEval(db: Db, praca: string): Promise<string | nu
 }
 
 // ---------------------------------------------------------------------------
-// Gate
-
-export type Gate = { liberado: boolean; motivos: string[] };
-
-/**
- * Gate da §7.1 para ligar o `automatico`: eval da praça aprovado na versão
- * atual dos prompts e 2 semanas em `aprovacao` com edição/rejeição abaixo do
- * limiar (D6), com amostra mínima. Na Espanha a DM é sempre manual (§4.5).
- */
-export async function avaliarGate(db: Db, perfilId: string, agora: Date): Promise<Gate> {
-  const [perfil] = await db.query<{ praca: string; modo_resposta: ModoDeResposta; modo_desde: Date }>(
-    "select praca, modo_resposta, modo_desde from public.perfis where id = $1::uuid",
-    [perfilId],
-  );
-  if (!perfil) return { liberado: false, motivos: ["Perfil não encontrado."] };
-  if (perfil.praca === "espanha") {
-    return { liberado: false, motivos: ["Na Espanha a DM é sempre manual (§4.5): o automático não existe para este perfil."] };
-  }
-
-  const config = await lerConfiguracao(db, "gate_automatico");
-  const motivos: string[] = [];
-
-  if (perfil.modo_resposta !== "aprovacao") {
-    motivos.push(`O perfil precisa estar em aprovacao (hoje está em ${perfil.modo_resposta}).`);
-  } else {
-    const dias = Math.floor((agora.getTime() - new Date(perfil.modo_desde).getTime()) / DIA);
-    if (dias < config.dias_em_aprovacao) {
-      motivos.push(`O perfil está há ${dias} dias em aprovacao; o mínimo é ${config.dias_em_aprovacao}.`);
-    }
-  }
-
-  const taxa = (await taxaDeEdicao(db, { agora, dias: config.dias_em_aprovacao })).find((t) => t.perfilId === perfilId);
-  const decididas = taxa?.decididas ?? 0;
-  if (decididas < config.amostra_minima_aprovacao) {
-    motivos.push(
-      `Só ${decididas} rascunhos decididos nos últimos ${config.dias_em_aprovacao} dias; o mínimo é ${config.amostra_minima_aprovacao}.`,
-    );
-  } else if (taxa?.taxa != null && taxa.taxa >= config.limiar_edicao) {
-    motivos.push(`Taxa de edição/rejeição de ${pct(taxa.taxa)}; precisa ficar abaixo de ${pct(config.limiar_edicao)}.`);
-  }
-
-  const veredito = await vereditoDoEval(db, perfil.praca);
-  if (veredito !== "aprovado") {
-    motivos.push(
-      veredito
-        ? `O eval da praça na versão ${VERSAO_DOS_PROMPTS} dos prompts está ${veredito}.`
-        : `Nenhum eval registrado para a praça na versão ${VERSAO_DOS_PROMPTS} dos prompts.`,
-    );
-  }
-  return { liberado: motivos.length === 0, motivos };
-}
-
-// ---------------------------------------------------------------------------
 // Troca de modo
 
 /**
@@ -172,34 +119,23 @@ async function devolverPendentesParaFila(db: Db, perfilId: string, motivo: strin
 }
 
 /**
- * Troca o modo de resposta do perfil (§4.8). É um ato humano, registrado em
- * `eventos` com o operador. Ligar o `automatico` passa pelo gate; sem ele, a
- * troca é bloqueada com os motivos.
+ * Troca o modo de resposta da conta (§4.7). É um ato humano, registrado em
+ * `eventos` com o operador, e vale para a próxima resposta. Na Espanha a DM é
+ * escrita à mão até as regras por praça saírem (SDR-53).
  */
 export async function trocarModo(
   db: Db,
   p: { perfilId: string; para: ModoDeResposta; operadorId: string; agora: Date },
 ): Promise<void> {
-  const gate = p.para === "automatico" ? await avaliarGate(db, p.perfilId, p.agora) : null;
   await db.transacao(async (tx) => {
-    const [perfil] = await tx.query<{ modo_resposta: ModoDeResposta }>(
-      "select modo_resposta from public.perfis where id = $1::uuid for update",
+    const [perfil] = await tx.query<{ modo_resposta: ModoDeResposta; praca: string }>(
+      "select modo_resposta, praca from public.perfis where id = $1::uuid for update",
       [p.perfilId],
     );
     if (!perfil) throw new ErroDeModo(["Perfil não encontrado."]);
     if (perfil.modo_resposta === p.para) throw new ErroDeModo([`O perfil já está em ${p.para}.`]);
-
-    if (gate && !gate.liberado) {
-      await registrarEvento(tx, {
-        tipo: "automatico_bloqueado",
-        entidade: "perfil",
-        entidadeId: p.perfilId,
-        perfilId: p.perfilId,
-        payload: { motivos: gate.motivos },
-        ator: p.operadorId,
-        em: p.agora,
-      });
-      return;
+    if (p.para === "automatico" && perfil.praca === "espanha") {
+      throw new ErroDeModo(["Na Espanha a DM é escrita à mão: o SDR não responde sozinho neste perfil."]);
     }
 
     await tx.query("update public.perfis set modo_resposta = $2, modo_desde = $3 where id = $1::uuid", [
@@ -221,8 +157,6 @@ export async function trocarModo(
       em: p.agora,
     });
   });
-  // O bloqueio fica registrado (o evento acima foi gravado) e volta para quem pediu.
-  if (gate && !gate.liberado) throw new ErroDeModo(gate.motivos);
 }
 
 // ---------------------------------------------------------------------------
@@ -304,7 +238,7 @@ export async function avaliarModosAutomaticos(db: Db, agora: Date): Promise<{ re
           ``,
           `Motivo: ${motivo}`,
           ``,
-          `Os rascunhos que ainda não tinham saído estão na fila de aprovação. Para religar o automático, o gate precisa ser cumprido de novo.`,
+          `As respostas que ainda não tinham saído esperam aprovação nos Chats. Para o SDR voltar a responder sozinho, troque o modo da conta.`,
         ].join("\n"),
       });
       rebaixados.push(perfil.id);

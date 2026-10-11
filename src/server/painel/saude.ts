@@ -14,7 +14,7 @@ export type SaudeDoPerfil = {
   praca: string;
   status: "ativo" | "pausado";
   motivoPausa: string | null;
-  modoResposta: "manual" | "aprovacao" | "automatico";
+  modoResposta: "aprovacao" | "automatico";
   unipileStatus: string | null;
   conectado: boolean;
   /** Conectado e com status em que o despachante envia: o mesmo critério do despausar. */
@@ -43,7 +43,7 @@ export type SaudeDoPerfil = {
 type LinhaDoPerfil = PerfilDoDespachante & {
   status: "ativo" | "pausado";
   motivo_pausa: string | null;
-  modo_resposta: "manual" | "aprovacao" | "automatico";
+  modo_resposta: "aprovacao" | "automatico";
   acessivel: boolean;
 };
 

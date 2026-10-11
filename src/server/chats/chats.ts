@@ -1,5 +1,4 @@
 import type { EstadoDoLead } from "@/domain/estados";
-import { ESTADOS_ABERTOS } from "@/server/conversas/inbox";
 import type { Db } from "@/server/db/tipos";
 import { transicionarLead } from "@/server/leads/transicoes";
 
@@ -42,17 +41,16 @@ export function quemEscreveu(direcao: "entrada" | "saida", autor: string): QuemE
 }
 
 /**
- * A conversa está com você quando o SDR chamou (ou você assumiu) ou a conta
- * escreve à mão; precisa de você quando, além disso, a última palavra é da
- * pessoa, ou quando há resposta do SDR esperando aprovação.
+ * A conversa está com você quando o SDR chamou ou você assumiu; precisa de
+ * você quando, além disso, a última palavra é da pessoa, ou quando há
+ * resposta do SDR esperando aprovação.
  */
 export function situacaoDoLead(p: {
   estado: EstadoDoLead;
-  modoResposta: string;
   ultimaDirecao: "entrada" | "saida" | null;
   aprovacoes: number;
 }): Exclude<Situacao, "fora"> {
-  const comVoce = p.estado === "escalado_humano" || (p.modoResposta === "manual" && ESTADOS_ABERTOS.includes(p.estado));
+  const comVoce = p.estado === "escalado_humano";
   if ((comVoce && p.ultimaDirecao === "entrada") || p.aprovacoes > 0) return "precisa";
   return comVoce ? "voce" : "sdr";
 }
@@ -72,7 +70,6 @@ type LinhaDeLead = {
   nome: string;
   empresa: string | null;
   conta: string;
-  modo_resposta: string;
   texto: string;
   direcao: "entrada" | "saida";
   autor: string;
@@ -97,7 +94,7 @@ type LinhaExterna = {
  */
 export async function listarChats(db: Db, p: { filtro: FiltroDoChat }): Promise<ItemDoChat[]> {
   const leads = await db.query<LinhaDeLead>(
-    `select l.id, l.estado, pe.nome, pe.empresa, pf.nome as conta, pf.modo_resposta,
+    `select l.id, l.estado, pe.nome, pe.empresa, pf.nome as conta,
             u.texto, u.direcao, u.autor, u.em,
             (select count(*)::int from public.acoes a where a.lead_id = l.id and a.status = 'aguardando_aprovacao') as aprovacoes
        from public.leads l
@@ -119,7 +116,7 @@ export async function listarChats(db: Db, p: { filtro: FiltroDoChat }): Promise<
     ultimoTexto: l.texto,
     ultimoAutor: quemEscreveu(l.direcao, l.autor),
     ultimaEm: l.em,
-    situacao: situacaoDoLead({ estado: l.estado, modoResposta: l.modo_resposta, ultimaDirecao: l.direcao, aprovacoes: l.aprovacoes }),
+    situacao: situacaoDoLead({ estado: l.estado, ultimaDirecao: l.direcao, aprovacoes: l.aprovacoes }),
     estado: l.estado,
   }));
 
@@ -303,7 +300,6 @@ export async function abrirChat(db: Db, leadId: string): Promise<ChatDoLead | nu
     pendentes,
     situacao: situacaoDoLead({
       estado: lead.estado,
-      modoResposta: lead.modo_resposta,
       ultimaDirecao: ultima?.direcao ?? null,
       aprovacoes: pendentes.length,
     }),

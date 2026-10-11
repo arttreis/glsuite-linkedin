@@ -34,8 +34,9 @@ insert into public.perfis (
     'pausado', 'Aguardando T-1, T-3 e T-5'
   ),
   (
-    -- Espanha: DM é manual (§4.5), então o despachante não envia DM nenhuma.
-    'jp', 'JP', 'espanha', 'Europe/Madrid', 'es', 'manual',
+    -- Espanha: DM é escrita à mão (§4.5), então a rampa não tem DM nenhuma.
+    -- O modo era 'manual' até o SDR-52, que tirou esse modo.
+    'jp', 'JP', 'espanha', 'Europe/Madrid', 'es', 'aprovacao',
     '[{"semana": 1, "convites_dia": 4, "dms_dia": 0},
       {"semana": 2, "convites_dia": 5, "dms_dia": 0},
       {"semana": 3, "convites_dia": 6, "dms_dia": 0}]',

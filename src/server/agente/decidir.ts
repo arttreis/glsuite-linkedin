@@ -130,9 +130,10 @@ export async function abrirConversa(p: {
  * Passo 1: classifica (Haiku). Passo 2: decide e rascunha (Sonnet). Depois,
  * regras duras que não dependem do prompt:
  * - opt-out claro é reconhecido antes de qualquer IA;
- * - todo texto passa pelo validador (§4.2); violação vira exceção;
  * - preço, reclamação, opt-out ambíguo, baixa confiança e reunião sem link
- *   viram exceção (vão para a fila no modo automático).
+ *   fazem o SDR parar e chamar você (§4.7), em qualquer modo;
+ * - todo texto passa pelo validador (§4.13); texto barrado vira resposta
+ *   para aprovar, com o motivo, e nunca sai sozinho.
  *
  * Não toca no banco: `processarComAgente` aplica o desfecho, e o eval (SDR-16)
  * roda exatamente esta função contra o dataset.
@@ -202,19 +203,21 @@ export async function decidirResposta(p: {
     return { tipo: "escalar", classificacao, decisao, motivo };
   }
 
-  const validacao = texto ? validarTextoDaIa(ctx, texto) : null;
-  if (validacao && !validacao.ok) excecoes.push(`validador: ${validacao.violacoes.map((v) => v.mensagem).join(" ")}`);
-  if (decisao.acao === "propor_reuniao" && !ctx.linkDeAgenda) excecoes.push("sem link de agenda configurado");
+  // O que faz o SDR parar e chamar você naquela conversa (§4.7).
+  if (decisao.acao === "propor_reuniao" && !ctx.linkDeAgenda) excecoes.push("quer marcar a reunião e não há link de agenda");
   if (classificacao.sinais.preco) excecoes.push("pergunta de preço");
   if (classificacao.sinais.reclamacao) excecoes.push("reclamação");
   if (decisao.confianca < configuracao.limiar_confianca) excecoes.push("baixa confiança");
+  if (excecoes.length > 0) return { tipo: "escalar", classificacao, decisao, motivo: excecoes.join("; ") };
 
+  // Texto barrado pelo validador nunca sai: vira resposta para aprovar, com o motivo.
+  const validacao = texto ? validarTextoDaIa(ctx, texto) : null;
   return {
     tipo: "rascunho",
     classificacao,
     decisao,
     texto,
     validacao,
-    excecao: excecoes.length > 0 ? excecoes.join("; ") : null,
+    excecao: validacao && !validacao.ok ? `validador: ${validacao.violacoes.map((v) => v.mensagem).join(" ")}` : null,
   };
 }

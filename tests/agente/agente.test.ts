@@ -117,7 +117,7 @@ describe("agente de conversa (SDR-10)", () => {
     });
   });
 
-  it("rascunho que viola o validador cai na fila marcado, até no modo automático", async () => {
+  it("rascunho que viola o validador nunca sai: cai na fila marcado, até no modo automático", async () => {
     const { leadId, mensagemId } = await pessoaResponde("Interessante, como funciona?", { modo: "automatico" });
     modelo.decisoes.push({
       acao: "responder",
@@ -151,21 +151,82 @@ describe("agente de conversa (SDR-10)", () => {
   });
 
   it.each([
-    ["pergunta de preço", { categoria: "pergunta", confianca: 0.9, sinais: { preco: true, reclamacao: false, idioma: "pt" } }, 0.9],
-    ["baixa confiança", { categoria: "pergunta", confianca: 0.9, sinais: { preco: false, reclamacao: false, idioma: "pt" } }, 0.4],
-  ] as const)("no modo automático, %s vai para a fila", async (motivo, classificacao, confianca) => {
-    const { leadId, mensagemId } = await pessoaResponde("E quanto custa?", { modo: "automatico" });
+    ["pergunta de preço", "automatico", { categoria: "pergunta", confianca: 0.9, sinais: { preco: true, reclamacao: false, idioma: "pt" } }, 0.9],
+    ["reclamação", "automatico", { categoria: "objecao", confianca: 0.9, sinais: { preco: false, reclamacao: true, idioma: "pt" } }, 0.9],
+    ["baixa confiança", "automatico", { categoria: "pergunta", confianca: 0.9, sinais: { preco: false, reclamacao: false, idioma: "pt" } }, 0.4],
+    ["pergunta de preço", "aprovacao", { categoria: "pergunta", confianca: 0.9, sinais: { preco: true, reclamacao: false, idioma: "pt" } }, 0.9],
+  ] as const)("%s faz o SDR chamar você no modo %s: nada sai e a conversa fica com humano (SDR-52)", async (motivo, modo, classificacao, confianca) => {
+    const { leadId, mensagemId } = await pessoaResponde("E quanto custa?", { modo });
     modelo.classificacoes.push(classificacao);
     modelo.decisoes.push({ ...modelo.decisaoPadrao, confianca });
-    expect(await rodar(mensagemId!)).toBe("na_fila");
-    expect((await acoesDaIa(leadId))[0]!.motivo_revisao).toContain(motivo);
+    expect(await rodar(mensagemId!)).toBe("escalado");
+    expect(await lead(leadId)).toBe("escalado_humano");
+    expect(await acoesDaIa(leadId)).toEqual([]);
+    const [alerta] = await banco.db.query<{ assunto: string; texto: string }>("select assunto, texto from public.alertas where chave like 'escalado/%'");
+    expect(alerta!.assunto).toContain("O SDR chamou você");
+    expect(alerta!.texto).toContain(motivo);
+    expect(alerta!.texto).toContain(`/chats/${leadId}`);
   });
 
-  it("no modo manual (JP), a IA só sugere: nada vai para a fila de envio", async () => {
-    const { leadId, mensagemId } = await pessoaResponde("Me interesa, cuéntame más.", { modo: "manual" });
-    expect(await rodar(mensagemId!)).toBe("sugestao");
+  it("depois que a conversa passa para você, o SDR não responde mais nela (SDR-52)", async () => {
+    const { leadId, mensagemId } = await pessoaResponde("E quanto custa?", { modo: "automatico" });
+    modelo.classificacoes.push({ categoria: "pergunta", confianca: 0.9, sinais: { preco: true, reclamacao: false, idioma: "pt" } });
+    await rodar(mensagemId!);
+
+    const chat = (await banco.db.query<{ chat_id: string }>("select chat_id from public.leads where id = $1::uuid", [leadId]))[0]!.chat_id;
+    const nova = `msg-${randomUUID().slice(0, 8)}`;
+    await registrarMensagem(
+      banco.db,
+      {
+        accountId: "acc-arthur",
+        chatId: chat,
+        messageId: nova,
+        texto: "Alguém aí?",
+        em: AGORA.toISOString(),
+        remetenteProviderId: "ACoProspect",
+        remetenteNome: "Maria",
+        enviadaPelaConta: false,
+        participantes: [],
+      },
+      AGORA,
+    );
+    const [mensagem] = await banco.db.query<{ id: string }>("select id from public.mensagens where provider_message_id = $1", [nova]);
+    expect(await rodar(mensagem!.id)).toBe("descartado");
     expect(await acoesDaIa(leadId)).toEqual([]);
-    expect((await rascunho(mensagemId!))!.resultado).toBe("sugestao");
+    expect(await lead(leadId)).toBe("escalado_humano");
+  });
+
+  it("o dono escrevendo direto no LinkedIn tira o SDR da conversa; o eco da DM do SDR saindo, não (SDR-52)", async () => {
+    const { leadId, mensagemId } = await pessoaResponde("Me conta mais?", { modo: "automatico" });
+    modelo.classificacoes.push({ categoria: "pergunta", confianca: 0.9, sinais: { preco: false, reclamacao: false, idioma: "pt" } });
+    expect(await rodar(mensagemId!)).toBe("agendado");
+    const chat = (await banco.db.query<{ chat_id: string }>("select chat_id from public.leads where id = $1::uuid", [leadId]))[0]!.chat_id;
+    const [resposta] = await banco.db.query<{ texto_final: string }>(
+      "update public.acoes set status = 'enviando' where lead_id = $1::uuid and origem = 'ia' returning texto_final",
+      [leadId],
+    );
+    const eco = (texto: string) =>
+      registrarMensagem(
+        banco.db,
+        {
+          accountId: "acc-arthur",
+          chatId: chat,
+          messageId: `msg-${randomUUID().slice(0, 8)}`,
+          texto,
+          em: AGORA.toISOString(),
+          remetenteProviderId: "ACoArthur",
+          remetenteNome: "Arthur",
+          enviadaPelaConta: true,
+          participantes: [{ providerId: "ACoArthur", nome: "Arthur" }, { providerId: "ACoProspect", nome: "Maria" }],
+        },
+        AGORA,
+      );
+
+    expect(await eco(resposta!.texto_final)).toEqual({ tipo: "nossa" });
+    expect(await lead(leadId)).toBe("em_conversa");
+
+    expect(await eco("Oi Maria, aqui é o Arthur mesmo. Te ligo amanhã?")).toMatchObject({ tipo: "humano_no_linkedin" });
+    expect(await lead(leadId)).toBe("escalado_humano");
   });
 
   it("escalar_humano passa a conversa para o dono do perfil, com alerta", async () => {

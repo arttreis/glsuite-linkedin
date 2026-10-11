@@ -8,9 +8,9 @@ describe("travas da primeira ativação (§8)", () => {
     expect(ids({ slug: "arthur", nome: "Arthur", praca: "domestico", modoResposta: "aprovacao" })).toEqual(["D3"]);
   });
 
-  it("Juliano espera a T-2 só quando a IA rascunha por ele", () => {
+  it("Juliano espera a T-2: a IA sempre escreve por ele", () => {
     expect(ids({ slug: "juliano", nome: "Juliano", praca: "domestico", modoResposta: "aprovacao" })).toEqual(["T-2"]);
-    expect(ids({ slug: "juliano", nome: "Juliano", praca: "domestico", modoResposta: "manual" })).toEqual([]);
+    expect(ids({ slug: "juliano", nome: "Juliano", praca: "domestico", modoResposta: "automatico" })).toEqual(["T-2"]);
   });
 
   it("Canadá espera IP, parceria e CASL; o dono da T-5 é o próprio perfil", () => {
@@ -21,7 +21,7 @@ describe("travas da primeira ativação (§8)", () => {
   });
 
   it("Espanha espera também o DPA (T-4)", () => {
-    expect(ids({ slug: "jp", nome: "JP", praca: "espanha", modoResposta: "manual" })).toEqual(["T-1", "T-3", "T-4", "T-5"]);
+    expect(ids({ slug: "jp", nome: "JP", praca: "espanha", modoResposta: "aprovacao" })).toEqual(["T-1", "T-3", "T-4", "T-5"]);
   });
 });
 

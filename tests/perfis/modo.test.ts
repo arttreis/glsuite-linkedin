@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { VERSAO_DOS_PROMPTS } from "@/server/agente/prompts";
-import { avaliarGate, avaliarModosAutomaticos, ErroDeModo, registrarEval, trocarModo } from "@/server/perfis/modo";
+import { avaliarModosAutomaticos, registrarEval, trocarModo } from "@/server/perfis/modo";
 import { executarTick } from "@/server/tick";
 import { criarBancoDeTeste, type BancoDeTeste } from "../support/banco";
 import { ativarPerfil, criarCampanha, criarLead, criarOperador, criarPessoa, idDoPerfil } from "../support/fixtures";
@@ -50,25 +50,6 @@ describe("modo automático por perfil (SDR-17)", () => {
     return { leadId, providerId };
   }
 
-  /** Rascunho da IA que um humano decidiu na fila. */
-  async function rascunhoDecidido(decisao: "aprovada" | "editada" | "rejeitada", decididaEm = diasAtras(2)) {
-    const { leadId } = await leadEmConversa();
-    await banco.db.query(
-      `insert into public.acoes (lead_id, perfil_id, tipo, origem, status, idempotency_key, agendada_para, decisao_humana, decidida_em)
-       values ($1::uuid, $2::uuid, 'dm', 'ia', $3, gen_random_uuid()::text, $4, $5, $4)`,
-      [leadId, arthur, decisao === "rejeitada" ? "cancelada" : "enviada", decididaEm, decisao],
-    );
-  }
-
-  /** Perfil há 20 dias em aprovação, com 20 decisões e `editadas` delas editadas. */
-  async function historicoEmAprovacao(editadas: number) {
-    await banco.db.query("update public.perfis set modo_resposta = 'aprovacao', modo_desde = $2 where id = $1::uuid", [
-      arthur,
-      diasAtras(20),
-    ]);
-    for (let i = 0; i < 20; i += 1) await rascunhoDecidido(i < editadas ? "editada" : "aprovada");
-  }
-
   /** DM que a IA agendou sozinha no automático, com o desfecho dela. */
   async function mensagemAutomatica(desfecho: "enviada" | "barrada" | "falhou" | "optout" | "pendente") {
     const { leadId, providerId } = await leadEmConversa();
@@ -100,55 +81,12 @@ describe("modo automático por perfil (SDR-17)", () => {
     return acao!.id;
   }
 
-  describe("gate para ligar", () => {
-    it("bloqueia sem o gate, explica os motivos e registra a tentativa", async () => {
+  describe("ligar o automático (SDR-52: sem trava de eval)", () => {
+    it("liga direto, registra a troca e vale para a próxima resposta", async () => {
       await banco.db.query("update public.perfis set modo_resposta = 'aprovacao', modo_desde = $2 where id = $1::uuid", [
         arthur,
-        diasAtras(3),
+        diasAtras(1),
       ]);
-
-      const tentativa = trocarModo(banco.db, { perfilId: arthur, para: "automatico", operadorId: operador, agora: AGORA });
-
-      await expect(tentativa).rejects.toBeInstanceOf(ErroDeModo);
-      const erro = (await tentativa.catch((e: ErroDeModo) => e)) as ErroDeModo;
-      expect(erro.motivos).toEqual([
-        "O perfil está há 3 dias em aprovacao; o mínimo é 14.",
-        "Só 0 rascunhos decididos nos últimos 14 dias; o mínimo é 20.",
-        `Nenhum eval registrado para a praça na versão ${VERSAO_DOS_PROMPTS} dos prompts.`,
-      ]);
-      expect(await modo()).toBe("aprovacao");
-      const eventos = await banco.db.query<{ tipo: string; ator: string }>(
-        "select tipo, ator from public.eventos where entidade = 'perfil' and entidade_id = $1",
-        [arthur],
-      );
-      expect(eventos).toEqual([{ tipo: "automatico_bloqueado", ator: operador }]);
-    });
-
-    it("bloqueia com edição acima do limiar mesmo com eval aprovado", async () => {
-      await historicoEmAprovacao(2);
-      await registrarEval(banco.db, { relatorio: relatorio({ domestico: "aprovado" }), operadorId: operador, agora: AGORA });
-
-      const gate = await avaliarGate(banco.db, arthur, AGORA);
-
-      expect(gate).toEqual({ liberado: false, motivos: ["Taxa de edição/rejeição de 10%; precisa ficar abaixo de 10%."] });
-    });
-
-    it("bloqueia com eval reprovado ou de outra praça", async () => {
-      await historicoEmAprovacao(1);
-      await registrarEval(banco.db, {
-        relatorio: relatorio({ domestico: "reprovado", canada: "aprovado" }),
-        operadorId: operador,
-        agora: AGORA,
-      });
-
-      expect((await avaliarGate(banco.db, arthur, AGORA)).motivos).toEqual([
-        `O eval da praça na versão ${VERSAO_DOS_PROMPTS} dos prompts está reprovado.`,
-      ]);
-    });
-
-    it("liga com o gate cumprido e registra a troca", async () => {
-      await historicoEmAprovacao(1);
-      await registrarEval(banco.db, { relatorio: relatorio({ domestico: "aprovado" }), operadorId: operador, agora: AGORA });
 
       await trocarModo(banco.db, { perfilId: arthur, para: "automatico", operadorId: operador, agora: AGORA });
 
@@ -157,6 +95,12 @@ describe("modo automático por perfil (SDR-17)", () => {
         "select payload, ator from public.eventos where tipo = 'modo_alterado'",
       );
       expect(evento).toEqual({ payload: { de: "aprovacao", para: "automatico", devolvidas_para_fila: 0 }, ator: operador });
+    });
+
+    it("o modo manual não existe mais", async () => {
+      await expect(banco.db.query("update public.perfis set modo_resposta = 'manual' where id = $1::uuid", [arthur])).rejects.toThrow(
+        /perfis_modo_resposta_check/,
+      );
     });
 
     it("recusa eval de outra versão dos prompts", async () => {

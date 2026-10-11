@@ -24,11 +24,11 @@ usar slug em inglês (#25), e as rotas antigas redirecionam.
 | 2 | SDR-47 Menu novo e Dashboard | 40 | ✅ | ✅ #26, em produção | — |
 | 3 | SDR-42 O SDR da organização | 41 | ✅ | ✅ #19, em produção | — |
 | 3 | SDR-44 Leads: público e prévia pela conta da casa | 41 | ✅ | ✅ #21, em produção | ⛔ testar a busca com a conta da casa |
-| 3 | SDR-48 Chats: a réplica das DMs | 47 | ✅ | ⏳ PR aberto | — |
-| 3 | SDR-49 Pipeline | 47 | ✅ | ⏳ PR aberto | — |
+| 3 | SDR-48 Chats: a réplica das DMs | 47 | ✅ | ✅ #27, em produção | — |
+| 3 | SDR-49 Pipeline | 47 | ✅ | ✅ #28, em produção | — |
 | 4 | SDR-43 Chat de teste: você no papel de lead | 42 | ✅ | ✅ #20, em produção | — |
 | 4 | SDR-45 Abordagem recomendada e permissão | 42, 44 | ✅ | ✅ #22, em produção | — |
-| 4 | SDR-52 O SDR responde sozinho | 42, 48 | 🔜 | — | ⛔ Resend (T-4) |
+| 4 | SDR-52 O SDR responde sozinho | 42, 48 | ✅ | ⏳ PR aberto | ⛔ Resend (T-4) para o e-mail |
 | 5 | SDR-46 Vincular o LinkedIn e começar | 45 | ✅ | ✅ #23, em produção | ⛔ vincular uma conta real pela Unipile |
 | 5 | SDR-50 Campanhas | 45, 47 | 🔜 | — | — |
 | 5 | SDR-51 Configurações | 43, 47 | 🔜 | — | — |
