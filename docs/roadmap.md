@@ -10,10 +10,15 @@ abordagem → permissão → LinkedIn) e o app em cinco telas (Dashboard, Chats,
 Pipeline, Campanhas, Configurações), sobre o mesmo motor. Produção em
 https://sdr.glsuite.io.
 
-O Marco A (SDR-40 a 46) está em produção desde 10/10, com as migrations
-aplicadas. A GuessLess foi zerada no mesmo dia para refazer o primeiro acesso
-(ficaram a organização, os operadores e a conta da casa). As URLs passaram a
-usar slug em inglês (#25), e as rotas antigas redirecionam.
+Os três marcos do épico (SDR-40 a 53) estão em produção desde 10/10, com as
+migrations aplicadas: primeiro acesso, o app em cinco telas e a limpeza (RD
+Station, regras por praça e telas antigas). A GuessLess foi zerada no mesmo dia
+para refazer o primeiro acesso (ficaram a organização, os operadores e a conta
+da casa). As URLs passaram a usar slug em inglês (#25), e as rotas antigas
+redirecionam.
+
+O que falta é aceite com serviço real (coluna da direita na tabela abaixo) e as
+travas da seção 2.
 
 ## 1 · Código (tickets da §9)
 
@@ -32,7 +37,7 @@ usar slug em inglês (#25), e as rotas antigas redirecionam.
 | 5 | SDR-46 Vincular o LinkedIn e começar | 45 | ✅ | ✅ #23, em produção | ⛔ vincular uma conta real pela Unipile |
 | 5 | SDR-50 Campanhas | 45, 47 | ✅ | ✅ #30, em produção | — |
 | 5 | SDR-51 Configurações | 43, 47 | ✅ | ✅ #31, em produção | — |
-| 6 | SDR-53 Sai o que ficou para trás (RD, praças, telas antigas) | 46, 48 a 52 | ✅ | RD ✅ #32; telas antigas e praças ⏳ PR aberto | — |
+| 6 | SDR-53 Sai o que ficou para trás (RD, praças, telas antigas) | 46, 48 a 52 | ✅ | ✅ #32, #33 e #34, em produção | — |
 
 Legenda: ✅ feito · 🔜 a fazer · ⏳ aguardando · ⛔ bloqueado por algo externo.
 
