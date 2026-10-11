@@ -27,7 +27,7 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
     itens: [
       { href: "/", rotulo: "Início", icone: House, guiado: true },
       { href: "/oferta", rotulo: "Oferta", icone: Globe, guiado: true },
-      { href: "/publicos", rotulo: "Públicos", icone: UsersRound, guiado: true, tambem: ["/campanhas", "/triagem", "/importar"] },
+      { href: "/publicos", rotulo: "Públicos", icone: UsersRound, guiado: true, tambem: ["/campaigns", "/triagem", "/importar"] },
     ],
   },
   {
@@ -39,7 +39,7 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
   },
   {
     titulo: "Gestão",
-    itens: [{ href: "/configuracoes", rotulo: "Configurações", icone: Settings, guiado: true, tambem: ["/perfis", "/integracoes"] }],
+    itens: [{ href: "/settings", rotulo: "Configurações", icone: Settings, guiado: true, tambem: ["/perfis", "/integracoes"] }],
   },
 ];
 

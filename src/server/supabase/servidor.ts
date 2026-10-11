@@ -73,11 +73,11 @@ export async function exigirOperador(): Promise<Operador> {
 
 /**
  * Operador de organização que terminou o primeiro acesso (§4.1). Quem não
- * terminou vai para `/comecar`.
+ * terminou vai para `/onboarding`.
  */
 export async function exigirOperadorNoApp(): Promise<Operador> {
   const operador = await exigirOperador();
-  if (!operador.primeiroAcessoConcluido) redirect("/comecar");
+  if (!operador.primeiroAcessoConcluido) redirect("/onboarding");
   return operador;
 }
 

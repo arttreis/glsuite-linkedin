@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { ehPassoInicial, passoAtual, podeAbrir, type IdDoPassoInicial } from "./primeiro-acesso";
+import {
+  ehPassoInicial,
+  PASSOS_DO_PRIMEIRO_ACESSO,
+  passoAtual,
+  podeAbrir,
+  rotaDoPasso,
+  type IdDoPassoInicial,
+} from "./primeiro-acesso";
 
 const feitos = (...passos: IdDoPassoInicial[]) => new Set(passos);
 
@@ -22,6 +29,18 @@ describe("primeiro acesso", () => {
     expect(podeAbrir("sdr", estado)).toBe(true);
     expect(podeAbrir("leads", estado)).toBe(false);
     expect(podeAbrir("linkedin", estado)).toBe(false);
+  });
+
+  it("cada passo abre numa rota com slug em inglês", () => {
+    const rotas = PASSOS_DO_PRIMEIRO_ACESSO.map(rotaDoPasso);
+    expect(rotas).toEqual([
+      "/onboarding/site",
+      "/onboarding/analysis",
+      "/onboarding/sdr",
+      "/onboarding/leads",
+      "/onboarding/approach",
+      "/onboarding/linkedin",
+    ]);
   });
 
   it("reconhece os ids dos passos", () => {

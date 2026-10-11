@@ -25,7 +25,7 @@ export type Operador = {
   papel: "admin" | "operador";
   organizacaoId: string;
   organizacaoNome: string;
-  /** A organização terminou o primeiro acesso (§4.1). Sem isso, só `/comecar` abre. */
+  /** A organização terminou o primeiro acesso (§4.1). Sem isso, só `/onboarding` abre. */
   primeiroAcessoConcluido: boolean;
 };
 

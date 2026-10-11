@@ -1198,13 +1198,13 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
   ("ana.souza" vira "Ana Souza"); o da organização é "Empresa de <nome>" até a
   análise do site (SDR-41) trazer o nome da empresa.
 - Portão: `organizacoes.primeiro_acesso_em`. O painel inteiro (`(painel)`)
-  passa por `exigirOperadorNoApp`; `/comecar` manda para o app quem já
+  passa por `exigirOperadorNoApp`; `/onboarding` manda para o app quem já
   terminou. A migration marca as organizações que já têm conta conectada.
 - O passo atual sai dos dados, não de uma coluna: site lido → análise;
   análise confirmada → SDR. Os passos seguintes ganham a sua condição nos
   tickets que os constroem. Passo da frente redireciona para o atual; passo
   feito abre para corrigir.
-- Cada passo é uma rota estática (`/comecar/site` … `/comecar/linkedin`), para
+- Cada passo é uma rota estática (`/onboarding/site` … `/onboarding/linkedin`), para
   cada ticket trocar só a sua página. Até lá, a página mostra a pergunta e
   "Este passo ainda está sendo montado".
 - O portão dos primeiros passos (SDR-19/SDR-30) continua por baixo até o
@@ -1373,7 +1373,7 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
   perfil da pessoa: pausado, Brasil, fuso de São Paulo, o idioma da análise,
   `modo_resposta = automatico` (§4.7), `RAMPA_PADRAO` e 75 por semana (D3), sem
   palavras proibidas de perfil, `operador_id` e `operador_perfis` da pessoa.
-  O hosted auth volta para `/comecar/linkedin`.
+  O hosted auth volta para `/onboarding/linkedin`.
 - `concluirPrimeiroAcesso` leva tudo para a conta, e roda pelo aviso da
   Unipile (`/api/unipile/conta`, depois do `registrarContaConectada`) e pela
   volta da pessoa à tela, o que vier primeiro. É idempotente, e só um leva por
@@ -1396,3 +1396,22 @@ Configurações). Tickets SDR-40 a SDR-53, na §9 do épico novo.
   pessoa? A aprovação já consulta a conta nova (`jaEConexao`); se o id não
   valer, o envio falha com erro permanente e o lead vai para revisão. Ver com
   a primeira conta real.
+
+### Slugs de URL em inglês (10/10/2026)
+
+- Pedido do Arthur: slug de URL sempre em inglês. O código, os nomes de
+  domínio e os textos da tela continuam em português; só a rota muda.
+- `/comecar` virou `/onboarding` (passos `site`, `analysis`, `sdr`, `leads`,
+  `approach`, `linkedin`); `/campanhas` virou `/campaigns` (`/campaigns/new`);
+  `/configuracoes` virou `/settings` (`/settings/organization`); `/auth/sair`
+  virou `/auth/logout`. O id do passo segue o domínio (`analise`,
+  `abordagem`) e `rotaDoPasso` traduz para o slug.
+- As rotas antigas redirecionam (307, no `next.config.ts`): link de e-mail,
+  favorito e o retorno do hosted auth que já estava em andamento continuam
+  funcionando. 307 e não 308 enquanto as rotas ainda mudam neste épico.
+- As telas que saem no SDR-53 (Oferta, Públicos, Triagem, Importar,
+  Aprovação, Tarefas, Resultados, Perfis, Integrações) não foram renomeadas:
+  somem nesse ticket e redirecionam para as telas novas, que já nascem em
+  inglês (`/chats`, `/pipeline`). Rotas de API chamadas de fora (webhook da
+  Unipile, retorno do hosted auth, cron, saúde) ficam como estão até o
+  destino externo mudar junto.

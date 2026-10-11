@@ -12,7 +12,7 @@ const TIPOS_OTP: EmailOtpType[] = ["email", "magiclink", "invite", "recovery", "
  * Destino do magic link: troca o código (PKCE) ou o token_hash por sessão. No
  * primeiro acesso de um e-mail liberado, cria a organização e o operador
  * (§4.1); o portão do painel manda quem não terminou o primeiro acesso para
- * `/comecar`.
+ * `/onboarding`.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
@@ -42,5 +42,5 @@ export async function GET(request: NextRequest) {
     agora: new Date(),
   });
   if (!operador) return NextResponse.redirect(new URL("/login?erro=acesso", origin));
-  return NextResponse.redirect(new URL(operador.criouOrganizacao ? "/comecar" : proximo, origin));
+  return NextResponse.redirect(new URL(operador.criouOrganizacao ? "/onboarding" : proximo, origin));
 }
