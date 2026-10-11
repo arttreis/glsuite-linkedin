@@ -4,6 +4,7 @@ import { ArrowRight, ExternalLink } from "lucide-react";
 import { useState, useTransition, type ReactNode } from "react";
 import { Aviso } from "@/components/aviso";
 import type { Dossie } from "@/domain/dossie";
+import type { ResultadoDaEdicao } from "@/server/oferta/oferta";
 import { confirmarAnaliseNoPrimeiroAcesso, salvarAnalise } from "../acoes";
 import { ListaDeFrases, ListaEditavel, TextoEditavel } from "./itens";
 
@@ -46,13 +47,22 @@ function Grupo({ titulo, ajuda, children }: { titulo: string; ajuda?: string; ch
   );
 }
 
-type Salvamento = { tipo: "salvando" } | { tipo: "salvo" } | { tipo: "erro"; texto: string } | null;
+type Salvamento = { tipo: "salvando" } | { tipo: "salvo" } | { tipo: "confirmado" } | { tipo: "erro"; texto: string } | null;
 
 /**
  * A análise do site para corrigir item a item (§4.2). Cada correção grava na
  * hora como rascunho; "Está certo, seguir" confirma e leva ao SDR.
  */
-export function EditorDaAnalise({ inicial }: { inicial: Dossie }) {
+export function EditorDaAnalise({
+  inicial,
+  confirmarAnalise = confirmarAnaliseNoPrimeiroAcesso,
+  rotuloDeConfirmar = "Está certo, seguir",
+}: {
+  inicial: Dossie;
+  /** No primeiro acesso, confirma e segue para o SDR; em Configurações, só confirma. */
+  confirmarAnalise?: (entrada: { dossie: unknown }) => Promise<ResultadoDaEdicao>;
+  rotuloDeConfirmar?: string;
+}) {
   const [d, setD] = useState<Dossie>(inicial);
   const [salvamento, setSalvamento] = useState<Salvamento>(null);
   const [, iniciarSalvamento] = useTransition();
@@ -71,8 +81,9 @@ export function EditorDaAnalise({ inicial }: { inicial: Dossie }) {
 
   const confirmar = () =>
     iniciarConfirmacao(async () => {
-      const resultado = await confirmarAnaliseNoPrimeiroAcesso({ dossie: d });
+      const resultado = await confirmarAnalise({ dossie: d });
       if (resultado && !resultado.ok) setSalvamento({ tipo: "erro", texto: resultado.erro });
+      else if (resultado?.ok) setSalvamento({ tipo: "confirmado" });
     });
 
   const travado = confirmando;
@@ -273,11 +284,17 @@ export function EditorDaAnalise({ inicial }: { inicial: Dossie }) {
         {salvamento?.tipo === "erro" && <Aviso tom="erro">{salvamento.texto}</Aviso>}
         <div className="flex flex-wrap items-center gap-3">
           <button type="button" className="botao botao-primario" onClick={confirmar} disabled={confirmando}>
-            {confirmando ? "Seguindo..." : "Está certo, seguir"}
+            {confirmando ? "Confirmando..." : rotuloDeConfirmar}
             <ArrowRight aria-hidden />
           </button>
           <span className="text-xs text-tinta-fraca" aria-live="polite">
-            {salvamento?.tipo === "salvando" ? "Salvando a correção..." : salvamento?.tipo === "salvo" ? "Correção salva." : ""}
+            {salvamento?.tipo === "salvando"
+              ? "Salvando a correção..."
+              : salvamento?.tipo === "salvo"
+                ? "Correção salva. Vale depois de confirmar."
+                : salvamento?.tipo === "confirmado"
+                  ? "Análise confirmada. O SDR e as próximas abordagens já usam esta versão."
+                  : ""}
           </span>
         </div>
       </div>

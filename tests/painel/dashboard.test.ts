@@ -139,7 +139,7 @@ describe("Dashboard (SDR-47)", () => {
 
       await banco.db.query("update public.perfis set unipile_status = 'CREDENTIALS' where id = $1::uuid", [juliano]);
       expect(await comoDuda((tx) => precisaDeVoce(tx, AGORA))).toEqual([
-        expect.objectContaining({ href: `/perfis#perfil-${juliano}`, acao: "Reconectar" }),
+        expect.objectContaining({ href: `/settings/linkedin#conta-${juliano}`, acao: "Reconectar" }),
       ]);
     });
 

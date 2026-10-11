@@ -38,7 +38,7 @@ function SemConta({ p }: { p: PublicoSalvo }) {
   return (
     <Aviso tom="atencao">
       Nenhuma conta do LinkedIn que você opera é da praça {NOME_DA_PRACA[p.praca]}.{" "}
-      <Link href="/perfis" className="link">
+      <Link href="/settings/linkedin" className="link">
         Conectar uma conta
       </Link>
     </Aviso>
@@ -144,7 +144,7 @@ function AbaLeads({
           {!conta.conectado && (
             <p className="mt-3 text-xs text-tinta-fraca">
               Sem LinkedIn conectado, a campanha não envia.{" "}
-              <Link href="/perfis" className="link">
+              <Link href="/settings/linkedin" className="link">
                 Conectar
               </Link>
             </p>
@@ -355,7 +355,7 @@ export default async function PublicoPage({ params, searchParams }: PageProps<"/
           <p className="mt-4 flex items-center gap-1.5 text-xs text-tinta-fraca">
             <Plug className="size-3.5" aria-hidden />
             Conta pausada ou sem LinkedIn não envia nada. Ative em{" "}
-            <Link href="/perfis" className="link">
+            <Link href="/settings/linkedin" className="link">
               Contas do LinkedIn
             </Link>
             .

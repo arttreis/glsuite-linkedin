@@ -64,7 +64,16 @@ function Nota({ item, desfazer }: { item: Extract<ItemDoTeste, { tipo: "nota" }>
  * responder os leads de verdade. O campo tem dois modos: responder como lead
  * ou ajustar o SDR.
  */
-export function ChatDoSdr({ inicial, nome }: { inicial: TesteDoSdr; nome: string }) {
+export function ChatDoSdr({
+  inicial,
+  nome,
+  comSeguir = true,
+}: {
+  inicial: TesteDoSdr;
+  nome: string;
+  /** "Ficou bom, seguir" só no primeiro acesso; em Configurações o chat é só teste. */
+  comSeguir?: boolean;
+}) {
   const [teste, setTeste] = useState(inicial);
   const [mensagens, setMensagens] = useState<ItemDoTeste[]>(inicial.mensagens);
   const [modo, setModo] = useState<Modo>("lead");
@@ -298,10 +307,12 @@ export function ChatDoSdr({ inicial, nome }: { inicial: TesteDoSdr; nome: string
           <RotateCcw aria-hidden />
           Recomeçar conversa
         </button>
-        <button type="button" className="botao botao-primario" onClick={seguir} disabled={pendente || seguindo}>
-          {seguindo ? "Seguindo..." : "Ficou bom, seguir"}
-          <ArrowRight aria-hidden />
-        </button>
+        {comSeguir && (
+          <button type="button" className="botao botao-primario" onClick={seguir} disabled={pendente || seguindo}>
+            {seguindo ? "Seguindo..." : "Ficou bom, seguir"}
+            <ArrowRight aria-hidden />
+          </button>
+        )}
       </div>
     </>
   );

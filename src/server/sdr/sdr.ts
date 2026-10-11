@@ -18,6 +18,44 @@ export type ResultadoDoSdr = { ok: true; sdr: SdrDaOrganizacao } | { ok: false; 
 
 export type Origem = "ia" | "humano" | "ajuste" | "desfazer";
 
+export type VersaoDoSdr = { versao: number; origem: Origem; resumo: string | null; pedido: string | null; em: Date; por: string | null };
+
+/** Cada versão do SDR, a mais nova primeiro, para o histórico em Configurações (§4.12). */
+export async function historicoDoSdr(db: Db, organizacaoId: string): Promise<VersaoDoSdr[]> {
+  return db.query<VersaoDoSdr>(
+    `select v.versao, v.origem, v.resumo, v.pedido, v.em, o.nome as por
+       from public.sdr_versoes v
+       join public.sdrs s on s.id = v.sdr_id
+       left join public.operadores o on o.id = v.por
+      where s.organizacao_id = $1::uuid
+      order by v.versao desc`,
+    [organizacaoId],
+  );
+}
+
+/** Volta o SDR para uma versão antiga, como uma versão nova: o histórico não perde nada. */
+export async function voltarParaVersao(
+  db: Db,
+  p: { organizacaoId: string; versao: number; operadorId: string; agora: Date },
+): Promise<{ ok: true; versao: number } | { ok: false; erro: string }> {
+  const [antiga] = await db.query<{ sdr: unknown }>(
+    `select v.sdr from public.sdr_versoes v join public.sdrs s on s.id = v.sdr_id
+      where s.organizacao_id = $1::uuid and v.versao = $2`,
+    [p.organizacaoId, p.versao],
+  );
+  const lido = esquemaDoSdr.safeParse(antiga?.sdr);
+  if (!lido.success) return { ok: false, erro: "Essa versão não pode ser restaurada." };
+  const gravada = await gravarVersaoDoSdr(db, {
+    organizacaoId: p.organizacaoId,
+    sdr: lido.data,
+    origem: "desfazer",
+    resumo: `Voltou para a versão ${p.versao}.`,
+    por: p.operadorId,
+    agora: p.agora,
+  });
+  return { ok: true, versao: gravada.versao };
+}
+
 /** A versão do SDR e a última mudança, para o Dashboard (§4.9). */
 export type ResumoDoSdr = {
   versao: number;

@@ -54,7 +54,7 @@ function ChecklistDeAtivacao({ conta, rampa, teto }: { conta: SaudeDoPerfil; ram
                 : "Vincular o LinkedIn"}
           </span>
           {!conta.contaPronta && (
-            <Link href={`/perfis#perfil-${conta.id}`} className="botao botao-pequeno">
+            <Link href={`/settings/linkedin#conta-${conta.id}`} className="botao botao-pequeno">
               Vincular
               <ArrowRight aria-hidden />
             </Link>
@@ -167,7 +167,7 @@ function Conta({ conta }: { conta: SaudeDoPerfil }) {
                   ) : (
                     <>
                       Reconecte o LinkedIn em{" "}
-                      <Link href={`/perfis#perfil-${conta.id}`} className="underline underline-offset-2">
+                      <Link href={`/settings/linkedin#conta-${conta.id}`} className="underline underline-offset-2">
                         Configurações
                       </Link>{" "}
                       para retomar.
@@ -201,7 +201,7 @@ export function ContasDoLinkedin({ contas }: { contas: SaudeDoPerfil[] }) {
           LinkedIn
         </h2>
         <p className="mt-3 text-sm text-tinta-suave">Nenhuma conta vinculada. Sem conta, o SDR não prospecta.</p>
-        <Link href="/perfis" className="botao botao-primario mt-5">
+        <Link href="/settings/linkedin" className="botao botao-primario mt-5">
           Vincular o LinkedIn
           <ArrowRight aria-hidden />
         </Link>
