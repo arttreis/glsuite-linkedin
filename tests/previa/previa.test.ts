@@ -181,7 +181,7 @@ describe("prévia de leads pela conta da casa (SDR-44)", () => {
     await expect(despausarPerfil(banco.db, { perfilId: casa, operadorId: duda, agora: AGORA })).rejects.toThrow(ErroDeAtivacao);
   });
 
-  it("marcar, desmarcar e seguir: o passo 4 termina com pelo menos uma marcada", async () => {
+  it("marcar, desmarcar e seguir: a prévia fecha com pelo menos uma marcada", async () => {
     await rodar();
     const comoDuda = <T,>(fn: (tx: typeof banco.db) => Promise<T>) => comOperador(banco.db, duda, fn);
 
@@ -195,8 +195,9 @@ describe("prévia de leads pela conta da casa (SDR-44)", () => {
     await comoDuda((tx) => marcarNaPrevia(tx, { organizacaoId: organizacao, providerId: "ACo2", marcada: true, agora: AGORA }));
     expect(await comoDuda((tx) => confirmarPrevia(tx, { organizacaoId: organizacao, operadorId: duda, agora: AGORA }))).toEqual({ ok: true });
     expect((await obterPrevia(banco.db, organizacao))!.pessoas.filter((p) => p.marcada).map((p) => p.providerId)).toEqual(["ACo2"]);
+    // Confirmar a prévia sozinho não fecha passo: a abordagem fecha com a permissão (SDR-56).
     const estado = await comoDuda((tx) => estadoDoPrimeiroAcesso(tx));
-    expect(estado.feitos.has("leads")).toBe(true);
+    expect(estado.atual).not.toBe("linkedin");
   });
 
   it("sem nomes, segue mesmo assim", async () => {

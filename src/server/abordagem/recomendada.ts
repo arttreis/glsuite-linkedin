@@ -7,6 +7,7 @@ import { lerConfiguracao } from "@/server/configuracoes";
 import type { Db } from "@/server/db/tipos";
 import { custoDaChamada } from "@/server/eval/custo";
 import { registrarEvento } from "@/server/eventos";
+import { confirmarPrevia, obterPrevia } from "@/server/previa/previa";
 import type { EscritorDeFluxo } from "@/server/publicos/escritor";
 import { escreverComRevisao, usoSomado } from "@/server/publicos/fluxo";
 import { promptDoFluxo, VERSAO_DO_PROMPT_DO_FLUXO } from "@/server/publicos/prompts-do-fluxo";
@@ -192,7 +193,9 @@ export async function editarTextoDaAbordagem(
 
 /**
  * "Pode entrar em contato" (§4.5): grava quem permitiu e quando. Sem isso,
- * nada sai. Texto com problema não deixa permitir. Roda como o operador.
+ * nada sai. Texto com problema não deixa permitir. A prévia fecha junto
+ * (SDR-56): quem abordar e o que dizer estão na mesma tela, e a permissão vale
+ * para as pessoas marcadas. Roda como o operador.
  */
 export async function permitirContato(
   db: Db,
@@ -203,6 +206,10 @@ export async function permitirContato(
   if (atual.problemas.length > 0) {
     const [primeiro] = atual.problemas;
     return { ok: false, erro: `Corrija antes de seguir: ${primeiro!.toque}, ${primeiro!.mensagem}` };
+  }
+  if (await obterPrevia(db, p.organizacaoId)) {
+    const previa = await confirmarPrevia(db, p);
+    if (!previa.ok) return previa;
   }
   await db.query(
     "update public.abordagens set permitida_em = $2, permitida_por = $3::uuid, atualizado_em = $2 where organizacao_id = $1::uuid",

@@ -1,97 +1,138 @@
 import { Suspense } from "react";
 import { Aviso } from "@/components/aviso";
+import { tamanhoDoPublico } from "@/domain/busca";
 import { RAMPA_PADRAO, TETO_SEMANAL_PADRAO } from "@/domain/rampa";
-import { gerarAbordagem, obterAbordagem } from "@/server/abordagem/recomendada";
+import { gerarAbordagem, obterAbordagem, type ResultadoDaAbordagem } from "@/server/abordagem/recomendada";
+import { lerConfiguracao } from "@/server/configuracoes";
 import { obterDb } from "@/server/db";
-import type { Operador } from "@/server/db/operador";
-import { obterEscritorDeFluxo } from "@/server/dependencias";
-import { obterPrevia } from "@/server/previa/previa";
+import { comOperador, type Operador } from "@/server/db/operador";
+import { obterAvaliadorDeAderencia, obterEscritorDeFluxo, obterSugeridorDePublicos, obterUnipileSeConfigurada } from "@/server/dependencias";
+import { dossieConfirmado } from "@/server/oferta/oferta";
+import { obterPrevia, rodarPrevia } from "@/server/previa/previa";
+import { listarPublicos, publicoDoPrimeiroAcesso, sugerirPublicos } from "@/server/publicos/publicos";
 import { obterSdr } from "@/server/sdr/sdr";
-import { Pergunta } from "../pergunta";
 import { abrirPasso } from "../portao";
-import { LinhaDoTempo } from "./linha-do-tempo";
+import { AreaDeTrabalho, type PreviaDaTela } from "./area-de-trabalho";
+import { Lateral } from "./lateral";
 
-// Escrever a abordagem é uma chamada da IA na abertura do passo.
+// Sugerir o público, buscar a prévia e escrever a abordagem são chamadas longas na abertura do passo.
 export const maxDuration = 300;
 
-function Escrevendo() {
+function Pensando() {
   return (
-    <div role="status" className="cartao mt-10 flex min-h-64 flex-col items-center justify-center gap-4 p-8 text-center">
+    <div role="status" className="cartao mx-auto mt-10 flex min-h-64 max-w-2xl flex-col items-center justify-center gap-4 p-8 text-center">
       <span className="relative flex size-10 items-center justify-center">
         <span className="absolute size-10 animate-ping rounded-full bg-destaque/20" />
         <span className="size-3.5 rounded-full bg-destaque" />
       </span>
-      <p className="font-medium">Escrevendo o convite e as mensagens na voz do seu SDR...</p>
+      <p className="font-medium">Pensando em quem compra de você...</p>
     </div>
   );
 }
 
-/** O que vai acontecer quando a pessoa permitir (§4.5), em poucas linhas. */
-function OQueVaiAcontecer({ pessoas, chamarVoce }: { pessoas: number | null; chamarVoce: string[] }) {
-  const [primeira] = RAMPA_PADRAO;
-  const itens = [
-    pessoas === null
-      ? "A lista de pessoas sai pela sua conta do LinkedIn, com o perfil de lead que você escolheu."
-      : `${pessoas} ${pessoas === 1 ? "pessoa marcada recebe" : "pessoas marcadas recebem"} o convite, pela sua conta do LinkedIn.`,
-    `Até ${primeira!.convites_dia} convites por dia na primeira semana, subindo devagar até ${TETO_SEMANAL_PADRAO} por semana. É o ritmo que protege a sua conta.`,
-    "Só em dias úteis, das 9h às 18h, com intervalo entre um convite e outro.",
-    "Quem responde sai da sequência na hora, e o SDR responde sozinho, do jeito que você ajustou.",
-    `O SDR para e chama você quando a pessoa pergunta preço, reclama${chamarVoce.length > 0 ? `, ou: ${chamarVoce.join("; ").toLowerCase()}` : ""}.`,
-    "Você vê tudo nos Chats e pode pausar a qualquer momento.",
-  ];
-  return (
-    <section className="cartao mt-10 p-6">
-      <h2 className="text-lg font-medium tracking-tight">O que vai acontecer</h2>
-      <ul className="mt-4 flex flex-col gap-2.5 text-sm text-tinta-suave">
-        {itens.map((item) => (
-          <li key={item} className="flex gap-3">
-            <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-destaque" />
-            {item}
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
+/** A prévia do público em uso: a que já existe, ou uma busca nova pela conta da casa. */
+async function garantirPrevia(organizacaoId: string, publicoId: string): Promise<PreviaDaTela> {
+  try {
+    const db = obterDb();
+    let previa = await obterPrevia(db, organizacaoId);
+    if (!previa || previa.publicoId !== publicoId || previa.status === "buscando") {
+      previa = await rodarPrevia(
+        { db, unipile: obterUnipileSeConfigurada() ?? null, avaliador: obterAvaliadorDeAderencia(), agora: new Date() },
+        { organizacaoId, publicoId },
+      );
+    }
+    return { ok: true, previa, tamanho: tamanhoDoPublico(previa.totalNoLinkedin) };
+  } catch (erro) {
+    console.error("Prévia do primeiro acesso falhou", erro);
+    return { ok: false, erro: "Não consegui buscar as pessoas agora. Recarregue a página." };
+  }
 }
 
-/** Garante a abordagem do público escolhido e entrega a linha do tempo. Roda dentro do Suspense. */
-async function Abordagem({ operador }: { operador: Operador }) {
-  const db = obterDb();
-  let abordagem = await obterAbordagem(db, operador.organizacaoId);
-  const previa = await obterPrevia(db, operador.organizacaoId);
-  if (!abordagem || (previa?.publicoId && abordagem.publicoId !== previa.publicoId)) {
+/** A abordagem do público em uso: a que já existe, ou escrita agora na voz do SDR. */
+async function garantirAbordagem(operador: Operador, publicoId: string): Promise<ResultadoDaAbordagem> {
+  try {
+    const db = obterDb();
+    const atual = await obterAbordagem(db, operador.organizacaoId);
+    if (atual && atual.publicoId === publicoId) return { ok: true, abordagem: atual };
     const escritor = obterEscritorDeFluxo();
-    if (!escritor) return <Aviso tom="erro" className="mt-10">Escrever a abordagem precisa da chave da Anthropic. Peça ao admin para configurar.</Aviso>;
-    const gerada = await gerarAbordagem(
+    if (!escritor) return { ok: false, erro: "Escrever a abordagem precisa da chave da Anthropic. Peça ao admin para configurar." };
+    return await gerarAbordagem(
       { db, escritor, agora: new Date() },
       { organizacaoId: operador.organizacaoId, nome: operador.nome, operadorId: operador.id },
     );
-    if (!gerada.ok) return <Aviso tom="erro" className="mt-10">{gerada.erro}</Aviso>;
-    abordagem = gerada.abordagem;
+  } catch (erro) {
+    console.error("Abordagem do primeiro acesso falhou", erro);
+    return { ok: false, erro: "Não consegui escrever a abordagem agora. Recarregue a página." };
   }
+}
+
+/**
+ * Garante o público em uso (o escolhido, ou a sugestão de maior aderência) e
+ * entrega a área de trabalho. A busca das pessoas e a escrita das mensagens
+ * correm juntas e chegam na tela cada uma no seu tempo. Roda dentro do Suspense.
+ */
+async function Area({ operador }: { operador: Operador }) {
+  const db = obterDb();
+  const doPrimeiroAcesso = () =>
+    comOperador(db, operador.id, (tx) =>
+      publicoDoPrimeiroAcesso(tx, { organizacaoId: operador.organizacaoId, operadorId: operador.id, agora: new Date() }),
+    );
+
+  let publico = await doPrimeiroAcesso();
+  if (!publico) {
+    const sugeridor = obterSugeridorDePublicos();
+    if (!sugeridor) return <Aviso tom="erro">Sugerir públicos precisa da chave da Anthropic. Peça ao admin para configurar.</Aviso>;
+    const sugestao = await sugerirPublicos(
+      { db, sugeridor, agora: () => new Date() },
+      { organizacaoId: operador.organizacaoId, operadorId: operador.id },
+    );
+    if (!sugestao.ok) return <Aviso tom="erro">{sugestao.erro}</Aviso>;
+    publico = await doPrimeiroAcesso();
+    if (!publico) return <Aviso tom="erro">A IA não trouxe nenhum público aproveitável. Recarregue para tentar de novo.</Aviso>;
+  }
+
+  // As duas chamadas longas começam agora e não são esperadas aqui.
+  const previa = garantirPrevia(operador.organizacaoId, publico.id);
+  const abordagem = garantirAbordagem(operador, publico.id);
+
+  const { publicos, analise } = await comOperador(db, operador.id, async (tx) => ({
+    publicos: (await listarPublicos(tx, operador.organizacaoId)).filter((p) => p.status !== "arquivado"),
+    analise: await dossieConfirmado(tx, operador.organizacaoId),
+  }));
   const sdr = await obterSdr(db, operador.organizacaoId);
-  const marcadas = previa?.status === "pronta" ? previa.pessoas.filter((pessoa) => pessoa.marcada) : null;
+  const { nota_de_corte: corte } = await lerConfiguracao(db, "busca");
 
   return (
-    <LinhaDoTempo
-      inicial={abordagem}
-      exemplos={(marcadas ?? []).map(({ providerId, nome, primeiroNome, empresa }) => ({ providerId, nome, primeiroNome, empresa }))}
-      resumo={<OQueVaiAcontecer pessoas={marcadas?.length ?? null} chamarVoce={sdr?.sdr.quando_chamar_voce ?? []} />}
+    <AreaDeTrabalho
+      key={publico.id}
+      previa={previa}
+      abordagem={abordagem}
+      corte={corte}
+      convitesPorDia={RAMPA_PADRAO[0]!.convites_dia}
+      tetoSemanal={TETO_SEMANAL_PADRAO}
+      chamarVoce={sdr?.sdr.quando_chamar_voce ?? []}
+      lateral={<Lateral analise={analise} sdr={sdr?.sdr ?? null} publicos={publicos} corte={corte} />}
     />
   );
 }
 
-/** Passo 5 (§2.1, §4.5): como vai abordar, e a permissão. */
-export default async function PassoAbordagem() {
+/**
+ * Passo 4 (§2.1, SDR-56): quem abordar e o que dizer, numa tela só. Os
+ * públicos pela aderência, as pessoas reais do LinkedIn, as mensagens como
+ * chegam para cada uma, e a permissão.
+ */
+export default async function PassoAbordagem({ searchParams }: PageProps<"/onboarding/approach">) {
   const { operador } = await abrirPasso("abordagem");
+  const { msg } = await searchParams;
   return (
     <>
-      <Pergunta passo="abordagem">
-        O convite e as mensagens que saem até a pessoa responder, na voz do seu SDR. Edite o que quiser: nada sai antes
-        de você permitir.
-      </Pergunta>
-      <Suspense fallback={<Escrevendo />}>
-        <Abordagem operador={operador} />
+      {typeof msg === "string" && (
+        <Aviso tom="erro" className="mx-auto mb-6 max-w-2xl">
+          {msg}
+        </Aviso>
+      )}
+      <Suspense fallback={<Pensando />}>
+        <Area operador={operador} />
       </Suspense>
     </>
   );

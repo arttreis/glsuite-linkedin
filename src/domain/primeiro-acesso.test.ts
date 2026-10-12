@@ -16,18 +16,18 @@ describe("primeiro acesso", () => {
   });
 
   it("o passo atual é o primeiro que falta, mesmo com um da frente feito", () => {
-    expect(passoAtual(feitos("site", "analise", "leads"))).toBe("sdr");
+    expect(passoAtual(feitos("site", "analise", "abordagem"))).toBe("sdr");
   });
 
   it("com tudo feito, fica no último", () => {
-    expect(passoAtual(feitos("site", "analise", "sdr", "leads", "abordagem", "linkedin"))).toBe("linkedin");
+    expect(passoAtual(feitos("site", "analise", "sdr", "abordagem", "linkedin"))).toBe("linkedin");
   });
 
   it("abre os feitos e o atual, não os da frente", () => {
     const estado = feitos("site", "analise");
     expect(podeAbrir("site", estado)).toBe(true);
     expect(podeAbrir("sdr", estado)).toBe(true);
-    expect(podeAbrir("leads", estado)).toBe(false);
+    expect(podeAbrir("abordagem", estado)).toBe(false);
     expect(podeAbrir("linkedin", estado)).toBe(false);
   });
 
@@ -37,7 +37,6 @@ describe("primeiro acesso", () => {
       "/onboarding/site",
       "/onboarding/analysis",
       "/onboarding/sdr",
-      "/onboarding/leads",
       "/onboarding/approach",
       "/onboarding/linkedin",
     ]);
@@ -45,6 +44,7 @@ describe("primeiro acesso", () => {
 
   it("reconhece os ids dos passos", () => {
     expect(ehPassoInicial("abordagem")).toBe(true);
+    expect(ehPassoInicial("leads")).toBe(false);
     expect(ehPassoInicial("oferta")).toBe(false);
   });
 });

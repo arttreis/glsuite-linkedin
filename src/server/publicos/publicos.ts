@@ -83,6 +83,27 @@ export async function obterPublico(db: Db, id: string): Promise<PublicoSalvo | n
 }
 
 /**
+ * O público da abordagem do primeiro acesso (SDR-56): o escolhido, se houver;
+ * senão a sugestão de maior aderência vira o escolhido, para a tela abrir já
+ * com pessoas e mensagens. A pessoa troca pela lista de públicos antes de
+ * permitir. Sem nenhum público, null: quem chama pede sugestões. Roda como o
+ * operador.
+ */
+export async function publicoDoPrimeiroAcesso(
+  db: Db,
+  p: { organizacaoId: string; operadorId: string; agora: Date },
+): Promise<PublicoSalvo | null> {
+  const publicos = await listarPublicos(db, p.organizacaoId);
+  const ativo = publicos.find((pub) => pub.status === "ativo");
+  if (ativo) return ativo;
+  // A lista já vem pela aderência.
+  const melhor = publicos.find((pub) => pub.status === "sugerido");
+  if (!melhor) return null;
+  const escolhido = await mudarStatusDoPublico(db, { id: melhor.id, acao: "escolher", operadorId: p.operadorId, agora: p.agora });
+  return escolhido.ok ? { ...melhor, status: "ativo" } : null;
+}
+
+/**
  * O público que pode virar campanha (SDR-26): só o que um humano escolheu ou
  * criou. Sugestão da IA e arquivado ficam de fora.
  */

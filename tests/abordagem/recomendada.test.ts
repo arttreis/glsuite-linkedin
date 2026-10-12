@@ -124,6 +124,44 @@ describe("abordagem recomendada e permissão (SDR-45)", () => {
     expect(estado.feitos.has("abordagem")).toBe(true);
   });
 
+  it("permitir fecha a prévia junto: só com alguém marcado, e nunca no meio da busca (SDR-56)", async () => {
+    await gerar(escritorFalso(BONS));
+    const pessoa = (id: string, marcada: boolean) => ({
+      providerId: id,
+      publicIdentifier: null,
+      urlPublica: `https://www.linkedin.com/in/${id}`,
+      nome: id,
+      primeiroNome: id,
+      cargo: null,
+      empresa: null,
+      localizacao: null,
+      nota: 80,
+      motivo: null,
+      marcada,
+    });
+    const previa = (status: string, pessoas: unknown[]) =>
+      banco.db.query(
+        `insert into public.previas (organizacao_id, status, pessoas) values ($1::uuid, $2, $3::jsonb)
+         on conflict (organizacao_id) do update set status = excluded.status, pessoas = excluded.pessoas`,
+        [organizacao, status, JSON.stringify(pessoas)],
+      );
+
+    await previa("buscando", []);
+    expect(await permitir()).toEqual({ ok: false, erro: "Espere a busca terminar." });
+
+    await previa("pronta", [pessoa("ana", false)]);
+    expect(await permitir()).toEqual({ ok: false, erro: "Marque pelo menos uma pessoa para seguir." });
+    expect((await obterAbordagem(banco.db, organizacao))!.permitida).toBeNull();
+
+    await previa("pronta", [pessoa("ana", true)]);
+    expect(await permitir()).toEqual({ ok: true });
+    const [fechada] = await banco.db.query<{ confirmada: boolean }>(
+      "select confirmada_em is not null as confirmada from public.previas where organizacao_id = $1::uuid",
+      [organizacao],
+    );
+    expect(fechada!.confirmada).toBe(true);
+  });
+
   it("editar revalida e apaga a permissão: a pessoa permite o que vê", async () => {
     await gerar(escritorFalso(BONS));
     await permitir();

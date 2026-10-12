@@ -7,6 +7,7 @@ import type { Db } from "@/server/db/tipos";
 import {
   listarPublicos,
   mudarStatusDoPublico,
+  publicoDoPrimeiroAcesso,
   publicoParaCampanha,
   salvarPublico,
   sugerirPublicos,
@@ -159,6 +160,29 @@ describe("públicos sugeridos a partir do dossiê (SDR-25)", () => {
 
     expect(await salvar({ ...PUBLICO, nome: "Com case, revisto" }, { id: publicos[0]!.id })).toMatchObject({ ok: true });
     expect((await listar()).find((p) => p.id === publicos[0]!.id)!.aderencia).toBeNull();
+  });
+
+  it("no primeiro acesso, a sugestão de maior aderência já vem escolhida; com um escolhido, fica ele (SDR-56)", async () => {
+    await confirmarDossie(banco.db, guessless, AGORA);
+    const doPrimeiroAcesso = () =>
+      comoOperador((tx) => publicoDoPrimeiroAcesso(tx, { organizacaoId: guessless, operadorId: operador, agora: AGORA }));
+    expect(await doPrimeiroAcesso()).toBeNull();
+
+    await sugerir(
+      sugeridorFalso({
+        publicos: [sugerido("Médio", { aderencia: { nota: 60, motivo: "Médio." } }), sugerido("Melhor", { aderencia: { nota: 90, motivo: "Melhor." } })],
+      }),
+    );
+    expect(await doPrimeiroAcesso()).toMatchObject({ nome: "Melhor", status: "ativo" });
+    expect((await listar()).map((p) => [p.nome, p.status])).toEqual([
+      ["Melhor", "ativo"],
+      ["Médio", "sugerido"],
+    ]);
+
+    const medio = (await listar()).find((p) => p.nome === "Médio")!;
+    await mudar((await listar())[0]!.id, "arquivar");
+    await mudar(medio.id, "escolher");
+    expect(await doPrimeiroAcesso()).toMatchObject({ nome: "Médio" });
   });
 
   it("toda prova de um público existe no dossiê confirmado", async () => {

@@ -71,5 +71,5 @@ export async function ficouBom(): Promise<{ ok: false; erro: string } | void> {
   );
   if (!ok) return { ok: false, erro: "O SDR ainda não está pronto." };
   revalidatePath("/onboarding", "layout");
-  redirect("/onboarding/leads");
+  redirect("/onboarding/approach");
 }

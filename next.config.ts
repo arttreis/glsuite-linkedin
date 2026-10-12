@@ -14,6 +14,9 @@ const nextConfig: NextConfig = {
       { source: "/comecar", destination: "/onboarding", permanent: false },
       { source: "/comecar/analise", destination: "/onboarding/analysis", permanent: false },
       { source: "/comecar/abordagem", destination: "/onboarding/approach", permanent: false },
+      // Leads e abordagem viraram uma tela só (SDR-56).
+      { source: "/comecar/leads", destination: "/onboarding/approach", permanent: false },
+      { source: "/onboarding/leads", destination: "/onboarding/approach", permanent: false },
       { source: "/comecar/:passo", destination: "/onboarding/:passo", permanent: false },
       { source: "/campanhas", destination: "/campaigns", permanent: false },
       { source: "/campanhas/nova", destination: "/campaigns/new", permanent: false },
