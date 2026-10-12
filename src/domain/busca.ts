@@ -42,3 +42,20 @@ export function mesmosFiltros(a: BuscaDoPublico, b: BuscaDoPublico): boolean {
 export function saldoDeBusca(buscadosHoje: number, tetoDoDia: number): number {
   return Math.max(0, tetoDoDia - buscadosHoje);
 }
+
+const COMPACTO = new Intl.NumberFormat("pt-BR", { notation: "compact", compactDisplay: "long", maximumSignificantDigits: 2 });
+
+/**
+ * Quantas pessoas cabem na busca, no começo de uma frase da tela: "430
+ * pessoas", "Cerca de 12 mil pessoas". A busca clássica pode parar a contagem
+ * em mil [verificar com conta real], então mil vira "Mil ou mais pessoas".
+ * Sem total, ou zero, não há frase.
+ */
+export function tamanhoDoPublico(total: number | null): string | null {
+  if (total === null || total <= 0) return null;
+  if (total === 1) return "1 pessoa";
+  if (total < 1000) return `${total} pessoas`;
+  if (total === 1000) return "Mil ou mais pessoas";
+  const numero = COMPACTO.format(total);
+  return `Cerca de ${numero}${/milh|bilh/.test(numero) ? " de" : ""} pessoas`;
+}

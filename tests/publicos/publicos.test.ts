@@ -49,6 +49,7 @@ const sugerido = (nome: string, parcial: Partial<SugestaoDePublicos["publicos"][
   ...PUBLICO,
   nome,
   provas: [0],
+  aderencia: { nota: 70, motivo: "O site cita e-commerce de médio porte." },
   ...parcial,
 });
 
@@ -133,7 +134,31 @@ describe("públicos sugeridos a partir do dossiê (SDR-25)", () => {
     const [evento] = await banco.db.query<{ payload: { quantidade: number; versao_prompt: string } }>(
       "select payload from public.eventos where tipo = 'publicos_sugeridos'",
     );
-    expect(evento!.payload).toMatchObject({ quantidade: 3, versao_prompt: "publicos-2" });
+    expect(evento!.payload).toMatchObject({ quantidade: 3, versao_prompt: "publicos-3" });
+  });
+
+  it("as sugestões vêm pela aderência, com o motivo; editar tira a aderência, que era do texto da IA", async () => {
+    await confirmarDossie(banco.db, guessless, AGORA);
+    await sugerir(
+      sugeridorFalso({
+        publicos: [
+          sugerido("Sem nota válida", { aderencia: { nota: 120, motivo: "Fora da escala." } }),
+          sugerido("Suposto", { aderencia: { nota: 55, motivo: "O site não cita esse setor." } }),
+          sugerido("Com case", { aderencia: { nota: 91, motivo: "O site tem case com a Loja X." } }),
+        ],
+      }),
+    );
+
+    const publicos = await listar();
+    expect(publicos.map((p) => [p.nome, p.aderencia?.nota ?? null])).toEqual([
+      ["Com case", 91],
+      ["Suposto", 55],
+      ["Sem nota válida", null],
+    ]);
+    expect(publicos[0]!.aderencia).toEqual({ nota: 91, motivo: "O site tem case com a Loja X." });
+
+    expect(await salvar({ ...PUBLICO, nome: "Com case, revisto" }, { id: publicos[0]!.id })).toMatchObject({ ok: true });
+    expect((await listar()).find((p) => p.id === publicos[0]!.id)!.aderencia).toBeNull();
   });
 
   it("toda prova de um público existe no dossiê confirmado", async () => {

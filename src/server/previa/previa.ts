@@ -19,6 +19,8 @@ export type Previa = {
   pessoas: PessoaDaPrevia[];
   motivo: string | null;
   regiao: ParametroDeBusca | null;
+  /** Quantas pessoas o LinkedIn diz que cabem na busca, quando diz. */
+  totalNoLinkedin: number | null;
   confirmada: boolean;
 };
 
@@ -31,6 +33,7 @@ type LinhaDaPrevia = {
   regiao: ParametroDeBusca | null;
   confirmada_em: Date | null;
   buscadas: number;
+  total_no_linkedin: number | null;
 };
 
 /** Busca parada há mais que isso (deploy, timeout) pode recomeçar. */
@@ -52,12 +55,13 @@ const daLinha = (linha: LinhaDaPrevia): Previa => ({
   pessoas: lerPessoas(linha.pessoas),
   motivo: linha.motivo,
   regiao: linha.regiao,
+  totalNoLinkedin: linha.total_no_linkedin,
   confirmada: linha.confirmada_em !== null,
 });
 
 async function linhaDaPrevia(db: Db, organizacaoId: string): Promise<LinhaDaPrevia | null> {
   const [linha] = await db.query<LinhaDaPrevia>(
-    `select id, publico_id, status, pessoas, motivo, regiao, confirmada_em, buscadas
+    `select id, publico_id, status, pessoas, motivo, regiao, confirmada_em, buscadas, total_no_linkedin
        from public.previas where organizacao_id = $1::uuid`,
     [organizacaoId],
   );
@@ -119,13 +123,20 @@ async function darNotas(avaliador: AvaliadorDeAderencia | null, publico: Publico
 async function gravar(
   db: Db,
   id: string,
-  p: { status: Previa["status"]; pessoas?: PessoaDaPrevia[]; motivo?: string | null; regiao?: ParametroDeBusca | null; somarBuscadas?: number },
+  p: {
+    status: Previa["status"];
+    pessoas?: PessoaDaPrevia[];
+    motivo?: string | null;
+    regiao?: ParametroDeBusca | null;
+    somarBuscadas?: number;
+    total?: number | null;
+  },
   agora: Date,
 ) {
   await db.query(
     `update public.previas
         set status = $2, pessoas = coalesce($3::jsonb, pessoas), motivo = $4, regiao = coalesce($5::jsonb, regiao),
-            buscadas = buscadas + $6, atualizado_em = $7
+            buscadas = buscadas + $6, atualizado_em = $7, total_no_linkedin = coalesce($8, total_no_linkedin)
       where id = $1::uuid`,
     [
       id,
@@ -135,6 +146,7 @@ async function gravar(
       p.regiao ? JSON.stringify(p.regiao) : null,
       p.somarBuscadas ?? 0,
       agora,
+      p.total ?? null,
     ],
   );
 }
@@ -165,7 +177,8 @@ export async function rodarPrevia(
      values ($1::uuid, $2::uuid, 'buscando', '[]', null, $3, $3)
      on conflict (organizacao_id) do update
        set publico_id = excluded.publico_id, status = 'buscando', pessoas = '[]', motivo = null, regiao = null,
-           confirmada_em = null, iniciada_em = excluded.iniciada_em, atualizado_em = excluded.atualizado_em
+           total_no_linkedin = null, confirmada_em = null, iniciada_em = excluded.iniciada_em,
+           atualizado_em = excluded.atualizado_em
      where public.previas.status <> 'buscando' or public.previas.iniciada_em < $3::timestamptz - $4::interval
      returning id, buscadas`,
     [p.organizacaoId, p.publicoId, agora, `${BUSCA_PARADA_MS / 1000} seconds`],
@@ -198,6 +211,7 @@ export async function rodarPrevia(
   if (alvo === 0) return semNomes("limite_da_conta");
 
   let regiao: ParametroDeBusca | null = null;
+  let total: number | null = null;
   const encontrados: ResultadoDeBusca[] = [];
   try {
     regiao = await resolverRegiao(deps.unipile, casa.account_id, publico.empresa.regiao);
@@ -206,6 +220,8 @@ export async function rodarPrevia(
     let cursor: string | undefined;
     for (let pagina = 0; pagina < MAX_PAGINAS && encontrados.length < alvo; pagina++) {
       const resultado = await deps.unipile.buscarPessoas(casa.account_id, { filtros }, cursor);
+      // O tamanho do público vem na primeira página, de graça: é a mesma busca.
+      if (pagina === 0) total = resultado.total;
       encontrados.push(...resultado.itens);
       if (!resultado.cursor || resultado.itens.length === 0) break;
       cursor = resultado.cursor;
@@ -258,12 +274,12 @@ export async function rodarPrevia(
     ];
   });
   if (pessoas.length === 0) {
-    await gravar(db, reservada.id, { status: "sem_nomes", motivo: MOTIVO_SEM_NOMES.ninguem, regiao, somarBuscadas: trazidos.length }, agora);
+    await gravar(db, reservada.id, { status: "sem_nomes", motivo: MOTIVO_SEM_NOMES.ninguem, regiao, somarBuscadas: trazidos.length, total }, agora);
     return (await obterPrevia(db, p.organizacaoId))!;
   }
 
   const marcadas = ordenarEMarcar(await darNotas(deps.avaliador, publico, pessoas), corte);
-  await gravar(db, reservada.id, { status: "pronta", pessoas: marcadas, regiao, somarBuscadas: trazidos.length }, agora);
+  await gravar(db, reservada.id, { status: "pronta", pessoas: marcadas, regiao, somarBuscadas: trazidos.length, total }, agora);
   return (await obterPrevia(db, p.organizacaoId))!;
 }
 
@@ -327,7 +343,7 @@ export async function trocarPublicoDaPrevia(
   if (voltou.length === 0) return { ok: false };
   await db.query(
     `update public.previas set publico_id = null, status = 'pronta', pessoas = '[]', motivo = null, regiao = null,
-            confirmada_em = null, atualizado_em = $2
+            total_no_linkedin = null, confirmada_em = null, atualizado_em = $2
       where organizacao_id = $1::uuid`,
     [p.organizacaoId, p.agora],
   );

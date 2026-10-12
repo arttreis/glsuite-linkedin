@@ -1,5 +1,6 @@
 import { limparEdicao } from "@/domain/edicao";
 import {
+  type Aderencia,
   explicarErroDoPublico,
   provasForaDoDossie,
   publico as esquemaDoPublico,
@@ -23,6 +24,8 @@ export type PublicoSalvo = Publico & {
   origem: "ia" | "humano";
   /** O dossiê foi confirmado de novo depois que o público foi feito ou revisto (§4.11). */
   desatualizado: boolean;
+  /** A nota da IA na sugestão; o público editado por um humano não tem. */
+  aderencia: Aderencia | null;
 };
 
 export type Resultado<T = object> = ({ ok: true } & T) | { ok: false; erro: string };
@@ -39,10 +42,12 @@ type LinhaDoPublico = {
   origem: "ia" | "humano";
   status: StatusDoPublico;
   desatualizado: boolean;
+  aderencia: number | null;
+  aderencia_motivo: string | null;
 };
 
 const COLUNAS = `p.id, p.nome, p.quem, p.empresa, p.por_que, p.angulo, p.provas, p.quem_nao_e, p.origem, p.status,
-  coalesce(o.confirmado_em > p.dossie_base_em, false) as desatualizado`;
+  coalesce(o.confirmado_em > p.dossie_base_em, false) as desatualizado, p.aderencia, p.aderencia_motivo`;
 
 const DE_PUBLICOS = `public.publicos p left join public.ofertas o on o.organizacao_id = p.organizacao_id`;
 
@@ -58,14 +63,15 @@ const doBanco = (linha: LinhaDoPublico): PublicoSalvo => ({
   origem: linha.origem,
   status: linha.status,
   desatualizado: linha.desatualizado,
+  aderencia: linha.aderencia === null ? null : { nota: linha.aderencia, motivo: linha.aderencia_motivo ?? "" },
 });
 
-/** Os públicos da organização, dos escolhidos para os arquivados. Roda como o operador (RLS). */
+/** Os públicos da organização, dos escolhidos para os arquivados, e dentro de cada um pela aderência. Roda como o operador (RLS). */
 export async function listarPublicos(db: Db, organizacaoId: string): Promise<PublicoSalvo[]> {
   const linhas = await db.query<LinhaDoPublico>(
     `select ${COLUNAS} from ${DE_PUBLICOS}
       where p.organizacao_id = $1::uuid
-      order by case p.status when 'ativo' then 0 when 'sugerido' then 1 else 2 end, p.criado_em, p.nome`,
+      order by case p.status when 'ativo' then 0 when 'sugerido' then 1 else 2 end, p.aderencia desc nulls last, p.criado_em, p.nome`,
     [organizacaoId],
   );
   return linhas.map(doBanco);
@@ -135,8 +141,9 @@ export async function sugerirPublicos(
       await tx.query(
         `insert into public.publicos
            (organizacao_id, nome, quem, empresa, por_que, angulo, provas, quem_nao_e, praca, origem, status,
-            dossie_base_em, criado_por, criado_em, atualizado_em)
-         values ($1::uuid, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6, $7::jsonb, $8, 'domestico', 'ia', 'sugerido', $9, $10::uuid, $11, $11)`,
+            dossie_base_em, criado_por, criado_em, atualizado_em, aderencia, aderencia_motivo)
+         values ($1::uuid, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6, $7::jsonb, $8, 'domestico', 'ia', 'sugerido', $9, $10::uuid, $11, $11,
+                 $12, $13)`,
         [
           p.organizacaoId,
           pub.nome,
@@ -149,6 +156,8 @@ export async function sugerirPublicos(
           entrada.baseEm,
           p.operadorId,
           agora,
+          pub.aderencia?.nota ?? null,
+          pub.aderencia?.motivo ?? null,
         ],
       );
     }
@@ -174,7 +183,8 @@ export async function sugerirPublicos(
  * Grava um público criado ou editado por um humano (§4.12). Prova só do dossiê
  * confirmado. `ativar` escolhe a sugestão junto; público novo já nasce ativo.
  * Quem salva revisou o público contra o dossiê de agora: o aviso de
- * desatualizado sai. Roda como o operador.
+ * desatualizado sai, e a aderência da IA também, que era do texto dela.
+ * Roda como o operador.
  */
 export async function salvarPublico(
   db: Db,
@@ -222,7 +232,7 @@ export async function salvarPublico(
      update public.publicos p
         set nome = $3, quem = $4::jsonb, empresa = $5::jsonb, por_que = $6::jsonb, angulo = $7, provas = $8::jsonb,
             quem_nao_e = $9, dossie_base_em = $10, editado_por = $11::uuid, editado_em = $12,
-            atualizado_em = $12,
+            atualizado_em = $12, aderencia = null, aderencia_motivo = null,
             status = case when $13 and antes.status = 'sugerido' then 'ativo' else antes.status end,
             escolhido_por = case when $13 and antes.status = 'sugerido' then $11::uuid else p.escolhido_por end,
             escolhido_em = case when $13 and antes.status = 'sugerido' then $12 else p.escolhido_em end
