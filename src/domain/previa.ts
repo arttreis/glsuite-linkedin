@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { renderizarTemplate, tokensDoTemplate, TOKENS_PERMITIDOS, type Token, type ValoresDoTemplate } from "./template";
 
 /**
  * Uma pessoa da prévia do primeiro acesso (§4.4): o que a busca da conta da
@@ -33,6 +34,28 @@ export function ordenarEMarcar(pessoas: readonly PessoaDaPrevia[], corte: number
   return pessoas
     .map((pessoa) => ({ ...pessoa, marcada: pessoa.nota !== null && pessoa.nota >= corte }))
     .sort((a, b) => (b.nota ?? -1) - (a.nota ?? -1));
+}
+
+/** Quem da prévia aparece como exemplo na abordagem: o que entra no lugar dos tokens. */
+export type PessoaDeExemplo = Pick<PessoaDaPrevia, "providerId" | "nome" | "primeiroNome" | "empresa">;
+
+/** O que a pessoa recebe no lugar de `{{first_name}}` e `{{company}}`, como no envio. */
+export const valoresDaPessoa = (pessoa: PessoaDeExemplo): ValoresDoTemplate => ({
+  first_name: pessoa.primeiroNome,
+  company: pessoa.empresa,
+});
+
+/**
+ * Para cada token que os textos usam, quantas pessoas não têm o dado para
+ * preencher. Com elas o texto não sai pela metade: a ação espera revisão
+ * (§4.13). Usa o mesmo preenchimento do envio.
+ */
+export function faltasParaPreencher(textos: readonly string[], pessoas: readonly PessoaDeExemplo[]): { token: Token; pessoas: number }[] {
+  const usados = new Set(textos.flatMap(tokensDoTemplate));
+  return TOKENS_PERMITIDOS.filter((token) => usados.has(token)).flatMap((token) => {
+    const semDado = pessoas.filter((pessoa) => !renderizarTemplate(`{{${token}}}`, valoresDaPessoa(pessoa)).ok).length;
+    return semDado > 0 ? [{ token, pessoas: semDado }] : [];
+  });
 }
 
 /** Motivos da prévia sem nomes, como a tela mostra. */

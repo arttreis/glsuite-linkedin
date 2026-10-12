@@ -70,12 +70,13 @@ async function Abordagem({ operador }: { operador: Operador }) {
     abordagem = gerada.abordagem;
   }
   const sdr = await obterSdr(db, operador.organizacaoId);
-  const pessoas = previa?.status === "pronta" ? previa.pessoas.filter((pessoa) => pessoa.marcada).length : null;
+  const marcadas = previa?.status === "pronta" ? previa.pessoas.filter((pessoa) => pessoa.marcada) : null;
 
   return (
     <LinhaDoTempo
       inicial={abordagem}
-      resumo={<OQueVaiAcontecer pessoas={pessoas} chamarVoce={sdr?.sdr.quando_chamar_voce ?? []} />}
+      exemplos={(marcadas ?? []).map(({ providerId, nome, primeiroNome, empresa }) => ({ providerId, nome, primeiroNome, empresa }))}
+      resumo={<OQueVaiAcontecer pessoas={marcadas?.length ?? null} chamarVoce={sdr?.sdr.quando_chamar_voce ?? []} />}
     />
   );
 }
