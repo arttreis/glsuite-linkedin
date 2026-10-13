@@ -222,11 +222,11 @@ describe("chat de teste do SDR (SDR-43)", () => {
     expect(rascunhos().at(-1)!.entrada).toContain("nicho: Boutiques de festa");
   });
 
-  it("'ficou bom' aprova o SDR e o primeiro acesso segue para os leads", async () => {
+  it("'ficou bom' aprova o SDR e o primeiro acesso segue para a abordagem", async () => {
     await comecar();
     expect(await comOperador(banco.db, duda, (tx) => aprovarSdr(tx, { organizacaoId: organizacao, operadorId: duda, agora: AGORA }))).toEqual({ ok: true });
     const estado = await comOperador(banco.db, duda, (tx) => estadoDoPrimeiroAcesso(tx));
-    expect(estado.atual).toBe("leads");
+    expect(estado.atual).toBe("abordagem");
   });
 
   it("sem SDR não há teste", async () => {

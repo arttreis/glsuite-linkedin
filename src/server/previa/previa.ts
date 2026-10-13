@@ -302,9 +302,9 @@ export async function marcarNaPrevia(
 }
 
 /**
- * "Seguir com estas pessoas": o passo 4 termina. Com nomes, precisa de pelo
- * menos uma marcada; sem nomes, segue e a lista vem pela conta da organização
- * quando ela vincular o LinkedIn. Roda como o operador.
+ * A prévia fecha junto com a permissão da abordagem (SDR-56). Com nomes,
+ * precisa de pelo menos uma marcada; sem nomes, segue e a lista vem pela
+ * conta da organização quando ela vincular o LinkedIn. Roda como o operador.
  */
 export async function confirmarPrevia(
   db: Db,

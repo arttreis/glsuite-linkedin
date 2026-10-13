@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { PASSO_INICIAL, PASSOS_DO_PRIMEIRO_ACESSO, rotaDoPasso, type IdDoPassoInicial } from "@/domain/primeiro-acesso";
 
 /**
- * Os seis passos do primeiro acesso no topo da tela. Passo feito vira link
+ * Os passos do primeiro acesso no topo da tela. Passo feito vira link
  * (para corrigir); o atual acende; os da frente ficam apagados. No celular,
  * só uma régua: o título do passo já diz onde a pessoa está.
  */
@@ -22,7 +22,7 @@ export function Trilha({ feitos, atual }: { feitos: readonly IdDoPassoInicial[];
         <p className="sr-only">
           Passo {indiceAberto + 1} de {PASSOS_DO_PRIMEIRO_ACESSO.length}: {PASSO_INICIAL[aberto].rotulo}
         </p>
-        <div className="grid grid-cols-6 gap-1" aria-hidden>
+        <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${PASSOS_DO_PRIMEIRO_ACESSO.length}, minmax(0, 1fr))` }} aria-hidden>
           {PASSOS_DO_PRIMEIRO_ACESSO.map((passo, indice) => (
             <span
               key={passo}

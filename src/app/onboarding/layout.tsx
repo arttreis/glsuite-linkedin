@@ -4,8 +4,9 @@ import { exigirOperadorNoPrimeiroAcesso } from "./portao";
 import { Trilha } from "./trilha";
 
 /**
- * Primeiro acesso (§2.1): tela cheia, sem menu, com os seis passos no topo.
- * Quem já terminou vai para o app.
+ * Primeiro acesso (§2.1): tela cheia, sem menu, com os passos no topo. Quem
+ * já terminou vai para o app. A coluna é estreita, uma pergunta por tela; a
+ * área de trabalho da abordagem (`data-largura="cheia"`) usa a largura toda.
  */
 export default async function PrimeiroAcessoLayout({ children }: LayoutProps<"/onboarding">) {
   const { estado } = await exigirOperadorNoPrimeiroAcesso();
@@ -24,7 +25,7 @@ export default async function PrimeiroAcessoLayout({ children }: LayoutProps<"/o
           </button>
         </form>
       </header>
-      <main className="mx-auto w-full max-w-2xl flex-1 px-5 pb-20 pt-12 sm:pt-20">{children}</main>
+      <main className="mx-auto w-full max-w-2xl flex-1 px-5 pb-20 pt-12 sm:pt-20 has-[[data-largura=cheia]]:max-w-[90rem] has-[[data-largura=cheia]]:pt-8 sm:has-[[data-largura=cheia]]:px-8 sm:has-[[data-largura=cheia]]:pt-12">{children}</main>
     </div>
   );
 }
