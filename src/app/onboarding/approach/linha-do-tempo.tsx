@@ -3,6 +3,8 @@
 import { ArrowRight, Check, Pencil, RotateCcw, TriangleAlert, X } from "lucide-react";
 import { Fragment, useState, useTransition, type ReactNode } from "react";
 import { Aviso } from "@/components/aviso";
+import { faltasParaPreencher, valoresDaPessoa, type PessoaDeExemplo } from "@/domain/previa";
+import { renderizarTemplate, type Token } from "@/domain/template";
 import type { Abordagem, Toque } from "@/server/abordagem/recomendada";
 import { editarToque, escreverDeNovo, podeEntrarEmContato } from "./acoes";
 
@@ -38,13 +40,46 @@ function ComTokens({ texto }: { texto: string }) {
 const textoDo = (abordagem: Abordagem, toque: Toque) =>
   toque === "T1" ? abordagem.textos.convite : (abordagem.textos.mensagens[Number(toque.slice(1)) - 2] ?? "");
 
+/** Quantas pessoas da prévia dão para ver a abordagem como chega para elas. */
+const EXEMPLOS = 3;
+
+const DADO_DO_TOKEN: Record<Token, string> = { first_name: "o primeiro nome", company: "a empresa" };
+
+const quemE = (pessoa: PessoaDeExemplo) => pessoa.primeiroNome ?? pessoa.nome;
+
+/**
+ * Pessoas marcadas sem o dado de um token que os textos usam: para elas, o
+ * texto espera revisão antes de sair (§4.13), e a pessoa fica sabendo agora.
+ */
+function SemDado({ textos, exemplos }: { textos: string[]; exemplos: PessoaDeExemplo[] }) {
+  const faltas = faltasParaPreencher(textos, exemplos);
+  if (faltas.length === 0) return null;
+  return (
+    <p className="mt-3 flex items-start gap-1.5 text-sm text-atencao">
+      <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+      <span>
+        {faltas
+          .map(
+            ({ token, pessoas }) =>
+              `${pessoas} de ${exemplos.length} ${exemplos.length === 1 ? "pessoa marcada" : "pessoas marcadas"} ${pessoas === 1 ? "está" : "estão"} sem ${DADO_DO_TOKEN[token]} no LinkedIn`,
+          )
+          .join("; ")}
+        . Para elas, o texto que usa esse dado espera você revisar antes de sair.
+      </span>
+    </p>
+  );
+}
+
 /**
  * A abordagem como linha do tempo (§4.5): o convite e as três mensagens, na
  * ordem em que saem, com o texto editável ali mesmo. Texto com problema não
- * deixa seguir.
+ * deixa seguir. Com a prévia pronta, os textos aparecem como chegam para as
+ * primeiras pessoas marcadas, com o mesmo preenchimento do envio.
  */
-export function LinhaDoTempo({ inicial, resumo }: { inicial: Abordagem; resumo: ReactNode }) {
+export function LinhaDoTempo({ inicial, exemplos, resumo }: { inicial: Abordagem; exemplos: PessoaDeExemplo[]; resumo: ReactNode }) {
   const [abordagem, setAbordagem] = useState(inicial);
+  const [vendo, setVendo] = useState<string | null>(exemplos[0]?.providerId ?? null);
+  const pessoaVista = exemplos.find((pessoa) => pessoa.providerId === vendo) ?? null;
   const [editando, setEditando] = useState<Toque | null>(null);
   const [rascunho, setRascunho] = useState("");
   const [erro, setErro] = useState<string | null>(null);
@@ -84,10 +119,42 @@ export function LinhaDoTempo({ inicial, resumo }: { inicial: Abordagem; resumo: 
 
   return (
     <>
-      <ol className="relative mt-10 flex flex-col gap-6 before:absolute before:bottom-6 before:left-[15px] before:top-6 before:w-px before:bg-linha-forte">
+      {exemplos.length > 0 && (
+        <div className="mt-10">
+          <p id="ver-como-chega" className="mb-2.5 text-sm text-tinta-suave">
+            Ver como chega para
+          </p>
+          <div role="group" aria-labelledby="ver-como-chega" className="segmentos">
+            {exemplos.slice(0, EXEMPLOS).map((pessoa) => (
+              <button
+                key={pessoa.providerId}
+                type="button"
+                className="segmento"
+                aria-pressed={vendo === pessoa.providerId}
+                onClick={() => setVendo(pessoa.providerId)}
+              >
+                {quemE(pessoa)}
+                {pessoa.empresa && <span className="text-tinta-fraca">· {pessoa.empresa}</span>}
+              </button>
+            ))}
+            <button type="button" className="segmento" aria-pressed={vendo === null} onClick={() => setVendo(null)}>
+              Modelo
+            </button>
+          </div>
+          <SemDado textos={[abordagem.textos.convite, ...abordagem.textos.mensagens]} exemplos={exemplos} />
+        </div>
+      )}
+
+      <ol
+        className={`relative flex flex-col gap-6 before:absolute before:bottom-6 before:left-[15px] before:top-6 before:w-px before:bg-linha-forte ${
+          exemplos.length > 0 ? "mt-8" : "mt-10"
+        }`}
+      >
         {PASSOS.map((passo, indice) => {
           const problemas = abordagem.problemas.filter((p) => p.toque === passo.toque);
           const texto = textoDo(abordagem, passo.toque);
+          const preenchido = pessoaVista ? renderizarTemplate(texto, valoresDaPessoa(pessoaVista)) : null;
+          const faltas = pessoaVista && preenchido && !preenchido.ok ? faltasParaPreencher([texto], [pessoaVista]) : [];
           return (
             <li key={passo.toque} className="relative flex gap-5">
               <span
@@ -134,9 +201,17 @@ export function LinhaDoTempo({ inicial, resumo }: { inicial: Abordagem; resumo: 
                   </div>
                 ) : (
                   <p className="mt-3 rounded-2xl rounded-tl-md border border-linha bg-superficie-alta px-4 py-3 leading-relaxed">
-                    <ComTokens texto={texto} />
+                    {preenchido?.ok ? preenchido.texto : <ComTokens texto={texto} />}
                   </p>
                 )}
+                {pessoaVista &&
+                  editando !== passo.toque &&
+                  faltas.map(({ token }) => (
+                    <p key={token} className="mt-2 flex items-start gap-1.5 text-sm text-atencao">
+                      <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                      {quemE(pessoaVista)} está sem {DADO_DO_TOKEN[token]} no LinkedIn: para essa pessoa, este texto espera você revisar antes de sair.
+                    </p>
+                  ))}
                 {problemas.map((problema) => (
                   <p key={problema.mensagem} className="mt-2 flex items-start gap-1.5 text-sm text-atencao">
                     <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
