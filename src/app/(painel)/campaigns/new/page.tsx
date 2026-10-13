@@ -65,6 +65,11 @@ export default async function NovaCampanhaPage({ searchParams }: PageProps<"/cam
                         <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
                           {p.nome}
                           {p.status === "sugerido" && <span className="etiqueta">sugestão da IA</span>}
+                          {p.aderencia && (
+                            <span className="etiqueta" title={p.aderencia.motivo}>
+                              aderência {p.aderencia.nota}
+                            </span>
+                          )}
                         </span>
                         <span className="mt-0.5 block text-[13px] text-tinta-suave">
                           {p.quem.cargos.filter(Boolean).join(", ")}

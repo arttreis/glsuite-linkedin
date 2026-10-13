@@ -117,11 +117,12 @@ export interface ClienteUnipile {
   /** Chats da conta, mais recentes primeiro. */
   listarConversas(accountId: string, p?: { cursor?: string; limite?: number }): Promise<{ itens: ConversaDaConta[]; cursor: string | null }>;
   listarParticipantes(chatId: string): Promise<ParticipanteDaConversa[]>;
+  /** `total` é quantas pessoas o LinkedIn diz que cabem na busca (`paging.total_count`), quando diz. */
   buscarPessoas(
     accountId: string,
     busca: { url: string } | { keywords: string; api?: "classic" | "sales_navigator" } | { filtros: FiltrosDaBusca },
     cursor?: string,
-  ): Promise<{ itens: ResultadoDeBusca[]; cursor: string | null }>;
+  ): Promise<{ itens: ResultadoDeBusca[]; cursor: string | null; total: number | null }>;
   /** Ids do LinkedIn para os filtros de região e setor da busca clássica. */
   listarParametrosDeBusca(accountId: string, tipo: "LOCATION" | "INDUSTRY", texto: string): Promise<ParametroDeBusca[]>;
   criarWebhook(p: { url: string; fonte: "messaging" | "users" | "account_status"; nome: string; headers: Record<string, string>; eventos?: string[] }): Promise<string>;
@@ -140,6 +141,12 @@ type Query = Record<string, string | number | boolean | undefined>;
 type Json = Record<string, unknown>;
 
 const texto = (valor: unknown): string | null => (typeof valor === "string" && valor.length > 0 ? valor : null);
+
+/** `paging.total_count` da busca: inteiro e não negativo, senão null. */
+export function totalDaBusca(paging: unknown): number | null {
+  const total = typeof paging === "object" && paging !== null ? (paging as Json).total_count : undefined;
+  return typeof total === "number" && Number.isInteger(total) && total >= 0 ? total : null;
+}
 
 /** Corpo da busca clássica de pessoas, só com os filtros preenchidos. */
 export function corpoDaBuscaClassica(filtros: FiltrosDaBusca): Record<string, unknown> {
@@ -397,6 +404,7 @@ export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
             };
           }),
         cursor: texto(dados.cursor),
+        total: totalDaBusca(dados.paging),
       };
     },
 

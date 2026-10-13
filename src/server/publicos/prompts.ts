@@ -2,7 +2,7 @@ import type { Dossie } from "@/domain/dossie";
 import { MAX_SUGESTOES, type Publico } from "@/domain/publico";
 
 /** Sobe quando o prompt dos públicos muda: vai gravado em cada sugestão. */
-export const VERSAO_DOS_PROMPTS_DE_PUBLICOS = "publicos-2";
+export const VERSAO_DOS_PROMPTS_DE_PUBLICOS = "publicos-3";
 
 /** Prompt de sistema da sugestão de públicos (§4.12). */
 export function promptDaSugestao(): string {
@@ -16,6 +16,7 @@ Um público é uma hipótese de venda: um grupo de pessoas que tem motivo para c
 - angulo: a ideia da abordagem em uma frase, ligada à dor. Sem número, sem promessa, sem jargão de vendas.
 - provas: os números das provas do dossiê que conversam com esse público. Lista vazia se nenhuma servir.
 - quem_nao_e: sinais de que a pessoa não serve mesmo parecendo servir (cargo sem decisão, empresa pequena demais, setor parecido mas diferente).
+- aderencia.nota: de 0 a 100, quanto esse público se encaixa na oferta pelo que o dossiê mostra. Pesa mais o que o dossiê afirma (clientes, cases e provas desse tipo de empresa, o "para quem" do site, dores que o site cita) do que o que você supõe. Público só suposto não passa de 60. Não é tamanho de mercado nem chance de fechar. aderencia.motivo: uma frase com a evidência do dossiê que sustenta a nota, ou o que falta nele.
 
 Regras:
 - Os públicos têm de ser diferentes entre si e dos já escolhidos: muda o cargo, o setor ou a dor.

@@ -93,6 +93,20 @@ describe("prévia de leads pela conta da casa (SDR-44)", () => {
     ]);
   });
 
+  it("guarda quantas pessoas o LinkedIn diz que cabem na busca, sem chamada a mais", async () => {
+    unipile.totalDaBusca = 12_437;
+    expect(await rodar()).toMatchObject({ status: "pronta", totalNoLinkedin: 12_437 });
+    expect(unipile.chamadasDe("buscarPessoas")).toHaveLength(1);
+
+    // Sem o total na resposta, fica sem; trocar o perfil do lead zera.
+    unipile.totalDaBusca = null;
+    expect(await rodar()).toMatchObject({ totalNoLinkedin: null });
+    unipile.totalDaBusca = 430;
+    await rodar();
+    await comOperador(banco.db, duda, (tx) => trocarPublicoDaPrevia(tx, { organizacaoId: organizacao, publicoId: publico, operadorId: duda, agora: AGORA }));
+    expect(await obterPrevia(banco.db, organizacao)).toMatchObject({ totalNoLinkedin: null });
+  });
+
   it("a prévia gasta o teto de busca do dia da conta da casa", async () => {
     await rodar();
     const [evento] = await banco.db.query<{ perfil_id: string; payload: { resultados: number } }>(

@@ -1,6 +1,8 @@
 import { Repeat2, Sparkles } from "lucide-react";
 import { Suspense } from "react";
+import { AnelDaNota } from "@/components/anel-da-nota";
 import { Aviso } from "@/components/aviso";
+import { tamanhoDoPublico } from "@/domain/busca";
 import { lerConfiguracao } from "@/server/configuracoes";
 import { obterDb } from "@/server/db";
 import { comOperador, type Operador } from "@/server/db/operador";
@@ -65,14 +67,22 @@ async function Sugestoes({ operador }: { operador: Operador }) {
     if (!resultado.ok) return <Aviso tom="erro" className="mt-10">{resultado.erro}</Aviso>;
     sugeridos = (await comOperador(db, operador.id, (tx) => listarPublicos(tx, operador.organizacaoId))).filter((p) => p.status === "sugerido");
   }
+  const { nota_de_corte: corte } = await lerConfiguracao(db, "busca");
 
+  // A lista já vem pela aderência: o primeiro é o que o site mais sustenta.
   return (
     <div className="mt-10 flex flex-col gap-4">
       {sugeridos.slice(0, SUGESTOES).map((publico) => (
         <form key={publico.id} action={escolherPublicoNoPrimeiroAcesso} className="cartao p-6">
           <input type="hidden" name="publico" value={publico.id} />
-          <h2 className="text-xl font-medium tracking-tight">{publico.nome}</h2>
-          <div className="mt-3">
+          <header className="flex items-start gap-4">
+            {publico.aderencia && <AnelDaNota nota={publico.aderencia.nota} corte={corte} />}
+            <div className="min-w-0">
+              <h2 className="text-xl font-medium tracking-tight">{publico.nome}</h2>
+              {publico.aderencia && <p className="mt-1 text-sm text-tinta-suave">{publico.aderencia.motivo}</p>}
+            </div>
+          </header>
+          <div className="mt-4">
             <ResumoDoPublico publico={publico} />
           </div>
           <button type="submit" className="botao botao-primario mt-5">
@@ -87,6 +97,27 @@ async function Sugestoes({ operador }: { operador: Operador }) {
         </button>
       </form>
     </div>
+  );
+}
+
+/**
+ * Quantas pessoas a prévia trouxe e, quando o LinkedIn diz, quantas cabem no
+ * perfil do lead: o tamanho real do público, sem número inventado (§4.2).
+ */
+function ContagemDaPrevia({ trazidas, tamanho, regiao }: { trazidas: number; tamanho: string | null; regiao: string | null }) {
+  const onde = regiao ? `, em ${regiao}` : "";
+  if (!tamanho) {
+    return (
+      <p className="mt-8 text-sm text-tinta-suave">
+        {trazidas} {trazidas === 1 ? "pessoa real" : "pessoas reais"} no LinkedIn{onde}, com a nota de quanto cada uma parece com o seu lead.
+      </p>
+    );
+  }
+  return (
+    <p className="mt-8 text-sm text-tinta-suave">
+      <span className="font-medium text-tinta">{tamanho}</span> no LinkedIn com esses cargos{onde}. Aqui {trazidas === 1 ? "está 1" : `estão ${trazidas}`},
+      com a nota de quanto cada uma parece com o seu lead.
+    </p>
   );
 }
 
@@ -125,10 +156,11 @@ async function Previa({ operador, publico }: { operador: Operador; publico: Publ
 
       {previa.status === "pronta" && previa.pessoas.length > 0 ? (
         <>
-          <p className="mt-8 text-sm text-tinta-suave">
-            {previa.pessoas.length} {previa.pessoas.length === 1 ? "pessoa real" : "pessoas reais"} no LinkedIn
-            {previa.regiao ? `, em ${previa.regiao.nome}` : ""}, com a nota de quanto cada uma parece com o seu lead.
-          </p>
+          <ContagemDaPrevia
+            trazidas={previa.pessoas.length}
+            tamanho={tamanhoDoPublico(previa.totalNoLinkedin)}
+            regiao={previa.regiao?.nome ?? null}
+          />
           <ListaDaPrevia inicial={previa.pessoas} corte={corte} />
         </>
       ) : (

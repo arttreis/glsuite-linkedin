@@ -39,10 +39,30 @@ const PUBLICO: Publico = {
 const sugerido = (parcial: Partial<SugestaoDePublicos["publicos"][number]> = {}): SugestaoDePublicos["publicos"][number] => ({
   ...PUBLICO,
   provas: [0],
+  aderencia: { nota: 82, motivo: "O site cita clientes de moda." },
   ...parcial,
 });
 
 describe("publicosDaSugestao", () => {
+  it("guarda a aderência que a IA deu, com o motivo", () => {
+    const { publicos } = publicosDaSugestao({ publicos: [sugerido()] }, DOSSIE);
+    expect(publicos[0]!.aderencia).toEqual({ nota: 82, motivo: "O site cita clientes de moda." });
+  });
+
+  it("aderência fora de 0 a 100 ou sem motivo fica de fora, e o público fica", () => {
+    const { publicos } = publicosDaSugestao(
+      {
+        publicos: [
+          sugerido({ aderencia: { nota: 140, motivo: "Muito bom." } }),
+          sugerido({ aderencia: { nota: -1, motivo: "Ruim." } }),
+          sugerido({ aderencia: { nota: 70, motivo: "  " } }),
+        ],
+      },
+      DOSSIE,
+    );
+    expect(publicos.map((p) => p.aderencia)).toEqual([null, null, null]);
+  });
+
   it("troca o número da prova pelo texto do dossiê e ignora número fora da lista", () => {
     const { publicos } = publicosDaSugestao({ publicos: [sugerido({ provas: [1, 7, 1, -1] })] }, DOSSIE);
     expect(publicos[0]!.provas).toEqual(["Atende a Loja X"]);

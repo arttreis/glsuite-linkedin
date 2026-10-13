@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buscaDoPublico, cargoDaBusca, mesmosFiltros, saldoDeBusca, type BuscaDoPublico } from "./busca";
+import { buscaDoPublico, cargoDaBusca, mesmosFiltros, saldoDeBusca, tamanhoDoPublico, type BuscaDoPublico } from "./busca";
 
 const BUSCA: BuscaDoPublico = {
   cargos: ["Head de E-commerce", "Diretor de E-commerce"],
@@ -28,5 +28,27 @@ describe("busca do público", () => {
 
   it("região e setor só por id numérico do LinkedIn", () => {
     expect(buscaDoPublico.safeParse({ ...BUSCA, regioes: [{ id: "Brasil", nome: "Brasil" }] }).success).toBe(false);
+  });
+});
+
+describe("tamanhoDoPublico", () => {
+  it("abaixo de mil, o número exato", () => {
+    expect(tamanhoDoPublico(1)).toBe("1 pessoa");
+    expect(tamanhoDoPublico(430)).toBe("430 pessoas");
+  });
+
+  it("mil pode ser o teto da contagem: vira mil ou mais", () => {
+    expect(tamanhoDoPublico(1000)).toBe("Mil ou mais pessoas");
+  });
+
+  it("acima de mil, arredondado como o LinkedIn mostra", () => {
+    expect(tamanhoDoPublico(12_437)).toBe("Cerca de 12 mil pessoas");
+    expect(tamanhoDoPublico(1_234_567)).toBe("Cerca de 1,2 milhão de pessoas");
+    expect(tamanhoDoPublico(999_999)).toBe("Cerca de 1 milhão de pessoas");
+  });
+
+  it("sem total ou zero, sem frase", () => {
+    expect(tamanhoDoPublico(null)).toBeNull();
+    expect(tamanhoDoPublico(0)).toBeNull();
   });
 });

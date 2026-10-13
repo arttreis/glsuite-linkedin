@@ -35,6 +35,8 @@ export class UnipileFalso implements ClienteUnipile {
   resultadosDeBusca: ResultadoDeBusca[] = [];
   /** Busca em páginas: o cursor `pagina-N` leva à página N. Vazio, vale `resultadosDeBusca`. */
   paginasDeBusca: ResultadoDeBusca[][] = [];
+  /** O `paging.total_count` que a busca devolve. */
+  totalDaBusca: number | null = null;
   parametrosDeBusca = new Map<string, ParametroDeBusca[]>();
   convitesPendentes: ConviteEnviado[] = [];
   webhooks: WebhookUnipile[] = [];
@@ -144,10 +146,10 @@ export class UnipileFalso implements ClienteUnipile {
 
   async buscarPessoas(accountId: string, busca: unknown, cursor?: string) {
     this.registrar("buscarPessoas", { accountId, busca, cursor });
-    if (this.paginasDeBusca.length === 0) return { itens: this.resultadosDeBusca, cursor: null };
+    if (this.paginasDeBusca.length === 0) return { itens: this.resultadosDeBusca, cursor: null, total: this.totalDaBusca };
     const pagina = cursor ? Number(cursor.replace("pagina-", "")) : 0;
     const proxima = pagina + 1 < this.paginasDeBusca.length ? `pagina-${pagina + 1}` : null;
-    return { itens: this.paginasDeBusca[pagina] ?? [], cursor: proxima };
+    return { itens: this.paginasDeBusca[pagina] ?? [], cursor: proxima, total: this.totalDaBusca };
   }
 
   async listarParametrosDeBusca(accountId: string, tipo: "LOCATION" | "INDUSTRY", texto: string) {

@@ -37,15 +37,37 @@ export const publico = z.object({
 export type Publico = z.infer<typeof publico>;
 
 /**
+ * Quanto o público se encaixa na oferta pelo que o dossiê mostra, de 0 a 100,
+ * com o motivo numa frase. É julgamento da IA, não tamanho de mercado nem
+ * chance de fechar. Só a sugestão tem: o público editado por um humano perde.
+ */
+export type Aderencia = { nota: number; motivo: string };
+
+/**
  * O que a IA devolve: o mesmo público, com as provas pelo número da lista do
- * dossiê. Assim ela não tem como escrever uma prova que não está lá.
+ * dossiê (assim ela não tem como escrever uma prova que não está lá) e a
+ * aderência.
  */
 export const sugestaoDePublicos = z.object({
-  publicos: z.array(publico.omit({ provas: true }).extend({ provas: z.array(z.number().int()) })),
+  publicos: z.array(
+    publico.omit({ provas: true }).extend({
+      provas: z.array(z.number().int()),
+      aderencia: z.object({ nota: z.number().int(), motivo: z.string() }),
+    }),
+  ),
 });
 export type SugestaoDePublicos = z.infer<typeof sugestaoDePublicos>;
 
 export const MAX_SUGESTOES = 5;
+
+export type PublicoSugerido = Publico & { aderencia: Aderencia | null };
+
+/** Nota fora de 0 a 100 ou sem motivo não vale: o público fica sem aderência, mas fica. */
+function aderenciaValida(aderencia: { nota: number; motivo: string }): Aderencia | null {
+  const motivo = aderencia.motivo.trim();
+  const { nota } = aderencia;
+  return Number.isInteger(nota) && nota >= 0 && nota <= 100 && motivo ? { nota, motivo: motivo.slice(0, 300) } : null;
+}
 
 /**
  * Converte a sugestão da IA em públicos: as provas viram os textos do dossiê
@@ -55,8 +77,8 @@ export const MAX_SUGESTOES = 5;
 export function publicosDaSugestao(
   sugestao: SugestaoDePublicos,
   d: Dossie,
-): { publicos: Publico[]; descartados: number } {
-  const publicos: Publico[] = [];
+): { publicos: PublicoSugerido[]; descartados: number } {
+  const publicos: PublicoSugerido[] = [];
   let descartados = 0;
   for (const item of sugestao.publicos) {
     const provas = [...new Set(item.provas)].flatMap((n) => (d.provas[n] ? [d.provas[n].texto] : []));
@@ -65,7 +87,7 @@ export function publicosDaSugestao(
       descartados++;
       continue;
     }
-    publicos.push(lido.data);
+    publicos.push({ ...lido.data, aderencia: aderenciaValida(item.aderencia) });
   }
   return { publicos, descartados };
 }
