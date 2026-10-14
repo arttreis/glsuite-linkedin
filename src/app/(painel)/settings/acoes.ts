@@ -12,6 +12,7 @@ import { concluirLeitura, iniciarLeitura, salvarDossie, type ResultadoDaEdicao }
 import { definirContasDoMembro, mudarPapelDoMembro } from "@/server/organizacao/equipe";
 import { renomearOrganizacao } from "@/server/organizacao/organizacao";
 import { garantirWebhooks, gerarLinkDeConexao } from "@/server/perfis/conexao";
+import { editarConta } from "@/server/perfis/edicao";
 import { ErroDeModo, registrarEval, trocarModo } from "@/server/perfis/modo";
 import { contaNovaDoLinkedin } from "@/server/perfis/nova-conta";
 import { despausarPerfil, ErroDeAtivacao, pausarPerfil } from "@/server/perfis/pausa";
@@ -127,6 +128,23 @@ export async function retomarContaDoPainel(formData: FormData) {
     erro = e.message;
   }
   voltar("linkedin", erro ?? undefined);
+}
+
+/** Nome e horário de envio da conta; o RLS deixa só o admin ou quem vinculou. */
+export async function editarContaDoPainel(formData: FormData) {
+  const operador = await exigirOperador();
+  const perfilId = await exigirAcessoAConta(operador.id, formData.get("perfilId"));
+  const resultado = await comOperador(obterDb(), operador.id, (tx) =>
+    editarConta(tx, {
+      perfilId,
+      nome: String(formData.get("nome") ?? ""),
+      inicio: String(formData.get("inicio") ?? ""),
+      fim: String(formData.get("fim") ?? ""),
+      operadorId: operador.id,
+      agora: new Date(),
+    }),
+  );
+  voltar("linkedin", resultado.ok ? "Conta atualizada. O novo horário vale a partir da próxima ação." : resultado.erro);
 }
 
 export async function reconectarConta(formData: FormData) {

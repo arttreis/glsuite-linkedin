@@ -1661,6 +1661,22 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   Unipile, retorno do hosted auth, cron, saúde) ficam como estão até o
   destino externo mudar junto.
 
+### SDR-57 · Editar nome e horário da conta (14/10/2026)
+
+- **Nome da conta:** o perfil nascia com o nome de quem estava logado, e o
+  agente escreve "em nome de" `perfis.nome`. Com o LinkedIn de outra pessoa,
+  o SDR falava pela pessoa errada. Agora o callback do hosted auth grava o
+  nome do dono (`/users/me`) quando a conta do perfil muda. Reconectar a
+  mesma conta não mexe no nome, para não desfazer uma edição.
+- **Quem edita:** o RLS de `perfis` que já existia (admin ou
+  `perfis.operador_id`). Quem só opera a conta por `operador_perfis` pausa,
+  mas não edita. Sem migration.
+- **Janela:** só início e fim. `jitter_min` fica como está, e os dias seguem
+  úteis. Mínimo de 1 hora, para caber o intervalo de 3 a 12 minutos entre
+  ações. O despachante confere a janela na hora de enviar, então vale na
+  próxima ação, sem reagendar nada.
+- Rampa, teto e dias da semana continuam fixos: mexem no risco da conta.
+
 ### SDR-58 · Busca de leads a qualquer hora (14/10/2026)
 
 - Pedido do Arthur: a busca de leads pode rodar a qualquer momento. Antes,

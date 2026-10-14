@@ -72,12 +72,15 @@ export async function registrarContaConectada(
     );
     if (outro) return { ok: false as const, motivo: `conta já ligada ao perfil ${outro.slug}` };
 
+    // Conta nova no perfil leva o nome de quem é dono no LinkedIn; reconectar a
+    // mesma conta mantém o nome que alguém tenha editado.
     await tx.query(
       `update public.perfis
           set unipile_account_id = $2, linkedin_provider_id = $3, tipo_conta = $4,
-              limite_nota_convite = $5, unipile_status = $6, unipile_status_em = $7
+              limite_nota_convite = $5, unipile_status = $6, unipile_status_em = $7,
+              nome = case when unipile_account_id is distinct from $2 and $8 <> '' then $8 else nome end
         where id = $1::uuid`,
-      [perfilId, accountId, dono.providerId, tipoConta, tipoConta === "gratuita" ? 200 : 300, statusMaisGrave(conta.status), agora],
+      [perfilId, accountId, dono.providerId, tipoConta, tipoConta === "gratuita" ? 200 : 300, statusMaisGrave(conta.status), agora, dono.nome.trim()],
     );
     await registrarEvento(tx, {
       tipo: status === "RECONNECTED" ? "conta_reconectada" : "conta_conectada",
