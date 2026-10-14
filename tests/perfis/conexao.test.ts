@@ -73,6 +73,28 @@ describe("conexão do perfil pela Unipile (hosted auth)", () => {
     });
   });
 
+  it("conta nova leva o nome do dono no LinkedIn; reconectar a mesma conta mantém o nome editado", async () => {
+    // O perfil nasce com o nome de quem vinculou, mas o LinkedIn conectado é de outra pessoa.
+    const perfilId = await idDoPerfil(banco.db, "arthur");
+    unipile.donos.set("acc-juliano", {
+      providerId: "ACoJuliano",
+      nome: "Juliano Souza",
+      publicIdentifier: "juliano",
+      premium: false,
+      salesNavigator: false,
+    });
+    const deps = { db: banco.db, unipile };
+    const nome = async () =>
+      (await banco.db.query<{ nome: string }>("select nome from public.perfis where id = $1::uuid", [perfilId]))[0]!.nome;
+
+    await registrarContaConectada(deps, { status: "CREATION_SUCCESS", account_id: "acc-juliano", name: perfilId }, AGORA);
+    expect(await nome()).toBe("Juliano Souza");
+
+    await banco.db.query("update public.perfis set nome = 'Juliano (comercial)' where id = $1::uuid", [perfilId]);
+    await registrarContaConectada(deps, { status: "RECONNECTED", account_id: "acc-juliano", name: perfilId }, AGORA);
+    expect(await nome()).toBe("Juliano (comercial)");
+  });
+
   it("recusa callback de perfil desconhecido, conta que não é do LinkedIn ou conta de outro perfil", async () => {
     const deps = { db: banco.db, unipile };
     expect(

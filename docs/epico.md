@@ -222,6 +222,8 @@ confirmada e guardada em versões. Ele tem:
 
 - O vínculo é pelo hosted auth da Unipile. A conta vira um perfil da
   organização, operado por quem vinculou, com a rampa e a janela padrão (D3).
+  A conta leva o nome do dono do LinkedIn conectado, que é em nome de quem o
+  SDR escreve; reconectar a mesma conta não troca o nome.
 - Vinculou, com a permissão da §4.5 já dada: o perfil ativa, a campanha passa
   para essa conta e ativa, e as pessoas marcadas entram na fila. A primeira
   ação espera a conta estabilizar (`conta_estavel_minutos`).
@@ -315,7 +317,7 @@ confirmada e guardada em versões. Ele tem:
 |---|---|
 | Empresa | a análise (Negócio, Produto, Mercado), editável; ler o site de novo |
 | SDR | os campos do SDR, editáveis; "Testar no chat", que abre o chat de teste; histórico de ajustes com desfazer; modo de resposta (sozinho ou aprovo cada resposta); link de agenda |
-| LinkedIn | contas vinculadas, status, rampa, teto, janela; pausar e retomar; reconectar; vincular outra conta |
+| LinkedIn | contas vinculadas, status, rampa, teto, janela; nome e janela editáveis (o admin ou quem vinculou a conta); pausar e retomar; reconectar; vincular outra conta |
 | Equipe | membros, papel (admin ou operador) e as contas que cada um opera. Só o admin muda |
 
 ### 4.13 · Regras do motor que continuam
@@ -331,7 +333,8 @@ Vêm do épico anterior e não mudam:
 - **Teto por perfil.** O LinkedIn conta ações por conta, então o teto é do
   perfil, somando todas as campanhas. Rampa padrão de convites por dia
   8 · 12 · 15 (semanas 1, 2 e 3+), teto de 75 convites por semana, mensagens
-  15 · 20 · 25 por dia (D3). Dias úteis, 9h às 18h no fuso do perfil, com
+  15 · 20 · 25 por dia (D3). Dias úteis, 9h às 18h no fuso do perfil (padrão
+  da conta nova; início e fim se editam por conta, com pelo menos 1 hora), com
   intervalo aleatório de 3 a 12 minutos entre ações. Mensagem só para conexão
   de 1º grau. Convite pendente há mais de 21 dias é retirado. Busca e visita de
   perfil têm teto próprio por dia (`busca.max_resultados_dia`, padrão 100;
@@ -651,6 +654,17 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   código dos primeiros passos.
 - Aceite: build, lint, testes e typecheck sem referência ao que saiu; nenhuma
   rota antiga devolve 404 (redireciona).
+
+### Depois do épico
+
+**SDR-57 · Editar nome e horário da conta do LinkedIn**
+- Ao conectar uma conta nova, o perfil leva o nome do dono no LinkedIn, e não
+  o de quem vinculou.
+- Em Configurações > LinkedIn, "Editar nome e horário": nome da conta e início
+  e fim da janela. Só o admin ou quem vinculou a conta.
+- Aceite: conta conectada fica com o nome do LinkedIn e reconectar não o
+  troca; janela com menos de 1 hora ou fim antes do início é recusada; quem
+  só opera a conta não edita; a edição fica na trilha.
 
 ## 10 · Decisões abertas
 

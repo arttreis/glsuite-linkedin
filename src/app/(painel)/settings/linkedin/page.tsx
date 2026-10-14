@@ -1,4 +1,4 @@
-import { FileJson, Link2, Pause, Play, Plus, RefreshCw, Webhook } from "lucide-react";
+import { FileJson, Link2, Pause, Pencil, Play, Plus, RefreshCw, Webhook } from "lucide-react";
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { Aviso } from "@/components/aviso";
@@ -12,6 +12,7 @@ import { comOperador } from "@/server/db/operador";
 import { exigirOperadorNoApp } from "@/server/supabase/servidor";
 import {
   atualizarStatusDasContasDoPainel,
+  editarContaDoPainel,
   pausarContaDoPainel,
   reconectarConta,
   registrarEvalDoPainel,
@@ -23,6 +24,7 @@ import {
 type Conta = {
   id: string;
   nome: string;
+  operador_id: string | null;
   status: "ativo" | "pausado";
   motivo_pausa: string | null;
   conectada: boolean;
@@ -43,13 +45,13 @@ const CONEXAO: Record<string, { tom: "ok" | "erro"; texto: string }> = {
 
 const TIPO: Record<string, string> = { gratuita: "conta gratuita", premium: "Premium", sales_navigator: "Sales Navigator" };
 
-/** LinkedIn (§4.12): as contas, status, rampa, teto e janela; pausar, retomar, reconectar e vincular outra. */
+/** LinkedIn (§4.12): as contas, status, rampa, teto e janela; editar nome e janela; pausar, retomar, reconectar e vincular outra. */
 export default async function LinkedinPage({ searchParams }: PageProps<"/settings/linkedin">) {
   const operador = await exigirOperadorNoApp();
   const { msg, conexao } = await searchParams;
   const contas = await comOperador(obterDb(), operador.id, (tx) =>
     tx.query<Conta>(
-      `select id, nome, status, motivo_pausa, unipile_account_id is not null as conectada, unipile_status, tipo_conta,
+      `select id, nome, operador_id, status, motivo_pausa, unipile_account_id is not null as conectada, unipile_status, tipo_conta,
               rampa, teto_convites_semana, janela, fuso, modo_resposta, ativado_em
          from public.perfis
         where not casa and public.pode_ver_perfil(id)
@@ -67,6 +69,7 @@ export default async function LinkedinPage({ searchParams }: PageProps<"/setting
         {contas.map((conta) => {
           const saudavel = conta.conectada && (conta.unipile_status === null || STATUS_SAUDAVEIS.has(conta.unipile_status));
           const nuncaAtivada = conta.ativado_em === null;
+          const podeEditar = operador.papel === "admin" || conta.operador_id === operador.id;
           return (
             <li key={conta.id} id={`conta-${conta.id}`} className="cartao scroll-mt-6 p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -104,6 +107,40 @@ export default async function LinkedinPage({ searchParams }: PageProps<"/setting
                   </dd>
                 </div>
               </dl>
+
+              {podeEditar && (
+                <details className="mt-4">
+                  <summary className="flex w-fit cursor-pointer items-center gap-1.5 text-[13px] text-tinta-suave hover:text-tinta">
+                    <Pencil className="size-3.5" aria-hidden />
+                    Editar nome e horário
+                  </summary>
+                  <form action={editarContaDoPainel} className="mt-3 flex flex-col gap-3">
+                    <input type="hidden" name="perfilId" value={conta.id} />
+                    <label className="rotulo">
+                      Nome da conta
+                      <input name="nome" defaultValue={conta.nome} required minLength={2} maxLength={80} className="campo w-72 max-w-full" />
+                    </label>
+                    <div className="flex flex-wrap items-end gap-3">
+                      <label className="rotulo">
+                        Começa às
+                        <input type="time" name="inicio" defaultValue={conta.janela.inicio} required className="campo w-32" />
+                      </label>
+                      <label className="rotulo">
+                        Termina às
+                        <input type="time" name="fim" defaultValue={conta.janela.fim} required className="campo w-32" />
+                      </label>
+                      <button type="submit" className="botao botao-primario">
+                        Salvar
+                      </button>
+                    </div>
+                    <p className="text-xs text-tinta-fraca">
+                      O SDR só envia convites e mensagens nesse horário, em dias úteis,{" "}
+                      {conta.fuso === "America/Sao_Paulo" ? "no horário de Brasília" : `no fuso ${conta.fuso}`}. Nas conversas desta conta, o SDR
+                      escreve em nome de quem está no nome.
+                    </p>
+                  </form>
+                </details>
+              )}
 
               {conta.status === "pausado" && !nuncaAtivada && conta.motivo_pausa && <p className="recuo mt-4">{conta.motivo_pausa}</p>}
 
