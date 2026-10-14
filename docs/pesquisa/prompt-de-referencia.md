@@ -8,7 +8,7 @@ original está no fim. Antes dele, o que entrou no Kakou e o que ficou de fora.
 
 | Regra do prompt | Onde entrou |
 |---|---|
-| Só a mensagem, no máximo 30 palavras | prompt da conversa (`promptDeRascunho`) |
+| Só a mensagem | prompt da conversa (`promptDeRascunho`). O limite de 30 palavras saiu no SDR-59 |
 | Sem pular linha | prompt da conversa |
 | Não começar com verbo | prompt da conversa, como "não comece com verbo no imperativo": em português, "Eu vi que…" com o pronome explícito soa duro |
 | Oral, direto, sem soar robótico ou formal | prompt da conversa e do convite (já era regra da casa) |

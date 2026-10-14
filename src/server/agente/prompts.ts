@@ -13,7 +13,7 @@ import type { Classificacao } from "./modelo";
  * nunca do lead: é estável e vai para o cache. Lead, instruções da campanha e
  * conversa vão na mensagem do usuário.
  */
-export const VERSAO_DOS_PROMPTS = "2026-10-11.1";
+export const VERSAO_DOS_PROMPTS = "2026-10-14.1";
 
 export type PerfilDoAgente = {
   nome: string;
@@ -105,7 +105,7 @@ Regras da casa (valem sempre):`;
     !sdr && perfil.regras?.trim() ? `\nRegras específicas de ${perfil.nome}:\n${perfil.regras.trim()}\n` : "";
 
   return `${inicio}
-- Devolva só a mensagem, com no máximo 30 palavras, numa linha só, sem linha em branco.
+- Devolva só a mensagem, numa linha só, sem linha em branco.
 - Frases curtas, tom oral e direto, como numa conversa de LinkedIn. Nada de lista, nada de formalidade de e-mail, nada que soe robótico.
 - Não cumprimente de novo: a conversa já começou.
 - Não comece a mensagem com verbo no imperativo (veja, confira, olha).

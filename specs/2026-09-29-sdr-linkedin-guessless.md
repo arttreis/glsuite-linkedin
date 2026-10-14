@@ -1676,3 +1676,13 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   ações. O despachante confere a janela na hora de enviar, então vale na
   próxima ação, sem reagendar nada.
 - Rampa, teto e dias da semana continuam fixos: mexem no risco da conta.
+
+### SDR-59 · Sem limite de palavras por mensagem (14/10/2026)
+
+- Pedido do Arthur: o limite de 30 palavras travava o ajuste do SDR no chat
+  de teste ("a frase pedida tem mais de 30 palavras"). Sai das regras da casa
+  (§4.3), do prompt do rascunho e da lista que o ajuste lê
+  (`REGRAS_DA_CASA`). Ficam "numa linha só, sem linha em branco" e "frases
+  curtas".
+- Os prompts sobem para `2026-10-14.1`. O modo automático pede eval na
+  versão atual dos prompts: rodar o eval de novo antes de ligar o automático.

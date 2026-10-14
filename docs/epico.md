@@ -139,8 +139,8 @@ confirmada e guardada em versões. Ele tem:
 | Quando chamar você | o que faz o SDR parar e passar a conversa para você |
 | Link de agenda | vai só depois que o lead aceitar conversar |
 
-- As **regras da casa** ficam por cima do SDR e não se editam: no máximo 30
-  palavras por mensagem, uma pergunta por mensagem e duas na conversa, sem
+- As **regras da casa** ficam por cima do SDR e não se editam: mensagem numa
+  linha só, uma pergunta por mensagem e duas na conversa, sem
   travessão, sem palavras vazias, sem prometer resultado, sem levar para
   WhatsApp ou e-mail, nunca dizer que não é robô, dizer a verdade sobre de onde
   veio o contato. E o validador (§4.13) vale para tudo.
@@ -665,6 +665,12 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
 - Aceite: conta conectada fica com o nome do LinkedIn e reconectar não o
   troca; janela com menos de 1 hora ou fim antes do início é recusada; quem
   só opera a conta não edita; a edição fica na trilha.
+
+**SDR-59 · Sem limite de palavras por mensagem**
+- Sai a regra da casa de no máximo 30 palavras por mensagem do SDR. Ficam a
+  mensagem numa linha só e as frases curtas.
+- Aceite: no teste do SDR, pedir mensagens mais longas é aceito, e não
+  recusado por regra da casa.
 
 ## 10 · Decisões abertas
 

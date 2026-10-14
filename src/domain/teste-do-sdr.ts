@@ -36,7 +36,7 @@ export type AjusteDoSdr = z.infer<typeof ajusteDoSdr>;
  * negocia. As completas estão no prompt do agente.
  */
 export const REGRAS_DA_CASA = [
-  "no máximo 30 palavras por mensagem, numa linha só",
+  "cada mensagem numa linha só",
   "no máximo uma pergunta por mensagem e duas na conversa inteira",
   "sem travessão nem meia-risca",
   "sem palavras vazias (impressionado, inspirador, admiro, adoro, fascinante, notei)",
