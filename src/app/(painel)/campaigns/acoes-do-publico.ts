@@ -4,10 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { obterAvaliadorDeAderencia, obterSugeridorDePublicos, obterUnipileSeConfigurada } from "@/server/dependencias";
+import { obterAvaliadorDeAderencia, obterInterpretadorDeBusca, obterSugeridorDePublicos, obterUnipileSeConfigurada } from "@/server/dependencias";
 import { darNotas } from "@/server/nota/nota";
 import { exigirCampanhaDoOperador } from "@/server/painel/autorizacao";
 import { procurarParametros, rodarBusca, salvarBusca, type ResultadoDaBusca } from "@/server/publicos/busca";
+import { conversarSobreABusca, type RespostaDaConversa } from "@/server/publicos/conversa-da-busca";
 import { salvarPublico, sugerirPublicos, type Resultado } from "@/server/publicos/publicos";
 import { exigirOperador } from "@/server/supabase/servidor";
 
@@ -64,6 +65,42 @@ export async function procurarParametrosDoPainel(entrada: { campanhaId: string; 
   const unipile = obterUnipileSeConfigurada();
   if (!unipile) return { ok: false as const, erro: SEM_UNIPILE };
   return procurarParametros({ db: obterDb(), unipile }, { campanhaId, tipo, texto: String(entrada.texto).slice(0, 80) });
+}
+
+/**
+ * Um turno da conversa da busca (SDR-62): devolve a busca como deve ficar,
+ * sem salvar. Se a conversa criou uma lista de empresas, a página recarrega as
+ * listas para o filtro "Só nestas empresas" mostrar a nova.
+ */
+export async function conversarSobreABuscaDoPainel(entrada: {
+  campanhaId: string;
+  busca: unknown;
+  historico: unknown;
+  mensagem: string;
+}): Promise<RespostaDaConversa> {
+  const operador = await exigirOperador();
+  const campanhaId = z.uuid().parse(entrada.campanhaId);
+  await exigirCampanhaDoOperador(operador.id, campanhaId);
+  const unipile = obterUnipileSeConfigurada();
+  if (!unipile) return { ok: false, erro: SEM_UNIPILE };
+  const interpretador = obterInterpretadorDeBusca();
+  if (!interpretador) return { ok: false, erro: "A conversa da busca precisa da chave da Anthropic. Peça ao admin para configurar." };
+  const resultado = await conversarSobreABusca(
+    { db: obterDb(), unipile, interpretador },
+    {
+      campanhaId,
+      busca: entrada.busca,
+      historico: entrada.historico,
+      mensagem: String(entrada.mensagem ?? ""),
+      operadorId: operador.id,
+      agora: new Date(),
+    },
+  );
+  if (resultado.ok && resultado.listaCriada) {
+    revalidatePath(`/campaigns/${campanhaId}`);
+    revalidatePath("/campaigns/company-lists");
+  }
+  return resultado;
 }
 
 /** Roda a busca salva: quem chega entra em "quem entra na campanha", já com nota. */

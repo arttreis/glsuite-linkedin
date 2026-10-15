@@ -1,9 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { pedidoDeBusca } from "@/domain/conversa-da-busca";
 import { textosDoFluxo } from "@/domain/fluxo-gerado";
 import { sugestaoDePublicos } from "@/domain/publico";
 import { ErroDoModelo } from "@/server/agente/modelo";
 import type { EscritorDeFluxo } from "./escritor";
+import type { InterpretadorDeBusca } from "./interpretador-de-busca";
 import type { SugeridorDePublicos } from "./sugeridor";
 
 export type ConfigDoSugeridor = {
@@ -60,6 +62,44 @@ export function criarEscritorClaude(config: ConfigDoSugeridor): EscritorDeFluxo 
         messages: [{ role: "user", content: entrada }],
         thinking: { type: "adaptive" },
         output_config: { effort: config.esforco, format: zodOutputFormat(textosDoFluxo) },
+      });
+      if (resposta.stop_reason === "refusal") {
+        throw new ErroDoModelo(`O modelo recusou (${resposta.stop_details?.category ?? "sem categoria"}).`);
+      }
+      if (resposta.parsed_output === null || resposta.parsed_output === undefined) {
+        throw new ErroDoModelo(`Resposta fora do formato (stop_reason ${resposta.stop_reason}).`);
+      }
+      const usage = resposta.usage;
+      return {
+        saida: resposta.parsed_output,
+        uso: {
+          entrada: usage.input_tokens,
+          saida: usage.output_tokens,
+          cacheLeitura: usage.cache_read_input_tokens ?? 0,
+          cacheEscrita: usage.cache_creation_input_tokens ?? 0,
+        },
+        modelo: resposta.model,
+      };
+    },
+  };
+}
+
+/**
+ * A conversa da busca no Claude, com o modelo de classificação (Haiku, §5):
+ * tirar filtros de uma frase não pede pensamento, e a resposta tem de vir
+ * rápido. Uma chamada por mensagem, saída estruturada.
+ */
+export function criarInterpretadorDeBuscaClaude(config: { apiKey?: string; modelo: string }): InterpretadorDeBusca {
+  const cliente = new Anthropic(config.apiKey ? { apiKey: config.apiKey } : {});
+
+  return {
+    async interpretar({ sistema, entrada }) {
+      const resposta = await cliente.messages.parse({
+        model: config.modelo,
+        max_tokens: 8000,
+        system: sistema,
+        messages: [{ role: "user", content: entrada }],
+        output_config: { format: zodOutputFormat(pedidoDeBusca) },
       });
       if (resposta.stop_reason === "refusal") {
         throw new ErroDoModelo(`O modelo recusou (${resposta.stop_details?.category ?? "sem categoria"}).`);

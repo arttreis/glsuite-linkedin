@@ -15,7 +15,7 @@ import type { ClienteUnipile, FiltrosDaBusca, ParametroDeBusca, ResultadoDeBusca
 import { classificarErro } from "@/server/unipile/erros";
 import { obterPublico, type Resultado } from "./publicos";
 
-type ContaDaBusca = {
+export type ContaDaBusca = {
   campanha_id: string;
   publico_id: string | null;
   busca: unknown;
@@ -30,7 +30,7 @@ type ContaDaBusca = {
   busca_suspensa_ate: Date | null;
 };
 
-async function contaDaCampanha(db: Db, campanhaId: string): Promise<ContaDaBusca | null> {
+export async function contaDaCampanha(db: Db, campanhaId: string): Promise<ContaDaBusca | null> {
   const [conta] = await db.query<ContaDaBusca>(
     `select c.id as campanha_id, c.publico_id, c.busca, pf.id as perfil_id, pf.nome as perfil, pf.organizacao_id, pf.praca, pf.fuso, pf.janela,
             pf.unipile_account_id as account_id, pf.unipile_status, pf.busca_suspensa_ate
