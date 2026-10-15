@@ -135,7 +135,7 @@ describe("públicos sugeridos a partir do dossiê (SDR-25)", () => {
     const [evento] = await banco.db.query<{ payload: { quantidade: number; versao_prompt: string } }>(
       "select payload from public.eventos where tipo = 'publicos_sugeridos'",
     );
-    expect(evento!.payload).toMatchObject({ quantidade: 3, versao_prompt: "publicos-4" });
+    expect(evento!.payload).toMatchObject({ quantidade: 3, versao_prompt: "publicos-5" });
   });
 
   it("as sugestões vêm pela aderência, com o motivo; editar tira a aderência, que era do texto da IA", async () => {

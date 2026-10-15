@@ -16,17 +16,19 @@ describe("primeiro acesso", () => {
   });
 
   it("o passo atual é o primeiro que falta, mesmo com um da frente feito", () => {
-    expect(passoAtual(feitos("site", "analise", "abordagem"))).toBe("sdr");
+    expect(passoAtual(feitos("site", "analise", "abordagem"))).toBe("concorrentes");
+    expect(passoAtual(feitos("site", "analise", "concorrentes", "abordagem"))).toBe("sdr");
   });
 
   it("com tudo feito, fica no último", () => {
-    expect(passoAtual(feitos("site", "analise", "sdr", "abordagem", "linkedin"))).toBe("linkedin");
+    expect(passoAtual(feitos(...PASSOS_DO_PRIMEIRO_ACESSO))).toBe("linkedin");
   });
 
   it("abre os feitos e o atual, não os da frente", () => {
     const estado = feitos("site", "analise");
     expect(podeAbrir("site", estado)).toBe(true);
-    expect(podeAbrir("sdr", estado)).toBe(true);
+    expect(podeAbrir("concorrentes", estado)).toBe(true);
+    expect(podeAbrir("sdr", estado)).toBe(false);
     expect(podeAbrir("abordagem", estado)).toBe(false);
     expect(podeAbrir("linkedin", estado)).toBe(false);
   });
@@ -36,6 +38,7 @@ describe("primeiro acesso", () => {
     expect(rotas).toEqual([
       "/onboarding/site",
       "/onboarding/analysis",
+      "/onboarding/competitors",
       "/onboarding/sdr",
       "/onboarding/approach",
       "/onboarding/linkedin",

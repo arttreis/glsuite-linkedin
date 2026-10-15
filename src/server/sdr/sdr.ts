@@ -2,6 +2,7 @@ import { dossie as esquemaDoDossie } from "@/domain/dossie";
 import { limparEdicao } from "@/domain/edicao";
 import { explicarErroDoSdr, sdr as esquemaDoSdr, soDaPessoa, type Sdr, type SdrDaIa } from "@/domain/sdr";
 import { ErroDoModelo, type Resposta } from "@/server/agente/modelo";
+import { concorrentesConfirmados } from "@/server/concorrentes/concorrentes";
 import type { Db } from "@/server/db/tipos";
 import { custoDaChamada } from "@/server/eval/custo";
 import { registrarEvento } from "@/server/eventos";
@@ -140,8 +141,8 @@ export async function gravarVersaoDoSdr(
 }
 
 /**
- * Gera o SDR da análise confirmada (§4.3), em nome de `nome` (quem vai
- * conversar). Sem análise confirmada, recusa. Se já existe SDR, a geração vira
+ * Gera o SDR da análise confirmada (§4.3) e dos concorrentes confirmados, em
+ * nome de `nome` (quem vai conversar). Sem análise confirmada, recusa. Se já existe SDR, a geração vira
  * versão nova e mantém o que só a pessoa decide (link de agenda, cautela).
  */
 export async function gerarSdr(
@@ -155,10 +156,14 @@ export async function gerarSdr(
   );
   const analise = esquemaDoDossie.safeParse(oferta?.dossie_confirmado);
   if (!analise.success) return { ok: false, erro: "Confirme a análise do site antes de montar o SDR." };
+  const concorrentes = await concorrentesConfirmados(db, p.organizacaoId);
 
   let resposta: Resposta<SdrDaIa>;
   try {
-    resposta = await deps.gerador.gerar({ sistema: promptDeGerarSdr({ nome: p.nome }), entrada: entradaDeGerarSdr(analise.data) });
+    resposta = await deps.gerador.gerar({
+      sistema: promptDeGerarSdr({ nome: p.nome }),
+      entrada: entradaDeGerarSdr(analise.data, concorrentes),
+    });
   } catch (erro) {
     if (!(erro instanceof ErroDoModelo)) console.error("SDR não gerado", erro);
     return { ok: false, erro: erro instanceof ErroDoModelo ? erro.message : "A IA não respondeu. Tente de novo." };

@@ -1,5 +1,5 @@
 /** Sobe quando os prompts do dossiê mudam: vai gravado em cada leitura. */
-export const VERSAO_DOS_PROMPTS_DO_DOSSIE = "dossie-2";
+export const VERSAO_DOS_PROMPTS_DO_DOSSIE = "dossie-3";
 
 const CAMINHOS_PROVAVEIS = [
   "sobre",
@@ -48,7 +48,7 @@ Regras:
 - "idioma" é o idioma principal do site.
 - "mercado" é a única parte que é hipótese sua, e quem lê sabe disso:
   - "segmentos": de 1 a 5 tipos de empresa que mais provavelmente compram, cada um com o porquê em uma frase. Comece pelos setores e clientes que as notas citam.
-  - "alternativas": o que esse comprador usa hoje no lugar (fazer internamente, planilha, agência, outro tipo de ferramenta). Concorrente com nome só se estiver nas notas; senão, descreva a categoria.
+  - "alternativas": o que esse comprador usa hoje no lugar (fazer internamente, planilha, agência, outro tipo de ferramenta). Concorrente com nome só se estiver nas notas; senão, descreva a categoria. Escreva cada uma como "Nome: o que é, numa linha" e termine com "(o site cita)" quando ela está nas notas ou "(a categoria implica)" quando é dedução sua. Ex.: "Planilha: controle manual das vendas (a categoria implica)".
   - "gatilhos": o que faz ser a hora de comprar (troca de liderança, crescimento, uma meta nova, um problema que estourou).
   - Nunca escreva número de tamanho de mercado, faturamento do setor, percentual de crescimento ou estatística: você não tem fonte para isso.
 - Escreva o dossiê no idioma do site.`;

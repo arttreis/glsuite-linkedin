@@ -45,6 +45,7 @@ export const REGRAS_DA_CASA = [
   "sem levar a conversa para WhatsApp, e-mail ou telefone, a não ser que a pessoa peça",
   "nunca dizer que escreveu à mão ou que não é um robô",
   "dizer a verdade sobre de onde veio o contato: o perfil público no LinkedIn",
+  "nunca criticar concorrente pelo nome",
   "nenhum link, a não ser o de agenda, e só depois que a pessoa aceitou conversar",
 ] as const;
 

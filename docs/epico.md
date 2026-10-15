@@ -23,13 +23,13 @@ mesmo SDR que depois responde os leads de verdade.
 ### 2.1 · Primeiro acesso: seis passos, uma coisa por tela
 
 ```text
- Site ──► Análise ──► SDR ──► Leads ──► Abordagem ──► LinkedIn ──► o app
- qual o   negócio,    chat de  quem no   como vai      vincular a
- site?    produto e   teste:   LinkedIn  abordar       conta e
-          mercado     você é   pode      [pode entrar  começar
-          [confirma]  o lead   comprar   em contato?]
-                      [ficou
-                       bom]
+ Site ──► Análise ──► Concorrentes ──► SDR ──► Abordagem ──► LinkedIn ──► o app
+ qual o   negócio,    contra quem      chat de  quem abordar  vincular a
+ site?    produto e   você disputa     teste:   e o que dizer conta e
+          mercado     o cliente        você é   [pode entrar  começar
+          [confirma]  [confirmar]      o lead   em contato?]
+                                       [ficou
+                                        bom]
 ```
 
 Tela cheia, sem menu. No topo, a marca e os seis passos com o atual em
@@ -44,18 +44,24 @@ navegador no meio volta para o passo em que parou.
    **Produto** (o que vende, diferenciais e provas) e **Mercado** (quem compra,
    o que usa hoje no lugar, o que faz ser a hora de comprar). A pessoa corrige
    qualquer item ali mesmo e confirma (§4.2).
-3. **SDR.** Uma tela de chat. O SDR abre a conversa como faria depois de um
+3. **Concorrentes.** "Contra quem você disputa o cliente": a lista que o Kakou
+   achou nas alternativas do Mercado, cada uma com nome, o que é numa linha e
+   de onde veio ("o site cita" ou "a categoria implica"). A pessoa tira,
+   corrige e acrescenta (nome e, se quiser, o site). Cada concorrente com site
+   tem um "Analisar" opcional: o que vende, para quem, como se posiciona e
+   onde a oferta dela ganha. "Confirmar" grava a lista; "Não tenho
+   concorrente direto" segue sem lista (§4.2).
+4. **SDR.** Uma tela de chat. O SDR abre a conversa como faria depois de um
    convite aceito; a pessoa responde no papel de lead. Quando uma resposta não
    ficar boa, ela troca o modo do campo para "Ajustar o SDR" e diz o que
    mudar; o SDR aprende, mostra o que mudou e responde de novo. "Ficou bom"
    segue (§4.3).
-4. **Leads.** "Quem compra de você": o perfil do lead (cargos, empresas,
-   região, por que precisa) e uma lista de pessoas reais do LinkedIn, cada uma
-   com a nota de aderência e o motivo numa linha. A pessoa tira quem não quer e
-   pode trocar o perfil do lead (§4.4).
-5. **Abordagem.** O Kakou recomenda como abordar: o convite e as mensagens,
-   numa linha do tempo legível, com os textos editáveis, e o que vai
-   acontecer ("18 pessoas, até 8 convites por dia, em dias úteis das 9h às
+5. **Abordagem.** Quem abordar e o que dizer numa tela só (SDR-56). Quem:
+   o perfil do lead (cargos, empresas, região, por que precisa) e uma lista de
+   pessoas reais do LinkedIn, cada uma com a nota de aderência e o motivo numa
+   linha; a pessoa tira quem não quer e pode trocar o perfil do lead (§4.4).
+   O que dizer: o convite e as mensagens, numa linha do tempo legível, com os
+   textos editáveis, e o que vai acontecer ("18 pessoas, até 8 convites por dia, em dias úteis das 9h às
    18h; o SDR responde sozinho e chama você quando..."). O botão é **"Pode
    entrar em contato"** (§4.5).
 6. **LinkedIn.** Por que vincular, o que o Kakou faz e não faz com a conta, e o
@@ -125,6 +131,31 @@ verifica.
   novo (em Configurações) gera um rascunho que só vale depois de confirmado.
 - Kill switch: configuração `dossie.ativo`.
 
+**Concorrentes** (SDR-68)
+
+- A lista de concorrentes nasce das alternativas do Mercado, com a origem de
+  cada uma: o site cita ou a categoria implica. A pessoa tira, corrige e
+  acrescenta (até 10, pelo nome e, se quiser, pelo site) e confirma. Edição
+  humana vale como fato. "Não tenho concorrente direto" confirma a lista
+  vazia.
+- **Analisar** um concorrente é opcional: a IA lê a página inicial do site
+  dele (no máximo 3 páginas, só no domínio dele), com o mesmo leitor e as
+  mesmas recusas de endereço da análise do site, antes de chamar a IA. O
+  texto do site é dado, nunca instrução. Volta o que ele vende, para quem,
+  como se posiciona (fato do site dele) e onde a oferta da pessoa ganha, que
+  é **hipótese** e a tela diz isso. Sem número inventado.
+- Teto por organização: 5 concorrentes analisados. Analisar de novo o mesmo
+  site não gasta vaga; leitura que falha devolve a vaga. O kill switch é o
+  mesmo da análise do site, `dossie.ativo`.
+- A lista confirmada alimenta a geração do SDR (as objeções do tipo "já uso
+  X" e como responder), a sugestão de públicos e a abordagem, no ângulo,
+  quando fizer sentido. **O SDR nunca critica concorrente pelo nome**, e as
+  mensagens da abordagem não citam concorrente.
+- Em Configurações › Empresa a lista se edita depois. Mudar a lista não gera
+  o SDR de novo sozinho.
+- Organização que já montou o SDR antes deste passo existir não volta para
+  ele; quem está fora do primeiro acesso não volta ao primeiro acesso.
+
 ### 4.3 · O SDR e o chat de teste
 
 **O SDR** é a forma como a organização conversa no LinkedIn, gerada da análise
@@ -147,7 +178,8 @@ confirmada e guardada em versões. Ele tem:
   travessão, sem palavras vazias, sem frase de efeito (a primeira mensagem
   termina com uma pergunta fácil de responder), sem prometer resultado, sem levar para
   WhatsApp ou e-mail, nunca dizer que não é robô, dizer a verdade sobre de onde
-  veio o contato. E o validador (§4.13) vale para tudo.
+  veio o contato, nunca criticar concorrente pelo nome. E o validador (§4.13)
+  vale para tudo.
 - **O chat de teste é o mesmo agente da produção.** Mesmo prompt, mesmo
   validador, mesma decisão; só o lead é fictício. O que a pessoa testa é o que
   vai rodar.
@@ -372,7 +404,7 @@ confirmada e guardada em versões. Ele tem:
 
 | Aba | O que tem |
 |---|---|
-| Empresa | a análise (Negócio, Produto, Mercado), editável; ler o site de novo |
+| Empresa | a análise (Negócio, Produto, Mercado), editável; ler o site de novo; os concorrentes, editáveis (§4.2) |
 | SDR | os campos do SDR, editáveis; "Testar no chat", que abre o chat de teste; histórico de ajustes com desfazer; quando o SDR passa a conversa para você (§4.7); modo de resposta (sozinho ou aprovo cada resposta); link de agenda |
 | LinkedIn | contas vinculadas, status, rampa, teto, janela; nome e janela editáveis (o admin ou quem vinculou a conta); pausar e retomar; reconectar; vincular outra conta |
 | Equipe | membros, papel (admin ou operador) e as contas que cada um opera. Só o admin muda |
@@ -823,6 +855,22 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   conta quantas de até quantas e mostra cada uma; quando a IA passa ao
   Mercado, Negócio e Produto ficam feitos; leitura de mais de 2 minutos mostra
   o aviso; leitura antiga, sem o teto gravado, conta só as lidas.
+
+**SDR-68 · Passo Concorrentes**
+- Pedido: "fazer a análise de concorrente ser uma etapa nova, onde o usuário
+  pode imputar concorrentes". Entra no primeiro acesso, antes do SDR
+  (§2.1), em `/onboarding/competitors`.
+- A lista sai das alternativas do Mercado; a pessoa tira, edita e acrescenta,
+  analisa o site de cada um se quiser (até 5 por organização) e confirma, ou
+  segue com "Não tenho concorrente direto". A lista entra no SDR, nos
+  públicos e na abordagem; o SDR nunca critica concorrente pelo nome (§4.2 e
+  §4.3). Configurações › Empresa edita a lista.
+- Aceite: as alternativas da análise viram a lista inicial; acrescentar,
+  editar e tirar é gravado; URL de concorrente que não é site público é
+  recusada antes da IA; o sexto concorrente analisado é recusado; "não tenho
+  concorrente" segue; o prompt do SDR leva os concorrentes confirmados e a
+  regra de não criticar; resposta da IA com campo longo descarta só aquele
+  item; organização no passo SDR ou além não volta.
 
 ## 10 · Decisões abertas
 

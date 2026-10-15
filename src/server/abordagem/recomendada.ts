@@ -1,8 +1,10 @@
 import type { ContextoDoPerfil } from "@/domain/campanha";
+import type { ConcorrenteComAnalise } from "@/domain/concorrentes";
 import { dossie as esquemaDoDossie } from "@/domain/dossie";
 import { fluxoComTextos, problemasDoFluxoGerado, textosDoFluxo, type ProblemaDoTexto, type TextosDoFluxo } from "@/domain/fluxo-gerado";
 import type { ValoresDoTemplate } from "@/domain/template";
 import { ErroDoModelo } from "@/server/agente/modelo";
+import { concorrentesConfirmados } from "@/server/concorrentes/concorrentes";
 import { lerConfiguracao } from "@/server/configuracoes";
 import type { Db } from "@/server/db/tipos";
 import { custoDaChamada } from "@/server/eval/custo";
@@ -67,7 +69,13 @@ export async function obterAbordagem(db: Db, organizacaoId: string): Promise<Abo
   };
 }
 
-type Entrada = { publico: PublicoSalvo; analise: ReturnType<typeof esquemaDoDossie.parse>; contexto: ContextoDoPerfil; voz: string };
+type Entrada = {
+  publico: PublicoSalvo;
+  analise: ReturnType<typeof esquemaDoDossie.parse>;
+  concorrentes: ConcorrenteComAnalise[] | null;
+  contexto: ContextoDoPerfil;
+  voz: string;
+};
 
 async function entradaDaAbordagem(db: Db, organizacaoId: string): Promise<Entrada | { erro: string }> {
   const [publico] = await db.query<{ id: string }>(
@@ -87,6 +95,7 @@ async function entradaDaAbordagem(db: Db, organizacaoId: string): Promise<Entrad
   return {
     publico: salvo,
     analise: analise.data,
+    concorrentes: await concorrentesConfirmados(db, organizacaoId),
     contexto: contextoDoPrimeiroAcesso(sdr.sdr.link_agenda),
     // A abordagem fala na voz do SDR (§4.5): a voz e o jeito de abrir.
     voz: `${sdr.sdr.voz}\nComo abre a conversa: ${sdr.sdr.abertura}`,
@@ -114,11 +123,12 @@ export async function gerarAbordagem(
 ): Promise<ResultadoDaAbordagem> {
   const entrada = await entradaDaAbordagem(deps.db, p.organizacaoId);
   if ("erro" in entrada) return { ok: false, erro: entrada.erro };
-  const { publico, analise, contexto, voz } = entrada;
+  const { publico, analise, concorrentes, contexto, voz } = entrada;
   const exemplo = await lerConfiguracao(deps.db, "template_exemplo");
   const sistema = promptDoFluxo({
     publico,
     dossie: analise,
+    concorrentes,
     estilo: "casa",
     perfil: { nome: p.nome, praca: "domestico", voz, palavrasProibidas: [], limiteNotaConvite: contexto.limiteNotaConvite },
   });

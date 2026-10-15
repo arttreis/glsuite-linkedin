@@ -1925,3 +1925,57 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   fica como próxima etapa, com o que ela faz, em vez de fingir que começou.
 - O checklist é um componente só (`onboarding/etapas.tsx`), usado nas duas
   telas.
+
+### SDR-68 · Passo Concorrentes (15/10/2026)
+
+- Pedido do Arthur: a análise de concorrente vira uma etapa nova do primeiro
+  acesso, onde a pessoa informa os concorrentes. Decisão dele: entra no
+  primeiro acesso, antes do SDR. Passo `concorrentes`, slug `competitors`.
+- **Onde mora.** Colunas novas em `ofertas` (migration aditiva
+  `20261015140000_concorrentes.sql`), ao lado da análise de onde a lista
+  nasce: `concorrentes` (a lista confirmada; null = nunca confirmada),
+  `concorrentes_confirmados_em`/`_por` e `concorrentes_leituras` (a leitura de
+  cada site, pela chave do domínio). Sem tabela nova: uma lista curta por
+  organização, gravada inteira no "Confirmar".
+- **Origem das alternativas.** O dossiê guarda as alternativas como texto. Em
+  vez de mudar o esquema do dossiê, o prompt da estruturação (`dossie-3`)
+  escreve cada uma como "Nome: o que é (o site cita)" ou "(a categoria
+  implica)", e `concorrentesDaAnalise` tira nome, descrição e origem do
+  texto. Alternativa de leitura anterior, sem a marca, aparece como "da
+  análise do site": o Kakou não chuta de onde veio.
+- **Análise de um concorrente.** `analisarConcorrente` recusa a URL com
+  `normalizarUrlDoSite` antes de tudo, reserva a vaga numa transação curta
+  (`for update` na oferta, então duas abas não passam do teto), chama a IA
+  fora da transação e grava a leitura, ou devolve a vaga se falhar. A leitura
+  reaproveita `criarLeitorClaude().ler` (web_fetch preso ao domínio do
+  concorrente, até 3 páginas) e a comparação é uma chamada estruturada com
+  `analiseDaIa`, **sem limite de tamanho no esquema** (o caso do SDR-63);
+  `analiseDaResposta` valida item a item e descarta só o campo ou o ponto
+  longo. Erro de parse do SDK vira "A resposta da IA veio fora do formato".
+  A análise roda dentro da action, com a tela esperando (até 1 minuto; a
+  página tem `maxDuration` 300), em vez de `after` com acompanhamento: são
+  poucas páginas, e a pessoa está olhando para aquele concorrente.
+- **Teto.** Cada domínio lido ocupa uma vaga; 5 por organização, no primeiro
+  acesso e em Configurações juntos (não renova). Domínio já lido devolve a
+  análise guardada sem chamar a IA; tirar o concorrente da lista não devolve
+  a vaga. Leitura parada há mais de 5 minutos pode recomeçar na mesma vaga.
+- **Kill switch.** Reusa `dossie.ativo`: é a mesma leitura de site, e uma
+  configuração nova seria mais uma chave para o admin lembrar. Nenhuma
+  variável de ambiente nova.
+- **Quem não volta.** O passo está feito quando a lista foi confirmada (vazia
+  ou não) **ou quando o SDR já existe** (`estadoDoPrimeiroAcesso`). Quem
+  estava no passo SDR quando o passo novo entrou já tem o SDR montado (ele é
+  montado ao abrir o passo) e segue onde estava; quem está além dele também.
+  Quem já saiu do primeiro acesso nunca volta (portão de sempre).
+- **Para onde a lista vai.** `concorrentesConfirmados` (null enquanto
+  ninguém confirmou; aí os prompts seguem como antes, só com o Mercado) entra
+  em `entradaDeGerarSdr` (`sdr-4`: objeções "já uso X" e a regra "Nunca
+  criticar concorrente pelo nome" nas regras do SDR), na sugestão de públicos
+  (`publicos-5`) e no prompt do fluxo, da abordagem e das campanhas
+  (`fluxo-4`), que também ganhou a regra de não citar concorrente. A regra
+  entra em `REGRAS_DA_CASA`, então o ajuste (`ajuste-2`) recusa pedido que a
+  contrarie. O prompt do agente (`VERSAO_DOS_PROMPTS`) não mudou: mudar fecha
+  o gate do eval de novo. A regra chega ao agente pelas regras do SDR gerado;
+  SDRs já gerados só a ganham ao gerar de novo ou ajustar.
+- Mudar a lista em Configurações não gera o SDR de novo (pedido do ticket);
+  a tela diz isso. Públicos e abordagens gerados depois já usam a lista.

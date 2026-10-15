@@ -57,8 +57,8 @@ export async function salvarAnalise(entrada: { dossie: unknown }): Promise<Resul
 }
 
 /**
- * Passo 2: "Está certo". Confirma e segue para o SDR, que é montado da análise
- * quando o passo 3 abre. Com erro, devolve para a tela mostrar.
+ * Passo 2: "Está certo". Confirma e segue para os concorrentes, que partem
+ * das alternativas do Mercado. Com erro, devolve para a tela mostrar.
  */
 export async function confirmarAnaliseNoPrimeiroAcesso(entrada: { dossie: unknown }): Promise<ResultadoDaEdicao> {
   const operador = await exigirOperador();
@@ -72,5 +72,5 @@ export async function confirmarAnaliseNoPrimeiroAcesso(entrada: { dossie: unknow
   );
   if (!resultado.ok) return resultado;
   revalidatePath("/onboarding", "layout");
-  redirect("/onboarding/sdr");
+  redirect("/onboarding/competitors");
 }

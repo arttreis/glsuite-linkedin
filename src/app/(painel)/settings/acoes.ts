@@ -8,6 +8,7 @@ import { urlPublicaDoApp } from "@/lib/env";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { obterGeradorDeSdr, obterLeitorDeSite, obterUnipile, segredoDaUnipile } from "@/server/dependencias";
+import { confirmarConcorrentes, type ResultadoDosConcorrentes } from "@/server/concorrentes/concorrentes";
 import { concluirLeitura, iniciarLeitura, salvarDossie, type ResultadoDaEdicao } from "@/server/oferta/oferta";
 import { definirContasDoMembro, mudarPapelDoMembro } from "@/server/organizacao/equipe";
 import { renomearOrganizacao } from "@/server/organizacao/organizacao";
@@ -44,6 +45,21 @@ export async function confirmarAnaliseNasConfiguracoes(entrada: { dossie: unknow
   const operador = await exigirOperador();
   const resultado = await comOperador(obterDb(), operador.id, (tx) =>
     salvarDossie(tx, { organizacaoId: operador.organizacaoId, dossie: entrada.dossie, confirmar: true, operadorId: operador.id, agora: new Date() }),
+  );
+  if (resultado.ok) revalidatePath("/settings/company");
+  return resultado;
+}
+
+/** Grava a lista de concorrentes (§4.2) e fica na tela. O SDR não muda sozinho: usa a lista na próxima geração. */
+export async function confirmarConcorrentesNasConfiguracoes(entrada: { concorrentes: unknown }): Promise<ResultadoDosConcorrentes> {
+  const operador = await exigirOperador();
+  const resultado = await comOperador(obterDb(), operador.id, (tx) =>
+    confirmarConcorrentes(tx, {
+      organizacaoId: operador.organizacaoId,
+      concorrentes: entrada.concorrentes,
+      operadorId: operador.id,
+      agora: new Date(),
+    }),
   );
   if (resultado.ok) revalidatePath("/settings/company");
   return resultado;
