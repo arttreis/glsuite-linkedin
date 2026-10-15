@@ -98,12 +98,11 @@ describe("busca a partir do público (SDR-27)", () => {
     expect(unipile.chamadasDe("buscarPessoas")).toEqual([]);
   });
 
-  it("não roda fora da janela da conta: fim de semana e madrugada", async () => {
+  it("roda a qualquer hora, também no fim de semana e de madrugada", async () => {
     await salvar({ ...(await situacao())!.busca, regioes: [BRASIL] });
-    for (const agora of [SABADO, QUARTA_DE_MADRUGADA]) {
-      expect(await rodar(agora)).toMatchObject({ ok: false, erro: expect.stringContaining("Fora do horário da conta") });
-    }
-    expect(unipile.chamadasDe("buscarPessoas")).toEqual([]);
+    unipile.paginasDeBusca = [pagina(10), pagina(10), pagina(10)];
+    expect(await rodar(SABADO, 10)).toMatchObject({ ok: true, resultados: 10 });
+    expect(await rodar(QUARTA_DE_MADRUGADA, 10)).toMatchObject({ ok: true, resultados: 10 });
   });
 
   it("não passa do teto do dia, e a próxima busca continua de onde parou", async () => {

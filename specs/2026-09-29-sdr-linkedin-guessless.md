@@ -1662,6 +1662,32 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   Unipile, retorno do hosted auth, cron, saúde) ficam como estão até o
   destino externo mudar junto.
 
+### SDR-57 · Editar nome e horário da conta (14/10/2026)
+
+- **Nome da conta:** o perfil nascia com o nome de quem estava logado, e o
+  agente escreve "em nome de" `perfis.nome`. Com o LinkedIn de outra pessoa,
+  o SDR falava pela pessoa errada. Agora o callback do hosted auth grava o
+  nome do dono (`/users/me`) quando a conta do perfil muda. Reconectar a
+  mesma conta não mexe no nome, para não desfazer uma edição.
+- **Quem edita:** o RLS de `perfis` que já existia (admin ou
+  `perfis.operador_id`). Quem só opera a conta por `operador_perfis` pausa,
+  mas não edita. Sem migration.
+- **Janela:** só início e fim. `jitter_min` fica como está, e os dias seguem
+  úteis. Mínimo de 1 hora, para caber o intervalo de 3 a 12 minutos entre
+  ações. O despachante confere a janela na hora de enviar, então vale na
+  próxima ação, sem reagendar nada.
+- Rampa, teto e dias da semana continuam fixos: mexem no risco da conta.
+
+### SDR-58 · Busca de leads a qualquer hora (14/10/2026)
+
+- Pedido do Arthur: a busca de leads pode rodar a qualquer momento. Antes,
+  só a busca da prévia (conta da casa) rodava fora da janela; a da campanha
+  esperava dia útil, das 9h às 18h.
+- Sai só a trava de janela de `rodarBusca`. Continuam o teto de busca do dia
+  (contado no dia local da conta), a suspensão por erro de limite até o dia
+  útil seguinte e o status da conta na Unipile.
+- Convites, mensagens e a visita de perfil da pesquisa seguem na janela.
+
 ### SDR-59 · Lista de empresas na busca (14/10/2026)
 
 - Pedido do Arthur: alimentar o Kakou com uma planilha que não é de leads (ex.:

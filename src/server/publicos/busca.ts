@@ -1,5 +1,5 @@
 import { buscaDoPublico, buscaInicial, cargoDaBusca, mesmosFiltros, saldoDeBusca, type BuscaDoPublico } from "@/domain/busca";
-import { aberturaDoProximoDiaUtil, dentroDaJanela, limitesDoDia, type Janela } from "@/domain/calendario";
+import { aberturaDoProximoDiaUtil, limitesDoDia, type Janela } from "@/domain/calendario";
 import { STATUS_SAUDAVEIS } from "@/domain/conta";
 import { assinaturaDasPartes, empresasPendentes, partesDaBusca, type ParteDaBusca } from "@/domain/lista-de-empresas";
 import type { Praca } from "@/domain/validador";
@@ -188,8 +188,8 @@ function filtrosDaParte(base: FiltrosDaBusca, parte: ParteDaBusca | null): Filtr
 /**
  * Roda a busca do público pela conta da campanha (§4.13) e manda o que vier
  * para a triagem, pelas regras de importação de sempre: opt-out nunca entra,
- * um alvo um dono, cooldown de empresa (§4.7). A busca é atividade da conta
- * (§4.3): só na janela e em dia útil, até o teto do dia. Erro de limite do
+ * um alvo um dono, cooldown de empresa (§4.7). A busca roda a qualquer hora,
+ * até o teto do dia da conta (§4.13): só os envios esperam a janela. Erro de limite do
  * LinkedIn suspende só a busca do perfil até o dia útil seguinte e avisa o
  * dono; os envios seguem.
  *
@@ -239,10 +239,6 @@ export async function rodarBusca(
   if (conta.busca_suspensa_ate && conta.busca_suspensa_ate > p.agora) {
     return { ok: false, erro: "A busca desta conta está suspensa até o próximo dia útil: o LinkedIn limitou as buscas." };
   }
-  const feriados = await feriadosDaPraca(db, conta.praca);
-  if (!dentroDaJanela(p.agora, conta.fuso, conta.janela, feriados)) {
-    return { ok: false, erro: `Fora do horário da conta: a busca roda em dia útil, das ${conta.janela.inicio} às ${conta.janela.fim} no fuso dela.` };
-  }
   const { max_resultados_dia: teto } = await lerConfiguracao(db, "busca");
   const saldo = saldoDeBusca(await buscadosHoje(db, conta, p.agora), teto);
   if (saldo === 0) return { ok: false, erro: `A conta já buscou ${teto} pessoas hoje, o teto do dia.` };
@@ -283,7 +279,7 @@ export async function rodarBusca(
     }
   } catch (erro) {
     if (classificarErro(erro) === "limite") {
-      const ate = aberturaDoProximoDiaUtil(p.agora, conta.fuso, conta.janela, feriados);
+      const ate = aberturaDoProximoDiaUtil(p.agora, conta.fuso, conta.janela, await feriadosDaPraca(db, conta.praca));
       await db.query("update public.perfis set busca_suspensa_ate = $2 where id = $1::uuid", [conta.perfil_id, ate]);
       await registrarEvento(db, {
         tipo: "busca_suspensa",
