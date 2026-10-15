@@ -11,8 +11,12 @@ import { entradaDaEstruturacao, promptDaEstruturacao, promptDaLeitura, VERSAO_DO
 /** Leitura em "lendo" há mais que isso parou no meio (deploy, timeout): pode recomeçar. */
 const LEITURA_PARADA_MS = 5 * 60 * 1000;
 
-/** Onde a leitura em andamento está: abrindo páginas, ou montando a análise com o que leu. */
-export type ProgressoDaLeitura = { etapa: "paginas" | "analise"; paginas: FonteDoSite[] };
+/**
+ * Onde a leitura em andamento está: abrindo páginas, montando Negócio e Produto
+ * com o que leu, ou já no Mercado. `maxPaginas` é o teto desta leitura
+ * (leituras antigas não têm).
+ */
+export type ProgressoDaLeitura = { etapa: "paginas" | "analise" | "mercado"; paginas: FonteDoSite[]; maxPaginas?: number };
 
 const PROGRESSO_INICIAL: ProgressoDaLeitura = { etapa: "paginas", paginas: [] };
 
@@ -265,22 +269,23 @@ export async function concluirLeitura(
   if (!endereco.ok) return falhar(db, p.ofertaId, endereco.erro, deps.agora());
 
   const inicio = Date.now();
-  // As páginas entram no progresso na ordem em que abrem; uma falha aqui não derruba a leitura.
+  // O progresso grava em fila, na ordem em que acontece; uma falha aqui não derruba a leitura.
   let gravacoes = Promise.resolve();
-  const anotarPagina = (fonte: FonteDoSite) => {
+  const anotar = (novo: string, valor: unknown) => {
     gravacoes = gravacoes
       .then(() =>
         db.query(
-          `update public.ofertas
-              set leitura_progresso = jsonb_set(leitura_progresso, '{paginas}', (leitura_progresso -> 'paginas') || $2::jsonb)
-            where id = $1::uuid and status = 'lendo'`,
-          [p.ofertaId, JSON.stringify([fonte])],
+          `update public.ofertas set leitura_progresso = ${novo} where id = $1::uuid and status = 'lendo'`,
+          [p.ofertaId, JSON.stringify(valor)],
         ),
       )
       .then(() => undefined, (erro) => console.error("Progresso da leitura não gravado", erro));
   };
+  const anotarPagina = (fonte: FonteDoSite) =>
+    anotar("jsonb_set(leitura_progresso, '{paginas}', (leitura_progresso -> 'paginas') || $2::jsonb)", [fonte]);
   try {
     const config = await lerConfiguracao(db, "dossie");
+    anotar("leitura_progresso || $2::jsonb", { maxPaginas: config.max_paginas });
     const leitura = await leitor.ler({
       sistema: promptDaLeitura({ maxPaginas: config.max_paginas }),
       url: endereco.url,
@@ -288,17 +293,14 @@ export async function concluirLeitura(
       maxPaginas: config.max_paginas,
       aoAbrirPagina: anotarPagina,
     });
+    anotar("leitura_progresso || $2::jsonb", { etapa: "analise", paginas: leitura.fontes });
     await gravacoes;
-    await db.query(
-      `update public.ofertas
-          set leitura_progresso = jsonb_build_object('etapa', 'analise', 'paginas', $2::jsonb)
-        where id = $1::uuid and status = 'lendo'`,
-      [p.ofertaId, JSON.stringify(leitura.fontes)],
-    );
     const estruturado = await leitor.estruturar({
       sistema: promptDaEstruturacao(),
       entrada: entradaDaEstruturacao({ url: endereco.url, notas: leitura.notas, fontes: leitura.fontes }),
+      aoComecarMercado: () => anotar("leitura_progresso || $2::jsonb", { etapa: "mercado" }),
     });
+    await gravacoes;
     const uso = somarUso(leitura.uso, estruturado.uso);
     const custo = (custoDaChamada(leitura.modelo, leitura.uso) ?? 0) + (custoDaChamada(estruturado.modelo, estruturado.uso) ?? 0);
     const agora = deps.agora();

@@ -1893,6 +1893,39 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   chat de teste mostra. Não há checagem no validador: dizer se uma frase é
   "de efeito" exige julgamento, e o eval é o lugar de medir.
 
+### SDR-65 · O que a tela mostra enquanto o Kakou trabalha (15/10/2026)
+
+- Pedido do Arthur: o aviso de que o site está sendo analisado podia ser
+  melhor. A tela só usa o que o servidor sabe; nada de percentual nem tempo
+  restante inventado.
+- O progresso da leitura continua no `ofertas.leitura_progresso` (jsonb), sem
+  migration. Ganhou três coisas:
+  - `maxPaginas`: o teto da configuração `dossie`, gravado no começo da
+    leitura, para a tela dizer "3 de até 8". Leitura antiga não tem e a tela
+    conta só as lidas.
+  - `trecho` em cada página: a primeira linha com cara de frase do texto que
+    o `web_fetch` trouxe, sem marcação, cortada em até 120 caracteres numa
+    palavra (`trechoDaPagina`, em `server/oferta/progresso.ts`). Página sem
+    frase (menu, PDF) fica sem trecho. Entra também em `ofertas.fontes`; a
+    estruturação continua recebendo só as URLs.
+  - A etapa `mercado`. A estruturação passou de `messages.parse` para
+    `messages.stream` com o mesmo formato, só para ver o JSON chegando:
+    quando a chave `"mercado"` aparece (`comecouOMercado`), Negócio e Produto
+    já saíram, porque o Mercado é a última parte do formato. O leitor avisa por
+    `aoComecarMercado`, e a etapa vai para `mercado`.
+- As gravações do progresso passaram a uma fila só (`anotar`), na ordem em que
+  acontecem; falha nela não derruba a leitura, como já era com as páginas.
+- Tempo decorrido: `leitura_iniciada_em` contra a hora da renderização, que
+  se atualiza a cada 3 s (`tempoDecorrido`, em `lib/tempo.ts`). Depois de 2
+  minutos, o aviso de que site grande demora e dá para fechar a aba (a
+  leitura roda no servidor, depois da resposta).
+- Abordagem: a escolha do público e a escrita são observáveis pela tela (o
+  Suspense da página e o da coluna de mensagens). A revisão roda dentro da
+  escrita (`escreverComRevisao`) e não é observável sem mudar o servidor;
+  fica como próxima etapa, com o que ela faz, em vez de fingir que começou.
+- O checklist é um componente só (`onboarding/etapas.tsx`), usado nas duas
+  telas.
+
 ### SDR-68 · Passo Concorrentes (15/10/2026)
 
 - Pedido do Arthur: a análise de concorrente vira uma etapa nova do primeiro
