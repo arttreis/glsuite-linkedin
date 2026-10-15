@@ -3,6 +3,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { dossieDaIa } from "@/domain/dossie";
 import { ErroDoModelo, type Uso } from "@/server/agente/modelo";
 import type { FonteDoSite, LeitorDeSite } from "./leitor";
+import { comecouOMercado, trechoDaPagina } from "./progresso";
 
 export type ConfigDoLeitor = {
   apiKey?: string;
@@ -22,6 +23,12 @@ const somar = (a: Uso, usage: Anthropic.Usage): Uso => ({
   saida: a.saida + usage.output_tokens,
   cacheLeitura: a.cacheLeitura + (usage.cache_read_input_tokens ?? 0),
   cacheEscrita: a.cacheEscrita + (usage.cache_creation_input_tokens ?? 0),
+});
+
+const fonteDa = (pagina: Anthropic.WebFetchBlock): FonteDoSite => ({
+  url: pagina.url,
+  titulo: pagina.content.title ?? null,
+  trecho: pagina.content.source.type === "text" ? trechoDaPagina(pagina.content.source.data) : null,
 });
 
 /**
@@ -60,7 +67,7 @@ export function criarLeitorClaude(config: ConfigDoLeitor): LeitorDeSite {
         });
         fluxo.on("contentBlock", (bloco) => {
           if (bloco.type === "web_fetch_tool_result" && bloco.content.type === "web_fetch_result") {
-            aoAbrirPagina?.({ url: bloco.content.url, titulo: bloco.content.content.title ?? null });
+            aoAbrirPagina?.(fonteDa(bloco.content));
           }
         });
         const resposta = await fluxo.finalMessage();
@@ -68,7 +75,7 @@ export function criarLeitorClaude(config: ConfigDoLeitor): LeitorDeSite {
         modelo = resposta.model;
         for (const bloco of resposta.content) {
           if (bloco.type === "web_fetch_tool_result" && bloco.content.type === "web_fetch_result") {
-            fontes.set(bloco.content.url, { url: bloco.content.url, titulo: bloco.content.content.title ?? null });
+            fontes.set(bloco.content.url, fonteDa(bloco.content));
           }
           if (bloco.type === "text") notas += bloco.text;
         }
@@ -84,8 +91,9 @@ export function criarLeitorClaude(config: ConfigDoLeitor): LeitorDeSite {
       return { notas: notas.trim(), fontes: [...fontes.values()], uso, modelo };
     },
 
-    async estruturar({ sistema, entrada }) {
-      const resposta = await cliente.messages.parse({
+    async estruturar({ sistema, entrada, aoComecarMercado }) {
+      // Em fluxo só para ver o Mercado começar; a resposta é a mesma de uma chamada inteira.
+      const fluxo = cliente.messages.stream({
         model: config.modelo,
         max_tokens: 16000,
         system: sistema,
@@ -93,6 +101,13 @@ export function criarLeitorClaude(config: ConfigDoLeitor): LeitorDeSite {
         thinking: { type: "adaptive" },
         output_config: { effort: config.esforco, format: zodOutputFormat(dossieDaIa) },
       });
+      let noMercado = false;
+      fluxo.on("text", (_, parcial) => {
+        if (noMercado || !comecouOMercado(parcial)) return;
+        noMercado = true;
+        aoComecarMercado?.();
+      });
+      const resposta = await fluxo.finalMessage();
       if (resposta.stop_reason === "refusal") {
         throw new ErroDoModelo(`O modelo recusou (${resposta.stop_details?.category ?? "sem categoria"}).`);
       }
