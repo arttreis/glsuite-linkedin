@@ -23,18 +23,19 @@ mesmo SDR que depois responde os leads de verdade.
 ### 2.1 · Primeiro acesso: seis passos, uma coisa por tela
 
 ```text
- Site ──► Análise ──► SDR ──► Leads ──► Abordagem ──► LinkedIn ──► o app
- qual o   negócio,    chat de  quem no   como vai      vincular a
- site?    produto e   teste:   LinkedIn  abordar       conta e
-          mercado     você é   pode      [pode entrar  começar
-          [confirma]  o lead   comprar   em contato?]
-                      [ficou
-                       bom]
+ Site ──► Análise ──► Objetivo ──► SDR ──► Abordagem ──► LinkedIn ──► o app
+ qual o   negócio,    o que       chat de  quem abordar  vincular a
+ site?    produto e   vender e    teste:   e o que       conta e
+          mercado     o que o     você é   dizer         começar
+          [confirma]  SDR faz     o lead   [pode entrar
+                      [confirma]  [ficou   em contato?]
+                                   bom]
 ```
 
-Tela cheia, sem menu. No topo, a marca e os seis passos com o atual em
-destaque. Cada tela faz uma pergunta e tem um botão principal. Quem fecha o
-navegador no meio volta para o passo em que parou.
+Tela cheia, sem menu. No topo, a marca e os passos com o atual em destaque.
+Cada tela faz uma pergunta e tem um botão principal. Quem fecha o navegador no
+meio volta para o passo em que parou. O passo **Concorrentes** entra entre
+Objetivo e SDR com o SDR-68; Leads e Abordagem viraram uma tela só no SDR-56.
 
 1. **Site.** "Qual o site da sua empresa?" Um campo e um botão.
 2. **Análise.** Enquanto o Kakou lê o site, a tela mostra o que ele está lendo.
@@ -42,20 +43,23 @@ navegador no meio volta para o passo em que parou.
    **Produto** (o que vende, diferenciais e provas) e **Mercado** (quem compra,
    o que usa hoje no lugar, o que faz ser a hora de comprar). A pessoa corrige
    qualquer item ali mesmo e confirma (§4.2).
-3. **SDR.** Uma tela de chat. O SDR abre a conversa como faria depois de um
+3. **Objetivo.** Antes de montar o SDR, quatro perguntas, uma por bloco, com
+   as opções tiradas da análise: o que vender pelo LinkedIn, o que o SDR deve
+   fazer, com quem é a conversa e de quanto tempo, e o que ele nunca deve
+   fazer ou oferecer. O Kakou devolve um resumo curto ("O Kakou vai prospectar
+   X para vender Y...") que a pessoa confirma ou corrige (§4.2.1).
+4. **SDR.** Uma tela de chat. O SDR abre a conversa como faria depois de um
    convite aceito; a pessoa responde no papel de lead. Quando uma resposta não
    ficar boa, ela troca o modo do campo para "Ajustar o SDR" e diz o que
    mudar; o SDR aprende, mostra o que mudou e responde de novo. "Ficou bom"
    segue (§4.3).
-4. **Leads.** "Quem compra de você": o perfil do lead (cargos, empresas,
-   região, por que precisa) e uma lista de pessoas reais do LinkedIn, cada uma
-   com a nota de aderência e o motivo numa linha. A pessoa tira quem não quer e
-   pode trocar o perfil do lead (§4.4).
-5. **Abordagem.** O Kakou recomenda como abordar: o convite e as mensagens,
-   numa linha do tempo legível, com os textos editáveis, e o que vai
-   acontecer ("18 pessoas, até 8 convites por dia, em dias úteis das 9h às
-   18h; o SDR responde sozinho e chama você quando..."). O botão é **"Pode
-   entrar em contato"** (§4.5).
+5. **Abordagem.** Quem abordar e o que dizer, numa tela: o perfil do lead
+   (cargos, empresas, região, por que precisa) com as pessoas reais do
+   LinkedIn, cada uma com a nota de aderência e o motivo numa linha (§4.4), e
+   o convite e as mensagens como chegam para cada uma, com os textos
+   editáveis e o que vai acontecer ("18 pessoas, até 8 convites por dia, em
+   dias úteis das 9h às 18h; o SDR responde sozinho e chama você
+   quando..."). O botão é **"Pode entrar em contato"** (§4.5).
 6. **LinkedIn.** Por que vincular, o que o Kakou faz e não faz com a conta, e o
    botão "Vincular meu LinkedIn". Vinculou, a campanha começa e a pessoa entra
    no app (§4.6).
@@ -123,6 +127,37 @@ verifica.
   novo (em Configurações) gera um rascunho que só vale depois de confirmado.
 - Kill switch: configuração `dossie.ativo`.
 
+### 4.2.1 · Objetivo: o que vender e o que o SDR faz
+
+- Vem depois da análise confirmada e antes do SDR. São quatro perguntas:
+  1. **O que vender pelo LinkedIn.** Os produtos da análise como opções, mais
+     um "outro" livre. Pode marcar mais de um; um é o principal.
+  2. **O que o SDR deve fazer**, uma escolha: "Qualificar e passar para você"
+     (ele conversa e chama você quando o lead serve) ou "Propor uma conversa e
+     mandar o link de agenda" (o padrão). "Agendar a reunião direto na sua
+     agenda" aparece como "em breve" e não se escolhe até o SDR-69.
+  3. **Com quem é a conversa e de quanto tempo.** O nome de quem atende
+     (padrão: quem está configurando) e 15, 20, 30 ou 45 minutos (padrão 20).
+  4. **O que o SDR nunca deve fazer ou oferecer**, opcional, texto livre.
+- As respostas ficam salvas enquanto a pessoa responde: quem fecha a aba volta
+  com elas.
+- Ao enviar, a IA devolve um **resumo para validar**, de 2 a 4 frases ("O
+  Kakou vai prospectar X para vender Y. O SDR vai ... e chamar você quando
+  ..."). A pessoa confirma ou corrige as respostas e pede outro. Resumo que
+  vem longo é cortado, não recusado; resposta fora do formato diz isso.
+- **Confirmar** grava o objetivo da organização, com quem confirmou e quando.
+  É o objetivo confirmado que vale; mudar uma resposta depois cria um rascunho
+  que só vale confirmado de novo.
+- O SDR nasce do objetivo confirmado e da análise: o objetivo do SDR segue o
+  que ele deve fazer, com quem e de quanto tempo, o produto principal vem
+  primeiro, e o "nunca" vira regra (§4.3).
+- O objetivo se edita em Configurações › SDR. Mudar e confirmar **não gera o
+  SDR de novo sozinho**: a tela mostra "Gerar o SDR de novo com o novo
+  objetivo" e só gera com o clique, como versão nova.
+- Organização que já estava no passo SDR ou depois quando o passo Objetivo
+  chegou (já tem SDR montado) não volta para ele: o objetivo fica para
+  Configurações, e o SDR dela segue como está.
+
 ### 4.3 · O SDR e o chat de teste
 
 **O SDR** é a forma como a organização conversa no LinkedIn, gerada da análise
@@ -130,7 +165,7 @@ confirmada e guardada em versões. Ele tem:
 
 | Campo | O que é |
 |---|---|
-| Objetivo | o que conta como sucesso, ex.: "marcar 20 minutos com o Arthur" |
+| Objetivo | o que conta como sucesso, ex.: "marcar 20 minutos com o Arthur". Sai do objetivo confirmado (§4.2.1) |
 | Voz | como a pessoa fala: tom, tratamento, o que soa como ela |
 | Abertura | o jeito da primeira mensagem depois do convite aceito |
 | Qualificação | os sinais e as perguntas que mostram que o lead serve |
@@ -370,7 +405,7 @@ confirmada e guardada em versões. Ele tem:
 | Aba | O que tem |
 |---|---|
 | Empresa | a análise (Negócio, Produto, Mercado), editável; ler o site de novo |
-| SDR | os campos do SDR, editáveis; "Testar no chat", que abre o chat de teste; histórico de ajustes com desfazer; quando o SDR passa a conversa para você (§4.7); modo de resposta (sozinho ou aprovo cada resposta); link de agenda |
+| SDR | o objetivo (§4.2.1), editável, com "Gerar o SDR de novo com o novo objetivo" quando ele mudou depois do SDR; os campos do SDR, editáveis; "Testar no chat", que abre o chat de teste; histórico de ajustes com desfazer; quando o SDR passa a conversa para você (§4.7); modo de resposta (sozinho ou aprovo cada resposta); link de agenda |
 | LinkedIn | contas vinculadas, status, rampa, teto, janela; nome e janela editáveis (o admin ou quem vinculou a conta); pausar e retomar; reconectar; vincular outra conta |
 | Equipe | membros, papel (admin ou operador) e as contas que cada um opera. Só o admin muda |
 
@@ -783,6 +818,21 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   "cria uma lista com A, B e C" cria a lista, põe na busca e procura as
   empresas; nada é salvo nem buscado sem o clique da pessoa; sem cargo no
   pedido, os cargos ficam; IA fora do ar não mexe nos filtros.
+
+**SDR-67 · Passo Objetivo no primeiro acesso**
+- Pedido: perguntar, antes de montar o SDR, o que a pessoa quer vender e o
+  que o SDR deve fazer, e devolver a resposta para ela validar.
+- Passo novo entre Análise e SDR, em `/onboarding/goal` (§2.1, §4.2.1): os
+  produtos da análise como opções, o que o SDR faz, com quem e quanto tempo,
+  e o que ele nunca faz. A IA devolve um resumo de 2 a 4 frases; "Confirmar"
+  grava quem e quando e segue para o SDR, que nasce do objetivo confirmado.
+- Em Configurações › SDR, o objetivo se edita e se confirma de novo, e a tela
+  oferece gerar o SDR de novo, sem gerar sozinha.
+- Aceite: os produtos da análise aparecem como opções; confirmar grava e
+  avança; organização no passo SDR ou além não volta; o prompt do SDR leva o
+  objetivo confirmado; resposta da IA com campo longo não derruba o resumo;
+  recarregar a página mantém as respostas; o passo aparece no indicador de
+  passos.
 
 ## 10 · Decisões abertas
 

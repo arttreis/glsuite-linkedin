@@ -1,12 +1,23 @@
-import { Hand, History, MessagesSquare, Sparkles } from "lucide-react";
+import { Goal, Hand, History, MessagesSquare, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Aviso } from "@/components/aviso";
+import type { Dossie } from "@/domain/dossie";
+import { OPCOES_DE_ACAO, respostasIniciais } from "@/domain/objetivo";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
+import { objetivoDaOrganizacao, sdrDesatualizado, type SituacaoDoObjetivo } from "@/server/objetivo/objetivo";
+import { dossieConfirmado } from "@/server/oferta/oferta";
 import { passagensRecentes, type PassagensRecentes } from "@/server/sdr/passagens";
 import { historicoDoSdr, obterSdr, type Origem } from "@/server/sdr/sdr";
 import { exigirOperadorNoApp } from "@/server/supabase/servidor";
-import { montarSdrDoPainel, trocarModoDaConta, voltarParaVersaoDoPainel } from "../acoes";
+import { FormularioDoObjetivo } from "../../../onboarding/goal/formulario-do-objetivo";
+import {
+  confirmarObjetivoNasConfiguracoes,
+  gerarSdrComNovoObjetivo,
+  montarSdrDoPainel,
+  trocarModoDaConta,
+  voltarParaVersaoDoPainel,
+} from "../acoes";
 import { EditorDoSdr } from "./editor-do-sdr";
 import { PassagemParaVoce } from "./passagem-para-voce";
 
@@ -21,6 +32,71 @@ const quando = (valor: Date) =>
   new Date(valor).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" });
 
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
+
+/**
+ * O objetivo (§4.2.1): o que vale hoje, editar e confirmar de novo. Mudou
+ * depois do SDR, oferece gerar o SDR de novo; nunca gera sozinho.
+ */
+function Objetivo({
+  analise,
+  objetivo,
+  nome,
+  desatualizado,
+}: {
+  analise: Dossie;
+  objetivo: SituacaoDoObjetivo;
+  nome: string;
+  desatualizado: boolean;
+}) {
+  const { confirmado } = objetivo;
+  const inicial = objetivo.respostas ?? confirmado?.objetivo ?? respostasIniciais(analise, nome);
+  return (
+    <section className="cartao p-5" aria-labelledby="titulo-objetivo">
+      <h2 id="titulo-objetivo" className="flex items-center gap-2 text-[15px] font-semibold">
+        <Goal className="size-4 text-tinta-suave" aria-hidden />
+        Objetivo
+      </h2>
+      {confirmado ? (
+        <>
+          <p className="mt-2 text-sm leading-relaxed">{confirmado.objetivo.resumo}</p>
+          <p className="mt-2 text-xs text-tinta-fraca">
+            {OPCOES_DE_ACAO[confirmado.objetivo.acao].rotulo} · {confirmado.objetivo.duracao} min com {confirmado.objetivo.quem_atende} ·
+            confirmado em {quando(confirmado.em)}
+            {confirmado.por ? ` por ${confirmado.por}` : ""}
+          </p>
+        </>
+      ) : (
+        <p className="mt-1 text-[13px] text-tinta-suave">
+          Ainda sem objetivo: o SDR saiu só da análise do site. Diga o que vender e o que ele deve fazer.
+        </p>
+      )}
+      {desatualizado && (
+        <Aviso tom="atencao" className="mt-4">
+          <p>O objetivo mudou depois que o SDR foi montado. O SDR atual segue valendo até você gerar de novo.</p>
+          <form action={gerarSdrComNovoObjetivo} className="mt-2">
+            <button type="submit" className="botao botao-pequeno">
+              <Sparkles aria-hidden />
+              Gerar o SDR de novo com o novo objetivo
+            </button>
+          </form>
+        </Aviso>
+      )}
+      {objetivo.rascunhoPendente && confirmado && (
+        <p className="mt-3 text-xs text-atencao">Há respostas mudadas que ainda não valem: abra, veja o resumo e confirme.</p>
+      )}
+      <details className="mt-4" open={!confirmado}>
+        <summary className="text-sm text-tinta-suave">{confirmado ? "Editar o objetivo" : "Responder"}</summary>
+        <FormularioDoObjetivo
+          produtos={analise.produtos}
+          inicial={inicial}
+          resumoInicial={objetivo.rascunhoPendente ? objetivo.resumo : null}
+          confirmar={confirmarObjetivoNasConfiguracoes}
+          rotuloDeConfirmar="Confirmar o objetivo"
+        />
+      </details>
+    </section>
+  );
+}
 
 /** As conversas que o SDR passou para você no último mês e o que acontece depois (§4.7). */
 function UltimasPassagens({ recentes }: { recentes: PassagensRecentes }) {
@@ -78,8 +154,11 @@ function UltimasPassagens({ recentes }: { recentes: PassagensRecentes }) {
 export default async function SdrPage({ searchParams }: PageProps<"/settings/sdr">) {
   const operador = await exigirOperadorNoApp();
   const { msg } = await searchParams;
-  const { sdr, historico, contas, passagens } = await comOperador(obterDb(), operador.id, async (tx) => ({
+  const { sdr, historico, contas, passagens, analise, objetivo, desatualizado } = await comOperador(obterDb(), operador.id, async (tx) => ({
     sdr: await obterSdr(tx, operador.organizacaoId),
+    analise: await dossieConfirmado(tx, operador.organizacaoId),
+    objetivo: await objetivoDaOrganizacao(tx, operador.organizacaoId),
+    desatualizado: await sdrDesatualizado(tx, operador.organizacaoId),
     historico: await historicoDoSdr(tx, operador.organizacaoId),
     passagens: await passagensRecentes(tx, { agora: new Date() }),
     contas: await tx.query<{ id: string; nome: string; modo_resposta: "aprovacao" | "automatico" }>(
@@ -90,6 +169,8 @@ export default async function SdrPage({ searchParams }: PageProps<"/settings/sdr
   return (
     <div className="flex max-w-4xl flex-col gap-6">
       {typeof msg === "string" && <Aviso>{msg}</Aviso>}
+
+      {analise && <Objetivo analise={analise} objetivo={objetivo} nome={operador.nome} desatualizado={desatualizado} />}
 
       {!sdr ? (
         <section className="cartao cartao-vitrine p-6">

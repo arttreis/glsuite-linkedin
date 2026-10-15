@@ -8,6 +8,7 @@ import { urlPublicaDoApp } from "@/lib/env";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { obterGeradorDeSdr, obterLeitorDeSite, obterUnipile, segredoDaUnipile } from "@/server/dependencias";
+import { confirmarObjetivo, type ResultadoDoObjetivo } from "@/server/objetivo/objetivo";
 import { concluirLeitura, iniciarLeitura, salvarDossie, type ResultadoDaEdicao } from "@/server/oferta/oferta";
 import { definirContasDoMembro, mudarPapelDoMembro } from "@/server/organizacao/equipe";
 import { renomearOrganizacao } from "@/server/organizacao/organizacao";
@@ -17,7 +18,7 @@ import { ErroDeModo, registrarEval, trocarModo } from "@/server/perfis/modo";
 import { contaNovaDoLinkedin } from "@/server/perfis/nova-conta";
 import { despausarPerfil, ErroDeAtivacao, pausarPerfil } from "@/server/perfis/pausa";
 import { sincronizarStatusDasContas } from "@/server/perfis/status-conta";
-import { garantirSdr, salvarSdr, voltarParaVersao } from "@/server/sdr/sdr";
+import { garantirSdr, gerarSdr, salvarSdr, voltarParaVersao } from "@/server/sdr/sdr";
 import { exigirOperador } from "@/server/supabase/servidor";
 
 type Aba = "company" | "sdr" | "linkedin" | "team";
@@ -64,6 +65,28 @@ export async function lerSiteDeNovo(formData: FormData) {
 }
 
 // --- SDR ----------------------------------------------------------------------
+
+/** Confirma o objetivo editado (§4.2.1). Não gera o SDR de novo: a tela oferece. */
+export async function confirmarObjetivoNasConfiguracoes(): Promise<ResultadoDoObjetivo> {
+  const operador = await exigirOperador();
+  const resultado = await comOperador(obterDb(), operador.id, (tx) =>
+    confirmarObjetivo(tx, { organizacaoId: operador.organizacaoId, operadorId: operador.id, agora: new Date() }),
+  );
+  if (resultado.ok) revalidatePath("/settings/sdr");
+  return resultado;
+}
+
+/** "Gerar o SDR de novo com o novo objetivo": versão nova, com o clique da pessoa (§4.2.1). */
+export async function gerarSdrComNovoObjetivo() {
+  const operador = await exigirOperador();
+  const gerador = obterGeradorDeSdr();
+  if (!gerador) voltar("sdr", "Gerar o SDR precisa da chave da Anthropic. Peça ao admin para configurar.");
+  const resultado = await gerarSdr(
+    { db: obterDb(), gerador: gerador! },
+    { organizacaoId: operador.organizacaoId, nome: operador.nome, operadorId: operador.id, agora: new Date() },
+  );
+  voltar("sdr", resultado.ok ? `SDR gerado de novo com o novo objetivo (versão ${resultado.sdr.versao}). Teste no chat.` : resultado.erro);
+}
 
 export async function salvarSdrDoPainel(entrada: { sdr: unknown }): Promise<{ ok: true; versao: number } | { ok: false; erro: string }> {
   const operador = await exigirOperador();

@@ -51,7 +51,7 @@ type Salvamento = { tipo: "salvando" } | { tipo: "salvo" } | { tipo: "confirmado
 
 /**
  * A análise do site para corrigir item a item (§4.2). Cada correção grava na
- * hora como rascunho; "Está certo, seguir" confirma e leva ao SDR.
+ * hora como rascunho; "Está certo, seguir" confirma e leva ao objetivo.
  */
 export function EditorDaAnalise({
   inicial,
@@ -59,7 +59,7 @@ export function EditorDaAnalise({
   rotuloDeConfirmar = "Está certo, seguir",
 }: {
   inicial: Dossie;
-  /** No primeiro acesso, confirma e segue para o SDR; em Configurações, só confirma. */
+  /** No primeiro acesso, confirma e segue para o objetivo; em Configurações, só confirma. */
   confirmarAnalise?: (entrada: { dossie: unknown }) => Promise<ResultadoDaEdicao>;
   rotuloDeConfirmar?: string;
 }) {

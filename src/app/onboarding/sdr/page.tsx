@@ -1,4 +1,4 @@
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Aviso } from "@/components/aviso";
@@ -6,10 +6,12 @@ import type { Sdr } from "@/domain/sdr";
 import { obterDb } from "@/server/db";
 import type { Operador } from "@/server/db/operador";
 import { obterGeradorDeSdr, obterModeloDeLinguagem } from "@/server/dependencias";
+import { sdrDesatualizado } from "@/server/objetivo/objetivo";
 import { garantirSdr } from "@/server/sdr/sdr";
 import { comecarTeste, obterTeste } from "@/server/sdr/teste";
 import { Pergunta } from "../pergunta";
 import { abrirPasso } from "../portao";
+import { gerarSdrDeNovoNoPrimeiroAcesso } from "./acoes";
 import { ChatDoSdr } from "./chat";
 
 // Montar o SDR e a primeira mensagem são duas chamadas da IA na abertura do passo.
@@ -23,7 +25,7 @@ function Montando() {
         <span className="size-3.5 rounded-full bg-destaque" />
       </span>
       <div>
-        <p className="font-medium">Montando o seu SDR a partir da análise...</p>
+        <p className="font-medium">Montando o seu SDR a partir da análise e do objetivo...</p>
         <p className="mt-1 text-sm text-tinta-suave">Leva uns 20 segundos. Depois ele manda a primeira mensagem.</p>
       </div>
     </div>
@@ -39,6 +41,21 @@ function Falhou({ erro }: { erro: string }) {
         Tentar de novo
       </Link>
     </div>
+  );
+}
+
+/** O objetivo mudou depois que o SDR foi montado: gerar de novo é com o clique, nunca sozinho (§4.2.1). */
+function ObjetivoMudou() {
+  return (
+    <Aviso tom="atencao" className="mt-8">
+      <p>O objetivo mudou depois que este SDR foi montado. Os ajustes feitos no chat ficam no histórico.</p>
+      <form action={gerarSdrDeNovoNoPrimeiroAcesso} className="mt-2">
+        <button type="submit" className="botao botao-pequeno">
+          <Sparkles aria-hidden />
+          Gerar o SDR de novo com o novo objetivo
+        </button>
+      </form>
+    </Aviso>
   );
 }
 
@@ -111,8 +128,10 @@ async function Chat({ operador }: { operador: Operador }) {
     if (!comecado.ok) return <Falhou erro={comecado.erro} />;
     teste = comecado.teste;
   }
+  const desatualizado = await sdrDesatualizado(db, operador.organizacaoId);
   return (
     <>
+      {desatualizado && <ObjetivoMudou />}
       <ChatDoSdr inicial={teste} nome={operador.nome} />
       <SdrCompleto sdr={sdr.sdr.sdr} />
     </>
@@ -120,14 +139,20 @@ async function Chat({ operador }: { operador: Operador }) {
 }
 
 /** Passo 3 (§2.1, §4.3): o chat em que a pessoa é o lead e refina o SDR. */
-export default async function PassoSdr() {
+export default async function PassoSdr({ searchParams }: PageProps<"/onboarding/sdr">) {
   const { operador } = await abrirPasso("sdr");
+  const { msg } = await searchParams;
   return (
     <>
       <Pergunta passo="sdr">
         Ele fala do jeito que vai falar com os seus leads. Responda como um cliente responderia; quando algo não soar
         certo, troque para &quot;Ajustar o SDR&quot; e diga o que mudar.
       </Pergunta>
+      {typeof msg === "string" && (
+        <Aviso tom="erro" className="mt-6">
+          {msg}
+        </Aviso>
+      )}
       <Suspense fallback={<Montando />}>
         <Chat operador={operador} />
       </Suspense>

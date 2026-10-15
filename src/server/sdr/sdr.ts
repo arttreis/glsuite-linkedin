@@ -5,6 +5,7 @@ import { ErroDoModelo, type Resposta } from "@/server/agente/modelo";
 import type { Db } from "@/server/db/tipos";
 import { custoDaChamada } from "@/server/eval/custo";
 import { registrarEvento } from "@/server/eventos";
+import { objetivoConfirmado } from "@/server/objetivo/objetivo";
 import { entradaDeGerarSdr, promptDeGerarSdr, VERSAO_DO_PROMPT_DO_SDR } from "./prompts";
 
 /** Gera o SDR a partir da análise. Em produção é o Claude (`claude.ts`); nos testes, um falso. */
@@ -117,18 +118,20 @@ export async function gravarVersaoDoSdr(
     por: string | null;
     agora: Date;
     geradoDeOfertaEm?: Date | null;
+    geradoDeObjetivoEm?: Date | null;
   },
 ): Promise<SdrDaOrganizacao> {
   return db.transacao(async (tx) => {
     const [gravado] = await tx.query<{ id: string; versao: number }>(
-      `insert into public.sdrs (organizacao_id, versao, sdr, gerado_de_oferta_em, atualizado_por, criado_em, atualizado_em)
-       values ($1::uuid, 1, $2::jsonb, $3, $4::uuid, $5, $5)
+      `insert into public.sdrs (organizacao_id, versao, sdr, gerado_de_oferta_em, gerado_de_objetivo_em, atualizado_por, criado_em, atualizado_em)
+       values ($1::uuid, 1, $2::jsonb, $3, $6, $4::uuid, $5, $5)
        on conflict (organizacao_id) do update
          set versao = public.sdrs.versao + 1, sdr = excluded.sdr, atualizado_por = excluded.atualizado_por,
              atualizado_em = excluded.atualizado_em,
-             gerado_de_oferta_em = coalesce(excluded.gerado_de_oferta_em, public.sdrs.gerado_de_oferta_em)
+             gerado_de_oferta_em = coalesce(excluded.gerado_de_oferta_em, public.sdrs.gerado_de_oferta_em),
+             gerado_de_objetivo_em = coalesce(excluded.gerado_de_objetivo_em, public.sdrs.gerado_de_objetivo_em)
        returning id, versao`,
-      [p.organizacaoId, JSON.stringify(p.sdr), p.geradoDeOfertaEm ?? null, p.por, p.agora],
+      [p.organizacaoId, JSON.stringify(p.sdr), p.geradoDeOfertaEm ?? null, p.por, p.agora, p.geradoDeObjetivoEm ?? null],
     );
     await tx.query(
       `insert into public.sdr_versoes (sdr_id, versao, sdr, origem, pedido, resumo, por, em)
@@ -140,9 +143,11 @@ export async function gravarVersaoDoSdr(
 }
 
 /**
- * Gera o SDR da análise confirmada (§4.3), em nome de `nome` (quem vai
- * conversar). Sem análise confirmada, recusa. Se já existe SDR, a geração vira
- * versão nova e mantém o que só a pessoa decide (link de agenda, cautela).
+ * Gera o SDR da análise e do objetivo confirmados (§4.2.1, §4.3), em nome de
+ * `nome` (quem vai conversar). Sem análise confirmada, recusa; sem objetivo
+ * (organização de antes do passo Objetivo), sai só da análise. Se já existe
+ * SDR, a geração vira versão nova e mantém o que só a pessoa decide (link de
+ * agenda, cautela).
  */
 export async function gerarSdr(
   deps: { db: Db; gerador: GeradorDeSdr },
@@ -155,10 +160,14 @@ export async function gerarSdr(
   );
   const analise = esquemaDoDossie.safeParse(oferta?.dossie_confirmado);
   if (!analise.success) return { ok: false, erro: "Confirme a análise do site antes de montar o SDR." };
+  const objetivo = await objetivoConfirmado(db, p.organizacaoId);
 
   let resposta: Resposta<SdrDaIa>;
   try {
-    resposta = await deps.gerador.gerar({ sistema: promptDeGerarSdr({ nome: p.nome }), entrada: entradaDeGerarSdr(analise.data) });
+    resposta = await deps.gerador.gerar({
+      sistema: promptDeGerarSdr({ nome: p.nome, comObjetivo: objetivo !== null }),
+      entrada: entradaDeGerarSdr(analise.data, objetivo?.objetivo ?? null),
+    });
   } catch (erro) {
     if (!(erro instanceof ErroDoModelo)) console.error("SDR não gerado", erro);
     return { ok: false, erro: erro instanceof ErroDoModelo ? erro.message : "A IA não respondeu. Tente de novo." };
@@ -175,6 +184,7 @@ export async function gerarSdr(
     por: p.operadorId,
     agora: p.agora,
     geradoDeOfertaEm: oferta?.confirmado_em ?? null,
+    geradoDeObjetivoEm: objetivo?.em ?? null,
   });
   await registrarEvento(db, {
     tipo: "sdr_gerado",
@@ -185,6 +195,7 @@ export async function gerarSdr(
       modelo: resposta.modelo,
       custo_usd: Number((custoDaChamada(resposta.modelo, resposta.uso) ?? 0).toFixed(4)),
       versao_prompt: VERSAO_DO_PROMPT_DO_SDR,
+      com_objetivo: objetivo !== null,
     },
     ator: p.operadorId ?? "sistema",
     em: p.agora,

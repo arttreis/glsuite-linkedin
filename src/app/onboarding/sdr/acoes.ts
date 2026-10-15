@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { obterAjustadorDeSdr, obterModeloDeLinguagem } from "@/server/dependencias";
+import { obterAjustadorDeSdr, obterGeradorDeSdr, obterModeloDeLinguagem } from "@/server/dependencias";
+import { gerarSdr } from "@/server/sdr/sdr";
 import {
   ajustarNoTeste,
   aprovarSdr,
@@ -15,10 +16,8 @@ import {
 } from "@/server/sdr/teste";
 import { exigirOperador } from "@/server/supabase/servidor";
 
-const SEM_CHAVE: ResultadoDoTeste = {
-  ok: false,
-  erro: "O SDR precisa da chave da Anthropic para conversar. Peça ao admin para configurar.",
-};
+const MENSAGEM_SEM_CHAVE = "O SDR precisa da chave da Anthropic para conversar. Peça ao admin para configurar.";
+const SEM_CHAVE: ResultadoDoTeste = { ok: false, erro: MENSAGEM_SEM_CHAVE };
 
 // O chat roda com a conexão do sistema, sempre na organização do operador: as
 // chamadas da IA levam segundos e não devem segurar uma transação aberta.
@@ -72,4 +71,20 @@ export async function ficouBom(): Promise<{ ok: false; erro: string } | void> {
   if (!ok) return { ok: false, erro: "O SDR ainda não está pronto." };
   revalidatePath("/onboarding", "layout");
   redirect("/onboarding/approach");
+}
+
+/**
+ * O objetivo mudou depois do SDR: gera de novo, como versão nova, e recomeça a
+ * conversa de teste com o SDR novo. Só com o clique (§4.2.1).
+ */
+export async function gerarSdrDeNovoNoPrimeiroAcesso() {
+  const { operador, base } = await contexto();
+  const gerador = obterGeradorDeSdr();
+  const modelo = obterModeloDeLinguagem();
+  if (!gerador || !modelo) redirect(`/onboarding/sdr?msg=${encodeURIComponent(MENSAGEM_SEM_CHAVE)}`);
+  const db = obterDb();
+  const gerado = await gerarSdr({ db, gerador: gerador! }, { ...base, operadorId: operador.id, agora: new Date() });
+  if (gerado.ok) await comecarTeste({ db, modelo: modelo!, agora: new Date() }, base);
+  revalidatePath("/onboarding/sdr");
+  redirect(gerado.ok ? "/onboarding/sdr" : `/onboarding/sdr?msg=${encodeURIComponent(gerado.erro)}`);
 }
