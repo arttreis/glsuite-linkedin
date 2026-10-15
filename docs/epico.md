@@ -177,8 +177,8 @@ confirmada e guardada em versões. Ele tem:
   está no primeiro acesso, não como operador da GuessLess.
 - A prévia traz até `previa.max_pessoas` pessoas por organização (padrão 25,
   somando todas as buscas do primeiro acesso), e conta no teto de busca do dia
-  da conta da casa (§4.13). Ao contrário das buscas das contas que prospectam,
-  a da prévia roda a qualquer hora: quem chega à noite também vê os nomes.
+  da conta da casa (§4.13). Como toda busca, a da prévia roda a qualquer
+  hora: quem chega à noite também vê os nomes.
   Sem saldo, ou com a conta da casa fora do ar, a tela mostra o perfil do lead
   sem nomes e avisa que a lista vem quando a pessoa vincular o LinkedIn. Nunca
   trava o primeiro acesso.
@@ -347,8 +347,9 @@ Vêm do épico anterior e não mudam:
   intervalo aleatório de 3 a 12 minutos entre ações. Mensagem só para conexão
   de 1º grau. Convite pendente há mais de 21 dias é retirado. Busca e visita de
   perfil têm teto próprio por dia (`busca.max_resultados_dia`, padrão 100;
-  `pesquisa.max_por_dia`, padrão 20); erro de limite na busca suspende só a
-  busca até o dia útil seguinte.
+  `pesquisa.max_por_dia`, padrão 20); a busca de leads roda a qualquer hora,
+  inclusive fora da janela e no fim de semana, dentro do teto do dia; erro de
+  limite na busca suspende só a busca até o dia útil seguinte.
 - **Parada automática.** O perfil pausa sozinho, e quem opera é avisado, quando
   a Unipile reporta conta desconectada, checkpoint ou captcha; quando erro de
   limite se repete; quando o aceite fica abaixo de 15% em 3 dias úteis (amostra
@@ -674,6 +675,11 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
 - Aceite: conta conectada fica com o nome do LinkedIn e reconectar não o
   troca; janela com menos de 1 hora ou fim antes do início é recusada; quem
   só opera a conta não edita; a edição fica na trilha.
+
+**SDR-58 · Busca de leads a qualquer hora**
+- A busca da campanha deixa de esperar a janela e o dia útil da conta. O teto
+  de busca do dia e a suspensão por limite do LinkedIn continuam.
+- Aceite: busca no sábado e de madrugada roda; o teto do dia segue valendo.
 
 **SDR-60 · Quando o SDR passa a conversa para você, numa seção só**
 - Em Configurações > SDR, a seção da §4.7: o que sempre passa (não se

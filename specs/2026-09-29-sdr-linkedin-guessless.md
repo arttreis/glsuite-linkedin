@@ -1677,6 +1677,16 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   próxima ação, sem reagendar nada.
 - Rampa, teto e dias da semana continuam fixos: mexem no risco da conta.
 
+### SDR-58 · Busca de leads a qualquer hora (14/10/2026)
+
+- Pedido do Arthur: a busca de leads pode rodar a qualquer momento. Antes,
+  só a busca da prévia (conta da casa) rodava fora da janela; a da campanha
+  esperava dia útil, das 9h às 18h.
+- Sai só a trava de janela de `rodarBusca`. Continuam o teto de busca do dia
+  (contado no dia local da conta), a suspensão por erro de limite até o dia
+  útil seguinte e o status da conta na Unipile.
+- Convites, mensagens e a visita de perfil da pesquisa seguem na janela.
+
 ### SDR-60 · Quando o SDR passa a conversa para você (14/10/2026)
 
 - **Onde mora a cautela:** no JSON do SDR (`sdr.cautela`, opcional), e não
