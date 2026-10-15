@@ -1763,3 +1763,31 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   `/campaigns/company-lists/[id]` (procurar, escolher, achadas, sem página,
   não procuradas, adicionar, renomear, apagar com confirmação, e as campanhas
   que usam a lista). Botão "Listas de empresas" em Campanhas.
+
+### SDR-61 · Quem escreve fora do Kakou tira o SDR (14/10/2026)
+
+- Pedido do Arthur: sempre que alguém da conta escreve fora da plataforma, o
+  SDR para. A regra já existia (§4.7, SDR-07 e SDR-52), mas tinha brechas:
+  - `sem_resposta` e `convite_retirado` não escalavam. O dono escrevia, a
+    pessoa respondia e o SDR voltava a conduzir. Agora os dois vão para
+    `escalado_humano` (transição somada à máquina de estados), também quando
+    a resposta sai pelo Chats.
+  - O despachante deixava sair DM de conversa em `escalado_humano`. Uma
+    resposta da IA já reservada (`enviando`) não é cancelada pelo webhook e
+    saía depois de o dono assumir. Agora resposta sem `aprovada_por` só sai em
+    `em_conversa`. Resposta aprovada ou escrita por alguém (que volta para a
+    fila pela reconciliação) continua saindo em `escalado_humano`.
+  - O agente conferia o estado só antes de chamar o modelo. Agora confere de
+    novo, com o lead travado, na hora de agendar: se alguém assumiu no meio,
+    o rascunho fica `descartado`. Se o modelo decidiu chamar você e você já
+    tinha assumido, não sai e-mail.
+  - A checagem na Unipile antes do envio pulava as mensagens da conta. Agora
+    registra também essas (o que já é nosso é reconhecido pelo id, pelo eco ou
+    pela nota do convite) e roda antes de toda DM do SDR sozinho, não só da
+    régua. Para a resposta da IA, só mensagem do dono cancela: a da pessoa é a
+    que está sendo respondida.
+- A nota do convite é reconhecida em qualquer estado. Antes, só com o convite
+  pendente; se o `new_relation` chegasse antes da mensagem com a nota, ela
+  passava por mensagem do dono e tirava o SDR à toa.
+- Fica de fora: pessoa em triagem com quem o dono conversa. A mensagem vira
+  conversa externa, e aprovar o lead depois ainda coloca a pessoa na fila.

@@ -240,9 +240,12 @@ confirmada e guardada em versões. Ele tem:
   pergunta preço, reclama, pede algo fora do comum, a confiança da decisão
   fica abaixo de `agente.limiar_confianca`, ou bate um item de "Quando chamar
   você" (§4.3). Você é avisado por e-mail e no Dashboard.
-- **Você assume quando responde.** Respondeu pelo Chats ou direto no LinkedIn, o
-  SDR sai daquela conversa (o lead vai para `escalado_humano`). "Devolver ao
-  SDR" põe ele de volta.
+- **Você assume quando responde.** Respondeu pelo Chats ou fora do Kakou
+  (LinkedIn no site, no celular ou em outra ferramenta), o SDR para naquela
+  conversa: o lead vai para `escalado_humano` e nada mais sai sozinho, nem a
+  sequência nem uma resposta que já estava agendada. Vale em qualquer etapa,
+  inclusive antes da pessoa responder e depois de a sequência terminar sem
+  resposta. "Devolver ao SDR" põe ele de volta.
 - Em Configurações, a pessoa troca para **"Aprovo cada resposta"**: o SDR
   escreve, e a resposta espera dentro do próprio chat, com Enviar, Editar e
   Descartar.
@@ -469,7 +472,7 @@ em_conversa ─┬─► qualificado ─► reuniao_marcada
              ├─► encerrado_nao
              ├─► optout
              └─► escalado_humano ──(devolver ao SDR)──► em_conversa
-o SDR chama você, ou você responde ──► escalado_humano
+o SDR chama você, ou você responde (pelo Chats ou fora do Kakou) ──► escalado_humano
 perfil pausado ⇒ ações congeladas, estado preservado
 ```
 
@@ -718,6 +721,18 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   da busca e a tela diz quantas; busca com lista e sem região roda; a última
   parte esgotada encerra a busca; lista mudada recomeça do início; lista
   apagada não roda; sem lista, a busca é a mesma de antes.
+
+**SDR-61 · Quem escreve fora do Kakou tira o SDR**
+- Mensagem da conta escrita fora do Kakou faz o SDR parar naquela conversa em
+  qualquer etapa (§4.7), inclusive com a sequência terminada sem resposta ou
+  o convite retirado.
+- A resposta do SDR que já estava agendada ou saindo não sai mais; a checagem
+  na Unipile antes de cada mensagem do SDR também procura mensagem da conta
+  que o webhook não trouxe.
+- Aceite: o dono escreve no LinkedIn enquanto o SDR rascunha, com a resposta
+  agendada ou com ela já saindo, e nada sai; depois da sequência sem
+  resposta, a pessoa responde e o SDR não volta; a nota do convite que chega
+  depois do aceite não tira o SDR.
 
 ## 10 · Decisões abertas
 

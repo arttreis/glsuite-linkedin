@@ -15,6 +15,8 @@ export type Reserva = {
   tipo: TipoDeAcao;
   toque: Toque | null;
   origem: "template" | "ia" | "humano";
+  /** Alguém aprovou ou escreveu (`aprovada_por`). Sem isso, a resposta é do SDR sozinho. */
+  aprovada: boolean;
   tentativas: number;
   texto: string | null;
   provider_id: string;
@@ -25,10 +27,13 @@ export type Reserva = {
 export type ContextoDaReserva = { agora: Date; feriados: Feriados; cooldownDias: number };
 
 /** Em que estado o lead precisa estar para cada ação sair (§5.1, passo 4). */
-export function estadosPermitidos(acao: { tipo: string; toque: string | null }): EstadoDoLead[] {
+export function estadosPermitidos(acao: { tipo: string; toque: string | null; aprovada: boolean }): EstadoDoLead[] {
   if (acao.tipo === "convite") return ["na_fila"];
   if (acao.tipo === "retirar_convite") return ["convite_enviado"];
   if (acao.tipo === "dm" && acao.toque) return ["aceito", "em_sequencia"];
+  // Resposta do SDR sozinho só sai enquanto a conversa é dele: se você assumiu
+  // no meio do caminho (pelo Chats ou direto no LinkedIn), ela não sai (§4.7).
+  if (acao.tipo === "dm" && !acao.aprovada) return ["em_conversa"];
   if (acao.tipo === "dm") return ["em_conversa", "qualificado", "reuniao_marcada", "escalado_humano"];
   return [];
 }
@@ -154,7 +159,7 @@ export async function reservarProximaAcao(
       if (saldo.convites > 0) tipos.push("convite");
 
       const [acao] = await tx.query<Candidata>(
-        `select a.id, a.lead_id, a.tipo, a.toque, a.origem, a.tentativas,
+        `select a.id, a.lead_id, a.tipo, a.toque, a.origem, a.aprovada_por is not null as aprovada, a.tentativas,
                 pe.provider_id, l.chat_id, l.convite_id
            from public.acoes a
            join public.leads l on l.id = a.lead_id
