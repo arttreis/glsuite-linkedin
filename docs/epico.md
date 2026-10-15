@@ -348,6 +348,19 @@ confirmada e guardada em versões. Ele tem:
   lista mudar (empresa entra, sai ou é escolhida), a busca também recomeça do
   início da lista: quem já entrou aparece como repetido, ninguém fica de fora.
   Lista apagada: a busca não roda e pede outra lista ou tirar o filtro.
+- **Busca pela conversa.** Em cima dos filtros, a pessoa diz quem quer achar
+  em texto livre ("diretores de e-commerce em São Paulo, só varejo") e ajusta
+  conversando ("põe também CMO", "tira o Rio"). A IA muda os filtros do
+  formulário: cargos, palavras-chave, região, setor e lista de empresas. Quem
+  acha região e setor no LinkedIn é a conta da campanha, pelo nome; a IA
+  nunca escolhe o id. Com mais de uma opção para o nome (São Paulo cidade ou
+  estado), a pessoa escolhe. A conversa não salva nem roda a busca: a pessoa
+  confere os filtros e busca, como antes. Ela usa uma lista de empresas da
+  organização pelo nome, ou cria uma com os nomes que a pessoa der (até 200;
+  lista maior se cria em Listas de empresas), e a procura das empresas no
+  LinkedIn começa na hora. O que a busca não filtra (porte, tempo de casa,
+  excluir cargo) não vira filtro inventado: porte fica na nota. A conversa
+  vale só enquanto a tela está aberta; o que fica é a busca.
 - Pausar e retomar a campanha. Fluxo de campanha ativa com leads em andamento
   não muda por baixo deles: editar cria uma versão nova para quem entrar
   depois.
@@ -757,6 +770,20 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   resposta, a pessoa responde e o SDR não volta; a nota do convite que chega
   depois do aceite não tira o SDR.
 
+**SDR-62 · Busca pela conversa**
+- Pedido: adicionar os filtros da busca de leads conversando, em vez de
+  procurar região e setor um por um.
+- Na aba Leads, uma caixa "Diga quem você quer achar" em cima dos filtros
+  (§4.11). Cada mensagem volta com a resposta, o que entrou e saiu da busca,
+  e as perguntas de região ou setor com mais de uma opção, em botões.
+- Aceite: "diretores de e-commerce no Brasil, só varejo" preenche cargos,
+  região e setor; "São Paulo" pergunta qual; "tira o setor" tira só o setor;
+  o que já estava na busca não consulta o LinkedIn de novo; "só nas
+  administradoras" usa a lista de mesmo nome, e lista que não existe avisa;
+  "cria uma lista com A, B e C" cria a lista, põe na busca e procura as
+  empresas; nada é salvo nem buscado sem o clique da pessoa; sem cargo no
+  pedido, os cargos ficam; IA fora do ar não mexe nos filtros.
+
 ## 10 · Decisões abertas
 
 | # | Decisão | Sugestão | Dono |
@@ -777,7 +804,7 @@ cooldown de empresa de 30 dias (D4).
 |---|---|
 | Unipile | €49 até 10 contas; a conta da casa ocupa uma |
 | Claude API · primeiro acesso | leitura do site, SDR, cada turno do chat de teste (classificação + rascunho) e cada ajuste. Estimativa a medir no SDR-43: menos de US$ 1 por primeiro acesso |
-| Claude API · operação | ~US$ 20 a 40 por conta ativa (rascunhos), nota de aderência ~US$ 2 por conta |
+| Claude API · operação | ~US$ 20 a 40 por conta ativa (rascunhos), nota de aderência ~US$ 2 por conta; conversa da busca, uma chamada de Haiku por mensagem (centavos por conversa) |
 | Vercel, Supabase, Resend | planos que a casa já tem |
 
 ## 12 · Como rodar este épico

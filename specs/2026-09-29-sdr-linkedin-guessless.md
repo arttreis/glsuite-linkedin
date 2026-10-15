@@ -1819,3 +1819,42 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   passava por mensagem do dono e tirava o SDR à toa.
 - Fica de fora: pessoa em triagem com quem o dono conversa. A mensagem vira
   conversa externa, e aprovar o lead depois ainda coloca a pessoa na fila.
+
+### SDR-62 · Busca pela conversa (15/10/2026)
+
+- Pedido do Arthur: deixar conversacional a adição de filtros da busca no
+  LinkedIn. Decisões dele: a conversa é **só da sessão** (não grava
+  histórico; o que fica é a busca) e **pode criar lista de empresas**.
+- A conversa é um jeito de editar o formulário, não um formulário novo. Ela
+  devolve o rascunho da busca para a tela (`conversarSobreABusca`, em
+  `server/publicos/conversa-da-busca.ts`) e não salva nem roda: salvar e
+  buscar continuam nos botões de sempre, com as mesmas regras. Assim a pessoa
+  sempre vê o que vai rodar, e o cursor da busca só recomeça quando ela salva
+  um filtro mudado (`mesmosFiltros`).
+- O modelo devolve a busca inteira como deve ficar (`pedidoDeBusca`), com
+  região, setor e lista **pelo nome**, mais a resposta. Devolver o estado
+  inteiro, e não operações, deixa o "tira", "troca" e "só" com o modelo e o
+  servidor só compara. O servidor resolve os nomes:
+  - Região ou setor que já está na busca (mesmo nome, sem acento e caixa)
+    fica com o id que tem, sem consultar o LinkedIn.
+  - Os outros vão a `listarParametrosDeBusca` pela conta da campanha
+    (consulta de lista, fora do teto do dia). Uma opção de mesmo nome, ou uma
+    opção só: entra. Várias: vira dúvida com até 5 opções, que a pessoa
+    responde em botões. Nenhuma: aviso.
+  - Lista pelo nome igual, ou pela única que contém o nome dito.
+- **Criar lista**: só com os nomes dados na conversa, até 200 (a saída do
+  modelo repete os nomes; lista maior vai pela tela de Listas, que aceita
+  arquivo e não tem teto). Usa `criarLista`, então repetidas entram uma vez.
+  A tela da conversa procura as empresas no LinkedIn em seguida, de leva em
+  leva, com `procurarEmpresasDoPainel`, como a tela da lista. A action
+  revalida a página para o filtro "Só nestas empresas" já mostrar a lista
+  nova e as pendentes.
+- Modelo: o de classificação (`IA_MODELO_CLASSIFICACAO`, Haiku), sem
+  pensamento: é extração de filtros de uma frase e a resposta tem de vir
+  rápido. Nenhuma variável de ambiente nova. Cada mensagem grava o evento
+  `busca_conversada` (mudanças, dúvidas, lista criada, modelo, custo,
+  `versao_prompt`).
+- O histórico vem da tela: as últimas 12 falas. Mensagem até 1000
+  caracteres. Pedido sem cargo mantém os cargos (a busca precisa de um).
+- A busca do LinkedIn não filtra porte nem exclui cargo; o prompt manda dizer
+  isso em vez de inventar filtro.

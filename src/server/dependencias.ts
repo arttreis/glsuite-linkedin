@@ -8,8 +8,9 @@ import { criarLeitorClaude } from "@/server/oferta/claude";
 import type { LeitorDeSite } from "@/server/oferta/leitor";
 import { criarAvaliadorClaude } from "@/server/nota/claude";
 import type { AvaliadorDeAderencia } from "@/server/nota/avaliador";
-import { criarEscritorClaude, criarSugeridorClaude } from "@/server/publicos/claude";
+import { criarEscritorClaude, criarInterpretadorDeBuscaClaude, criarSugeridorClaude } from "@/server/publicos/claude";
 import type { EscritorDeFluxo } from "@/server/publicos/escritor";
+import type { InterpretadorDeBusca } from "@/server/publicos/interpretador-de-busca";
 import type { SugeridorDePublicos } from "@/server/publicos/sugeridor";
 import { criarAjustadorDeSdrClaude, criarGeradorDeSdrClaude } from "@/server/sdr/claude";
 import type { GeradorDeSdr } from "@/server/sdr/sdr";
@@ -133,6 +134,19 @@ export function obterAvaliadorDeAderencia(): AvaliadorDeAderencia | null {
     avaliador = env.ANTHROPIC_API_KEY ? criarAvaliadorClaude({ apiKey: env.ANTHROPIC_API_KEY, modelo: env.IA_MODELO_CLASSIFICACAO }) : null;
   }
   return avaliador;
+}
+
+let interpretadorDeBusca: InterpretadorDeBusca | null | undefined;
+
+/** A conversa da busca de leads (SDR-62) no modelo de classificação, ou null sem ANTHROPIC_API_KEY. */
+export function obterInterpretadorDeBusca(): InterpretadorDeBusca | null {
+  if (interpretadorDeBusca === undefined) {
+    const env = envIa();
+    interpretadorDeBusca = env.ANTHROPIC_API_KEY
+      ? criarInterpretadorDeBuscaClaude({ apiKey: env.ANTHROPIC_API_KEY, modelo: env.IA_MODELO_CLASSIFICACAO })
+      : null;
+  }
+  return interpretadorDeBusca;
 }
 
 let escritorDeFluxo: EscritorDeFluxo | null | undefined;

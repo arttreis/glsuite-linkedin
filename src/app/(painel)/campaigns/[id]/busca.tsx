@@ -8,6 +8,7 @@ import { ListaDeFrases } from "@/components/campos-de-edicao";
 import type { BuscaDoPublico } from "@/domain/busca";
 import type { ListaParaBusca } from "@/server/publicos/busca";
 import { procurarParametrosDoPainel, rodarBuscaDoPainel, salvarBuscaDoPainel } from "../acoes-do-publico";
+import { ConversaDaBusca } from "./conversa-da-busca";
 
 type Parametro = BuscaDoPublico["regioes"][number];
 type Tipo = "LOCATION" | "INDUSTRY";
@@ -170,8 +171,9 @@ function SoNestasEmpresas({
 /**
  * A busca do público no LinkedIn, na aba Leads (§4.13). Monta com os cargos do
  * público; região e setor vêm da lista do LinkedIn; a lista de empresas é
- * opcional (§4.11). O que a busca trouxer vai para "quem entra na campanha",
- * pelas regras de importação.
+ * opcional (§4.11). Dá para montar conversando (SDR-62): a conversa muda os
+ * mesmos filtros, e buscar continua sendo aqui. O que a busca trouxer vai
+ * para "quem entra na campanha", pelas regras de importação.
  */
 export function BuscaDaCampanha({
   campanhaId,
@@ -248,11 +250,15 @@ export function BuscaDaCampanha({
         <Aviso tom="atencao">O LinkedIn limitou as buscas desta conta. A busca volta no próximo dia útil; convites e mensagens seguem.</Aviso>
       )}
       {!salva && (
-        <p className="text-xs text-tinta-fraca">Montada com os cargos do público. Escolha a região, ou uma lista de empresas, antes de buscar.</p>
+        <p className="text-xs text-tinta-fraca">
+          Montada com os cargos do público. Diga quem você quer achar, ou escolha a região ou uma lista de empresas, antes de buscar.
+        </p>
       )}
       {busca.esgotada && (
         <Aviso tom="atencao">Esta busca já trouxe todo mundo que o LinkedIn mostra com esses filtros. Mude algum filtro para achar mais gente.</Aviso>
       )}
+
+      <ConversaDaBusca campanhaId={campanhaId} busca={busca} aoMudar={mudar} desabilitado={travado} />
 
       <div className="flex flex-col gap-2">
         <p className="rotulo">Cargos (qualquer um deles)</p>
