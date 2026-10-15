@@ -1,7 +1,12 @@
 import type { Resposta, Uso } from "@/server/agente/modelo";
 import type { Dossie } from "@/domain/dossie";
 
-export type FonteDoSite = { url: string; titulo: string | null };
+export type FonteDoSite = {
+  url: string;
+  titulo: string | null;
+  /** O começo do texto da página, para a tela mostrar o que está sendo lido. Fontes antigas não têm. */
+  trecho?: string | null;
+};
 
 export type LeituraDoSite = { notas: string; fontes: FonteDoSite[]; uso: Uso; modelo: string };
 
@@ -19,5 +24,6 @@ export interface LeitorDeSite {
     maxPaginas: number;
     aoAbrirPagina?: (fonte: FonteDoSite) => void;
   }): Promise<LeituraDoSite>;
-  estruturar(p: { sistema: string; entrada: string }): Promise<Resposta<Dossie>>;
+  /** `aoComecarMercado` avisa quando Negócio e Produto saíram e a IA passou ao Mercado. */
+  estruturar(p: { sistema: string; entrada: string; aoComecarMercado?: () => void }): Promise<Resposta<Dossie>>;
 }

@@ -14,3 +14,12 @@ export function haQuantoTempo(em: Date, agora: Date): string {
   if (dias < 7) return `há ${dias} dias`;
   return new Date(em).toLocaleDateString("pt-BR", { timeZone: FUSO, day: "2-digit", month: "2-digit" });
 }
+
+/** O tempo corrido de algo em andamento, curto e exato: "8 s", "1 min 5 s", "3 min". */
+export function tempoDecorrido(desde: Date, agora: Date): string {
+  const segundos = Math.max(0, Math.floor((agora.getTime() - new Date(desde).getTime()) / 1000));
+  if (segundos < 60) return `${segundos} s`;
+  const minutos = Math.floor(segundos / 60);
+  const resto = segundos % 60;
+  return resto === 0 ? `${minutos} min` : `${minutos} min ${resto} s`;
+}
