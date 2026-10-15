@@ -12,6 +12,7 @@ import { renderizarTemplate, type Token } from "@/domain/template";
 import type { Abordagem, ResultadoDaAbordagem, Toque } from "@/server/abordagem/recomendada";
 import type { Previa } from "@/server/previa/previa";
 import { editarToque, escreverDeNovo, marcarPessoaDaPrevia, podeEntrarEmContato } from "./acoes";
+import { GerandoAbordagem } from "./gerando";
 
 export type PreviaDaTela = { ok: true; previa: Previa; tamanho: string | null } | { ok: false; erro: string };
 
@@ -584,7 +585,7 @@ export function AreaDeTrabalho({
         </section>
         <section aria-label="Mensagens" className="order-2 lg:order-3">
           <h2 className={`${rotulo} mb-3`}>Como chega</h2>
-          <Suspense fallback={<Carregando texto="Escrevendo o convite e as mensagens na voz do seu SDR..." alto />}>
+          <Suspense fallback={<GerandoAbordagem etapa="escrita" className="min-h-96" />}>
             <ComPrimeiraMarcada estado={estado} escolhida={escolhida}>
               {(vendo) => (
                 <Mensagens
