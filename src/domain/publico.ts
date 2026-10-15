@@ -47,11 +47,23 @@ export type Aderencia = { nota: number; motivo: string };
  * O que a IA devolve: o mesmo público, com as provas pelo número da lista do
  * dossiê (assim ela não tem como escrever uma prova que não está lá) e a
  * aderência.
+ *
+ * Sem limite de tamanho de propósito (SDR-63): a saída estruturada da API não
+ * cumpre `maxLength` nem `maxItems`, e o SDK valida a resposta inteira com
+ * este esquema. Um campo longo num público derrubava a sugestão toda. Os
+ * limites ficam no prompt e em `publicosDaSugestao`, que descarta só o
+ * público que não cabe.
  */
 export const sugestaoDePublicos = z.object({
   publicos: z.array(
-    publico.omit({ provas: true }).extend({
+    z.object({
+      nome: z.string(),
+      quem: z.object({ cargos: z.array(z.string()), senioridade: z.string() }),
+      empresa: z.object({ setores: z.array(z.string()), porte: z.string(), regiao: z.string() }),
+      por_que: z.object({ dor: z.string(), gatilho: z.string(), resultado: z.string() }),
+      angulo: z.string(),
       provas: z.array(z.number().int()),
+      quem_nao_e: z.string(),
       aderencia: z.object({ nota: z.number().int(), motivo: z.string() }),
     }),
   ),
@@ -69,10 +81,15 @@ function aderenciaValida(aderencia: { nota: number; motivo: string }): Aderencia
   return Number.isInteger(nota) && nota >= 0 && nota <= 100 && motivo ? { nota, motivo: motivo.slice(0, 300) } : null;
 }
 
+/** Cargos e setores a mais não derrubam o público: ficam os primeiros, sem vazios. */
+function primeiros(itens: string[], max: number): string[] {
+  return itens.map((item) => item.trim()).filter(Boolean).slice(0, max);
+}
+
 /**
  * Converte a sugestão da IA em públicos: as provas viram os textos do dossiê
- * (número fora da lista é ignorado), e sai o que não cabe no esquema ou cai
- * numa praça sem conta da organização. No máximo 5.
+ * (número fora da lista é ignorado), cargos e setores a mais são cortados, e
+ * sai o que ainda não cabe no esquema. No máximo 5.
  */
 export function publicosDaSugestao(
   sugestao: SugestaoDePublicos,
@@ -82,7 +99,12 @@ export function publicosDaSugestao(
   let descartados = 0;
   for (const item of sugestao.publicos) {
     const provas = [...new Set(item.provas)].flatMap((n) => (d.provas[n] ? [d.provas[n].texto] : []));
-    const lido = publico.safeParse({ ...item, provas });
+    const lido = publico.safeParse({
+      ...item,
+      quem: { ...item.quem, cargos: primeiros(item.quem.cargos, 10) },
+      empresa: { ...item.empresa, setores: primeiros(item.empresa.setores, 8) },
+      provas,
+    });
     if (!lido.success || publicos.length >= MAX_SUGESTOES) {
       descartados++;
       continue;

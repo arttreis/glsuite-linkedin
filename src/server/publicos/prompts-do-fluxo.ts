@@ -7,7 +7,7 @@ import type { Praca } from "@/domain/validador";
 import { VOZ_PADRAO } from "@/server/agente/prompts";
 
 /** Sobe quando o prompt do fluxo muda: vai gravado em cada geração. */
-export const VERSAO_DO_PROMPT_DO_FLUXO = "fluxo-3";
+export const VERSAO_DO_PROMPT_DO_FLUXO = "fluxo-4";
 
 export type PerfilDoFluxo = {
   nome: string;
@@ -24,13 +24,13 @@ const IDIOMA: Record<Praca, string> = {
 };
 
 const DM1: Record<EstiloDoFluxo, string> = {
-  casa: "dar antes de pedir: um insight curto e útil ligado à dor do público. Não pergunta nada.",
+  casa: "abrir a conversa: um contexto curto e concreto ligado à dor do público e, no fim, uma pergunta fácil sobre como a pessoa lida com isso hoje, respondível em poucas palavras. Nada de pedir reunião.",
   pergunta:
     "um insight curto ligado à dor do público e, no fim, uma pergunta curta e direta que faz a pessoa parar para pensar, respondível em poucas palavras. Nada de pedir reunião.",
 };
 
 const DM2: Record<EstiloDoFluxo, string> = {
-  casa: "gerar resposta: uma pergunta fácil de responder, ligada ao ângulo.",
+  casa: "retomar com um ponto novo ligado ao ângulo, sem repetir a DM 1, e uma pergunta fácil de responder.",
   pergunta: "retomar com um ponto novo, sem repetir a DM 1, e no máximo uma pergunta fácil.",
 };
 
@@ -86,6 +86,7 @@ Regras (valem para os quatro textos):
 - Nunca diga que escreveu à mão, que não é automático ou que não é um robô.
 - Nunca cite concorrente pelo nome nem fale mal de um.
 - Frases curtas, tom oral e direto, sem palavras vazias (impressionado, inspirador, admiro, adoro, fascinante, notei).
+- Nada de frase de efeito nem reflexão em primeira pessoa ("toda vez que vejo...", "penso em quanto..."). Mensagem que a pessoa não tem o que responder não serve.
 - Não repita o {{first_name}} em toda mensagem; não cumprimente de novo depois do convite.
 - Idioma: ${IDIOMA[perfil.praca]}.
 

@@ -1,3 +1,4 @@
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { describe, expect, it } from "vitest";
 import type { Dossie } from "./dossie";
 import { limparEdicao } from "./edicao";
@@ -6,6 +7,7 @@ import {
   provasForaDoDossie,
   publico,
   publicosDaSugestao,
+  sugestaoDePublicos,
   type Publico,
   type SugestaoDePublicos,
 } from "./publico";
@@ -77,6 +79,34 @@ describe("publicosDaSugestao", () => {
   it("fica com no máximo 5", () => {
     const seis = Array.from({ length: 6 }, (_, i) => sugerido({ nome: `Público ${i}` }));
     expect(publicosDaSugestao({ publicos: seis }, DOSSIE)).toMatchObject({ descartados: 1 });
+  });
+
+  it("um campo longo descarta só aquele público (SDR-63)", () => {
+    const resultado = publicosDaSugestao(
+      { publicos: [sugerido({ quem_nao_e: "x".repeat(401) }), sugerido({ nome: "Outro" })] },
+      DOSSIE,
+    );
+    expect(resultado.publicos.map((p) => p.nome)).toEqual(["Outro"]);
+    expect(resultado.descartados).toBe(1);
+  });
+
+  it("cargos e setores a mais ficam nos primeiros, sem vazios", () => {
+    const cargos = ["", ...Array.from({ length: 12 }, (_, i) => `Cargo ${i}`)];
+    const setores = Array.from({ length: 10 }, (_, i) => `Setor ${i}`);
+    const { publicos } = publicosDaSugestao(
+      { publicos: [sugerido({ quem: { cargos, senioridade: "diretoria" }, empresa: { ...PUBLICO.empresa, setores } })] },
+      DOSSIE,
+    );
+    expect(publicos[0]!.quem.cargos).toEqual(cargos.slice(1, 11));
+    expect(publicos[0]!.empresa.setores).toEqual(setores.slice(0, 8));
+  });
+});
+
+describe("sugestaoDePublicos", () => {
+  it("a resposta da IA com um campo longo passa pelo parse do SDK (SDR-63)", () => {
+    const formato = zodOutputFormat(sugestaoDePublicos);
+    const resposta = { publicos: [sugerido({ quem_nao_e: "x".repeat(600), angulo: "y".repeat(400) })] };
+    expect(() => formato.parse(JSON.stringify(resposta))).not.toThrow();
   });
 });
 
