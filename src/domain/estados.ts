@@ -70,8 +70,9 @@ const TRANSICOES: Record<EstadoDoLead, readonly EstadoDoLead[]> = {
   // aceito → sem_resposta: o fluxo pode terminar logo depois do aceite (SDR-21).
   aceito: ["em_sequencia", "sem_resposta", "em_conversa", "escalado_humano"],
   em_sequencia: ["sem_resposta", "em_conversa", "escalado_humano"],
-  sem_resposta: ["em_conversa"],
-  convite_retirado: ["aceito", "em_conversa"],
+  // → escalado_humano: o dono escreveu fora do Kakou e o SDR não volta quando a pessoa responder (SDR-61).
+  sem_resposta: ["em_conversa", "escalado_humano"],
+  convite_retirado: ["aceito", "em_conversa", "escalado_humano"],
   em_conversa: ["qualificado", "reuniao_marcada", "encerrado_nao", "escalado_humano"],
   qualificado: ["reuniao_marcada", "encerrado_nao", "escalado_humano"],
   reuniao_marcada: ["encerrado_nao"],

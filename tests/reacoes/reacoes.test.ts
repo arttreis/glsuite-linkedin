@@ -183,6 +183,65 @@ describe("reações a eventos (SDR-07)", () => {
     expect((await acoes(leadId!)).map((a) => a.status)).toEqual(["cancelada"]);
   });
 
+  describe("quem escreve fora do Kakou tira o SDR (SDR-61)", () => {
+    it("depois da sequência sem resposta: quando a pessoa responder, o SDR não volta", async () => {
+      const campanha = await criarCampanha(banco.db);
+      const [leadId] = await leadsComAcao(banco.db, { campanhaId: campanha, quantidade: 1, estado: "sem_resposta", toque: "T4", desde: SEGUNDA_10H });
+      await banco.db.query("update public.leads set chat_id = 'chat-fim' where id = $1::uuid", [leadId]);
+
+      await webhook(mensagemRecebida({ chat_id: "chat-fim", message_id: "manual-fim", message: "Oi! Passando para saber se ainda faz sentido.", sender: { attendee_provider_id: "ACoArthur" } }));
+      expect((await lead(leadId!)).estado).toBe("escalado_humano");
+
+      await webhook(mensagemRecebida({ chat_id: "chat-fim", message_id: "resp-fim", message: "Faz sim, me conta." }));
+      expect((await lead(leadId!)).estado).toBe("escalado_humano");
+    });
+
+    it("convite retirado: o dono escreve e a conversa fica com ele", async () => {
+      const leadId = await leadComConviteEnviado();
+      await banco.db.query("update public.leads set estado = 'convite_retirado', chat_id = 'chat-ret' where id = $1::uuid", [leadId]);
+
+      await webhook(mensagemRecebida({ chat_id: "chat-ret", message_id: "manual-ret", message: "Oi, tudo bem? Te mandei um convite.", sender: { attendee_provider_id: "ACoArthur" } }));
+      expect((await lead(leadId)).estado).toBe("escalado_humano");
+    });
+
+    it("a nota do convite que chega depois do aceite não é o dono escrevendo", async () => {
+      const leadId = await leadComConviteEnviado("Oi Pessoa, tudo bem?");
+      const providerId = await providerDoLead(leadId);
+      await webhook(novaRelacao({ user_provider_id: providerId }));
+      expect((await lead(leadId)).estado).toBe("aceito");
+
+      await webhook(
+        mensagemRecebida({
+          chat_id: "chat-nota",
+          message_id: "msg-nota-atrasada",
+          message: "Oi Pessoa, tudo bem?",
+          sender: { attendee_provider_id: "ACoArthur", attendee_name: "Arthur" },
+          attendees: [{ attendee_provider_id: providerId, attendee_name: "Pessoa" }],
+        }),
+      );
+      expect((await lead(leadId)).estado).toBe("aceito");
+      expect((await acoes(leadId)).find((a) => a.toque === "T2")!.status).toBe("pendente");
+    });
+
+    it("webhook perdido: a checagem na Unipile antes da DM acha o dono escrevendo direto no LinkedIn", async () => {
+      const campanha = await criarCampanha(banco.db);
+      const [leadId] = await leadsComAcao(banco.db, { campanhaId: campanha, quantidade: 1, estado: "em_sequencia", toque: "T3", desde: SEGUNDA_10H });
+      await banco.db.query("update public.leads set chat_id = 'chat-dono', convite_enviado_em = $2 where id = $1::uuid", [
+        leadId,
+        new Date(SEGUNDA_10H.getTime() - 7 * 86_400_000),
+      ]);
+      unipile.mensagensPorChat.set("chat-dono", [
+        { id: "dono-sem-webhook", texto: "Fala! Vi seu post.", enviadaPelaConta: true, remetenteProviderId: "ACoArthur", em: SEGUNDA_10H.toISOString() },
+      ]);
+      const verificarResposta = criarVerificadorDeResposta({ db: banco.db, unipile, agora: SEGUNDA_10H });
+      const resultado = await despachar({ db: banco.db, unipile, agora: new Date(SEGUNDA_10H.getTime() + 60_000), aleatorio: () => 0.5, verificarResposta });
+
+      expect(resultado[0]!.resultado).toBe("cancelada");
+      expect(unipile.chamadasDe("enviarMensagem")).toHaveLength(0);
+      expect((await lead(leadId!)).estado).toBe("escalado_humano");
+    });
+  });
+
   it("o eco da DM que o próprio SDR mandou não para a régua", async () => {
     const campanha = await criarCampanha(banco.db);
     const [leadId] = await leadsComAcao(banco.db, { campanhaId: campanha, quantidade: 1, estado: "aceito", toque: "T2", desde: SEGUNDA_10H });

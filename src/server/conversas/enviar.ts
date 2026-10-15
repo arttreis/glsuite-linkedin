@@ -60,6 +60,7 @@ export async function enviarDmDeConversa(
       tipo: "dm",
       toque: null,
       origem: dm.autor,
+      aprovada: true,
       tentativas: 1,
       texto: dm.texto,
       provider_id: dm.providerId,
