@@ -11,9 +11,9 @@ import { confirmarObjetivoNoPrimeiroAcesso, resumirObjetivoDoPainel, salvarObjet
 /** Uma pergunta por bloco, numerada, como os passos. */
 function Bloco({ numero, titulo, ajuda, children }: { numero: number; titulo: string; ajuda?: string; children: ReactNode }) {
   return (
-    <fieldset className="cartao min-w-0 p-5 sm:p-6">
+    <fieldset className="cartao min-w-0 p-4 sm:p-6">
       <legend className="sr-only">{titulo}</legend>
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2.5 sm:gap-3">
         <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-destaque/50 text-[11px] font-medium text-destaque">
           {numero}
         </span>
@@ -273,11 +273,11 @@ export function FormularioDoObjetivo({
           </label>
           <div role="radiogroup" aria-label="Duração da conversa" className="flex flex-col gap-1.5">
             <span className="text-[13px] font-medium text-tinta-suave">Duração</span>
-            <div className="flex gap-1.5">
+            <div className="grid grid-cols-4 gap-1.5">
               {DURACOES.map((duracao) => (
                 <label
                   key={duracao}
-                  className="flex h-9 min-w-14 cursor-pointer items-center justify-center rounded-full border border-linha px-3 text-sm tabular-nums transition-colors hover:border-linha-forte has-[:checked]:border-destaque/60 has-[:checked]:bg-destaque/10 has-[:checked]:text-destaque has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-destaque"
+                  className="flex h-9 cursor-pointer whitespace-nowrap items-center justify-center rounded-full border border-linha px-2.5 text-sm tabular-nums sm:px-3 transition-colors hover:border-linha-forte has-[:checked]:border-destaque/60 has-[:checked]:bg-destaque/10 has-[:checked]:text-destaque has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-destaque"
                 >
                   <input
                     type="radio"
