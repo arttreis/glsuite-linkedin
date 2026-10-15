@@ -4,6 +4,8 @@ import { lerEnv } from "@/lib/env";
 import { criarModeloClaude } from "@/server/agente/claude";
 import type { ModeloDeLinguagem } from "@/server/agente/modelo";
 import type { EnviadorDeEmail } from "@/server/alertas/alertas";
+import type { AnalistaDeConcorrente } from "@/server/concorrentes/analista";
+import { criarAnalistaDeConcorrenteClaude } from "@/server/concorrentes/claude";
 import { criarLeitorClaude } from "@/server/oferta/claude";
 import type { LeitorDeSite } from "@/server/oferta/leitor";
 import { criarAvaliadorClaude } from "@/server/nota/claude";
@@ -110,6 +112,19 @@ export function obterLeitorDeSite(): LeitorDeSite | null {
       : null;
   }
   return leitorDeSite;
+}
+
+let analistaDeConcorrente: AnalistaDeConcorrente | null | undefined;
+
+/** Lê o site de um concorrente e compara com a oferta (SDR-68), ou null sem ANTHROPIC_API_KEY. */
+export function obterAnalistaDeConcorrente(): AnalistaDeConcorrente | null {
+  if (analistaDeConcorrente === undefined) {
+    const env = envIa();
+    analistaDeConcorrente = env.ANTHROPIC_API_KEY
+      ? criarAnalistaDeConcorrenteClaude({ apiKey: env.ANTHROPIC_API_KEY, modelo: env.IA_MODELO_RASCUNHO, esforco: env.IA_ESFORCO_RASCUNHO })
+      : null;
+  }
+  return analistaDeConcorrente;
 }
 
 let sugeridorDePublicos: SugeridorDePublicos | null | undefined;

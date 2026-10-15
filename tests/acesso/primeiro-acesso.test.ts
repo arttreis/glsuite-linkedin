@@ -110,7 +110,7 @@ describe("primeiro acesso: organização nova por domínio (SDR-40)", () => {
     expect(estado.atual).toBe("site");
   });
 
-  it("o passo atual sai dos dados: site lido vai para a análise, análise confirmada vai para o SDR", async () => {
+  it("o passo atual sai dos dados: site lido vai para a análise, análise confirmada para os concorrentes, e eles para o SDR", async () => {
     const userId = await usuarioNoAuth("duda@guessless.com.br");
     await garantirOperadorDoPrimeiroAcesso(banco.db, pedido(userId, "duda@guessless.com.br"));
     const { organizacaoId } = (await buscarOperadorAtivo(banco.db, userId))!;
@@ -126,8 +126,41 @@ describe("primeiro acesso: organização nova por domínio (SDR-40)", () => {
       [organizacaoId],
     );
     const depois = await estado();
-    expect(depois.atual).toBe("sdr");
+    expect(depois.atual).toBe("concorrentes");
     expect([...depois.feitos]).toEqual(["site", "analise"]);
+
+    await banco.db.query(
+      "update public.ofertas set concorrentes = '[]'::jsonb, concorrentes_confirmados_em = now() where organizacao_id = $1::uuid",
+      [organizacaoId],
+    );
+    const comConcorrentes = await estado();
+    expect(comConcorrentes.atual).toBe("sdr");
+    expect([...comConcorrentes.feitos]).toEqual(["site", "analise", "concorrentes"]);
+  });
+
+  it("organização que já estava no passo SDR ou além não volta para os concorrentes (SDR-68)", async () => {
+    const userId = await usuarioNoAuth("lia@guessless.com.br");
+    await garantirOperadorDoPrimeiroAcesso(banco.db, pedido(userId, "lia@guessless.com.br"));
+    const { organizacaoId } = (await buscarOperadorAtivo(banco.db, userId))!;
+    const estado = () => comOperador(banco.db, userId, (tx) => estadoDoPrimeiroAcesso(tx));
+    await banco.db.query(
+      `insert into public.ofertas (organizacao_id, url, dossie_confirmado, confirmado_em)
+       values ($1::uuid, 'https://lia.com.br/', '{}'::jsonb, now())`,
+      [organizacaoId],
+    );
+
+    // No passo SDR: o SDR já foi montado, sem lista de concorrentes.
+    await banco.db.query(
+      "insert into public.sdrs (organizacao_id, versao, sdr, criado_em, atualizado_em) values ($1::uuid, 1, '{}'::jsonb, now(), now())",
+      [organizacaoId],
+    );
+    expect((await estado()).atual).toBe("sdr");
+
+    // Além dele: SDR aprovado.
+    await banco.db.query("update public.sdrs set aprovado_em = now() where organizacao_id = $1::uuid", [organizacaoId]);
+    const alem = await estado();
+    expect(alem.atual).toBe("abordagem");
+    expect(alem.feitos.has("concorrentes")).toBe(true);
   });
 
   it("a migration dá o primeiro acesso por feito a quem tem conta conectada, e roda de novo sem erro", async () => {
@@ -191,7 +224,7 @@ describe("confirmar a análise no primeiro acesso (SDR-41)", () => {
     expect(await confirmar(ANALISE)).toEqual({ ok: true });
     expect(await nomeDaOrganizacao()).toBe("Loja da Duda");
     const estado = await comOperador(banco.db, userId, (tx) => estadoDoPrimeiroAcesso(tx));
-    expect(estado.atual).toBe("sdr");
+    expect(estado.atual).toBe("concorrentes");
   });
 
   it("depois do primeiro acesso, confirmar não muda o nome", async () => {

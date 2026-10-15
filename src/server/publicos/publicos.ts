@@ -8,6 +8,7 @@ import {
   type Publico,
 } from "@/domain/publico";
 import { ErroDoModelo } from "@/server/agente/modelo";
+import { concorrentesConfirmados } from "@/server/concorrentes/concorrentes";
 import { comOperador } from "@/server/db/operador";
 import type { Db } from "@/server/db/tipos";
 import { custoDaChamada } from "@/server/eval/custo";
@@ -138,6 +139,7 @@ export async function sugerirPublicos(
     return {
       dossie,
       jaEscolhidos: escolhidos,
+      concorrentes: await concorrentesConfirmados(tx, p.organizacaoId),
       baseEm: await confirmadoEm(tx, p.organizacaoId),
     };
   });

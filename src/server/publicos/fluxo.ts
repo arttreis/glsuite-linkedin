@@ -7,6 +7,7 @@ import type { Db } from "@/server/db/tipos";
 import { custoDaChamada } from "@/server/eval/custo";
 import { registrarEvento } from "@/server/eventos";
 import { salvarFluxo } from "@/server/fluxo/fluxos";
+import { concorrentesConfirmados } from "@/server/concorrentes/concorrentes";
 import { dossieConfirmado } from "@/server/oferta/oferta";
 import type { EscritorDeFluxo } from "./escritor";
 import { entradaDoFluxo, promptDoFluxo, VERSAO_DO_PROMPT_DO_FLUXO } from "./prompts-do-fluxo";
@@ -82,6 +83,7 @@ export async function gerarFluxo(
     return {
       publico,
       dossie,
+      concorrentes: await concorrentesConfirmados(tx, campanha.organizacao_id),
       contexto: await contextoDoPerfil(tx, campanha.perfil_id),
       exemplo: await lerConfiguracao(tx, "template_exemplo"),
       nome: campanha.nome,
@@ -90,10 +92,11 @@ export async function gerarFluxo(
   });
   if ("erro" in entrada) return { ok: false, erro: entrada.erro! };
 
-  const { publico, dossie, contexto, exemplo } = entrada;
+  const { publico, dossie, concorrentes, contexto, exemplo } = entrada;
   const sistema = promptDoFluxo({
     publico,
     dossie,
+    concorrentes,
     estilo: p.estilo,
     perfil: {
       nome: entrada.nome,

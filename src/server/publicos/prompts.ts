@@ -1,8 +1,9 @@
+import { textoDosConcorrentes, type ConcorrenteComAnalise } from "@/domain/concorrentes";
 import type { Dossie } from "@/domain/dossie";
 import { MAX_SUGESTOES, type Publico } from "@/domain/publico";
 
 /** Sobe quando o prompt dos públicos muda: vai gravado em cada sugestão. */
-export const VERSAO_DOS_PROMPTS_DE_PUBLICOS = "publicos-3";
+export const VERSAO_DOS_PROMPTS_DE_PUBLICOS = "publicos-4";
 
 /** Prompt de sistema da sugestão de públicos (§4.12). */
 export function promptDaSugestao(): string {
@@ -21,6 +22,7 @@ Um público é uma hipótese de venda: um grupo de pessoas que tem motivo para c
 Regras:
 - Os públicos têm de ser diferentes entre si e dos já escolhidos: muda o cargo, o setor ou a dor.
 - Se o dossiê cita clientes ou cases, um dos públicos pode ser de empresas parecidas com eles.
+- Se o dossiê traz concorrentes, use, quando fizer sentido, onde a oferta ganha deles para escolher o público e o ângulo. O ângulo nunca cita concorrente pelo nome nem fala mal dele.
 - Você pode dizer o que o site não diz sobre por que alguém precisa da oferta. Não pode afirmar fato sobre a empresa que não esteja no dossiê, nem criar prova: prova só pelo número da lista.
 - Sem nome de pessoa física.
 - Escreva tudo em português, menos os cargos, que vão no idioma em que aparecem no LinkedIn.
@@ -29,10 +31,18 @@ Regras:
 
 const lista = (itens: string[]) => (itens.length > 0 ? itens.map((item) => `- ${item}`).join("\n") : "(nada)");
 
-/** Mensagem do usuário: públicos já escolhidos e o dossiê, com as provas numeradas. */
-export function entradaDaSugestao(p: { dossie: Dossie; jaEscolhidos: Publico[] }): string {
+/** Mensagem do usuário: públicos já escolhidos e o dossiê, com as provas numeradas e os concorrentes confirmados. */
+export function entradaDaSugestao(p: {
+  dossie: Dossie;
+  jaEscolhidos: Publico[];
+  concorrentes?: readonly ConcorrenteComAnalise[] | null;
+}): string {
   const d = p.dossie;
   const provas = d.provas.map((prova, n) => `${n}. [${prova.tipo}] ${prova.texto}`);
+  const concorrentes =
+    p.concorrentes && p.concorrentes.length > 0
+      ? `\n\nConcorrentes confirmados pela empresa:\n${textoDosConcorrentes(p.concorrentes)}`
+      : "";
   return `Públicos já escolhidos:
 ${lista(p.jaEscolhidos.map((pub) => `${pub.nome}: ${pub.quem.cargos.join(", ")}. Dor: ${pub.por_que.dor}`))}
 
@@ -51,6 +61,6 @@ Dores que resolve:
 ${lista(d.dores)}
 
 Provas (use os números):
-${provas.length > 0 ? provas.join("\n") : "(nenhuma)"}
+${provas.length > 0 ? provas.join("\n") : "(nenhuma)"}${concorrentes}
 </dossie>`;
 }

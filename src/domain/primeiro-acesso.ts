@@ -1,10 +1,11 @@
 /**
- * Os cinco passos do primeiro acesso (§2.1), nesta ordem. Cada passo é uma
+ * Os passos do primeiro acesso (§2.1), nesta ordem. Cada passo é uma
  * tela em `/onboarding/<slug>` com um botão principal. A abordagem junta quem
  * abordar e o que dizer numa tela só (SDR-56): os públicos, as pessoas e as
- * mensagens como chegam para cada uma.
+ * mensagens como chegam para cada uma. Os concorrentes vêm antes do SDR, que
+ * usa a lista (SDR-68).
  */
-export const PASSOS_DO_PRIMEIRO_ACESSO = ["site", "analise", "sdr", "abordagem", "linkedin"] as const;
+export const PASSOS_DO_PRIMEIRO_ACESSO = ["site", "analise", "concorrentes", "sdr", "abordagem", "linkedin"] as const;
 
 export type IdDoPassoInicial = (typeof PASSOS_DO_PRIMEIRO_ACESSO)[number];
 
@@ -12,6 +13,7 @@ export type IdDoPassoInicial = (typeof PASSOS_DO_PRIMEIRO_ACESSO)[number];
 const SLUG_DO_PASSO: Record<IdDoPassoInicial, string> = {
   site: "site",
   analise: "analysis",
+  concorrentes: "competitors",
   sdr: "sdr",
   abordagem: "approach",
   linkedin: "linkedin",
@@ -24,6 +26,7 @@ export function rotaDoPasso(passo: IdDoPassoInicial): string {
 export const PASSO_INICIAL: Record<IdDoPassoInicial, { rotulo: string; pergunta: string }> = {
   site: { rotulo: "Site", pergunta: "Qual o site da sua empresa?" },
   analise: { rotulo: "Análise", pergunta: "Entendemos certo o seu negócio?" },
+  concorrentes: { rotulo: "Concorrentes", pergunta: "Contra quem você disputa o cliente" },
   sdr: { rotulo: "SDR", pergunta: "Converse com o seu SDR como se fosse um lead." },
   abordagem: { rotulo: "Abordagem", pergunta: "Quem abordar e o que dizer" },
   linkedin: { rotulo: "LinkedIn", pergunta: "Vincule o seu LinkedIn para começar." },

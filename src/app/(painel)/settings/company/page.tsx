@@ -1,24 +1,28 @@
 import { RotateCcw } from "lucide-react";
 import { AtualizarSozinho } from "@/components/atualizar-sozinho";
 import { Aviso } from "@/components/aviso";
+import { situacaoDosConcorrentes } from "@/server/concorrentes/concorrentes";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { ofertaDaOrganizacao } from "@/server/oferta/oferta";
 import { exigirOperadorNoApp } from "@/server/supabase/servidor";
 import { EditorDaAnalise } from "../../../onboarding/analysis/editor-da-analise";
-import { confirmarAnaliseNasConfiguracoes, lerSiteDeNovo } from "../acoes";
+import { EditorDeConcorrentes } from "../../../onboarding/competitors/editor-de-concorrentes";
+import { confirmarAnaliseNasConfiguracoes, confirmarConcorrentesNasConfiguracoes, lerSiteDeNovo } from "../acoes";
 
-// "Ler o site de novo" roda a leitura depois da resposta (after).
+// "Ler o site de novo" roda a leitura depois da resposta (after); "Analisar" um concorrente lê dentro da action.
 export const maxDuration = 300;
 
 const quando = (valor: Date) =>
   new Date(valor).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" });
 
-/** Empresa (§4.12): a análise de negócio, produto e mercado, editável, e ler o site de novo. */
+/** Empresa (§4.12): a análise de negócio, produto e mercado, editável, ler o site de novo e os concorrentes. */
 export default async function EmpresaPage({ searchParams }: PageProps<"/settings/company">) {
   const operador = await exigirOperadorNoApp();
   const { msg } = await searchParams;
-  const oferta = await comOperador(obterDb(), operador.id, (tx) => ofertaDaOrganizacao(tx, operador.organizacaoId, new Date()));
+  const [oferta, concorrentes] = await comOperador(obterDb(), operador.id, (tx) =>
+    Promise.all([ofertaDaOrganizacao(tx, operador.organizacaoId, new Date()), situacaoDosConcorrentes(tx, operador.organizacaoId)]),
+  );
   const lendo = oferta.leitura.status === "lendo";
 
   return (
@@ -63,6 +67,28 @@ export default async function EmpresaPage({ searchParams }: PageProps<"/settings
         />
       ) : (
         <p className="vazio">Ainda não há análise. Informe o site acima e leia.</p>
+      )}
+
+      {oferta.confirmado && (
+        <div id="concorrentes" className="mt-6">
+          <h2 className="text-lg font-medium">Contra quem você disputa o cliente</h2>
+          <p className="mt-1 text-sm text-tinta-suave">
+            {concorrentes.confirmados
+              ? `Lista gravada em ${quando(concorrentes.confirmados.em)}${concorrentes.confirmados.por ? ` por ${concorrentes.confirmados.por}` : ""}. `
+              : ""}
+            Mudar a lista vale para as próximas sugestões de públicos e abordagens. O SDR que já existe não muda sozinho.
+          </p>
+          <EditorDeConcorrentes
+            inicial={concorrentes.lista}
+            analisesIniciais={concorrentes.analises}
+            restantesIniciais={concorrentes.restantes}
+            leituraLigada={concorrentes.leituraLigada}
+            daAnalise={concorrentes.daAnalise}
+            confirmar={confirmarConcorrentesNasConfiguracoes}
+            rotuloDeConfirmar="Salvar os concorrentes"
+            semConcorrente={false}
+          />
+        </div>
       )}
     </div>
   );
