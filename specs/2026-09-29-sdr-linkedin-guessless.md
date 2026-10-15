@@ -1925,3 +1925,59 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   fica como próxima etapa, com o que ela faz, em vez de fingir que começou.
 - O checklist é um componente só (`onboarding/etapas.tsx`), usado nas duas
   telas.
+
+### SDR-66 · Passagem de bastão (15/10/2026)
+
+- Resumo, sugestão e ponte saem de uma chamada própria (`passar`, no modelo
+  da classificação, Haiku), feita só quando o SDR passa. Não vão na chamada
+  de decisão porque a passagem por preço ou reclamação é decidida depois
+  dela, por regra; pedir os três campos em toda resposta pagaria tokens em
+  todas as mensagens. O prompt fica em `prompts-da-passagem.ts`, versão
+  própria `2026-10-15.1`. A chamada roda dentro de `decidirResposta`, então
+  o chat de teste e o eval veem a mesma ponte da produção. Se ela falhar, a
+  passagem acontece sem resumo, sugestão nem ponte.
+- Quem leva ponte é decidido por regra, não pelo modelo: reclamação (sinal),
+  opt-out ambíguo, baixa confiança e "o agente não escreveu resposta" são
+  silêncio. Quando o próprio SDR decide `escalar_humano` (pedido fora do
+  comum, caso da pessoa), leva ponte, a não ser que a confiança fique abaixo
+  da cautela ou haja sinal de reclamação; o prompt ainda pode devolver `null`
+  se o caso for só dúvida.
+- A ponte passa pelo validador da IA e por `problemaDaPonte`: até 30
+  palavras, numa linha, sem prazo menor que 1 dia útil ("hoje", "já já",
+  minutos, horas) e sem dizer que outra pessoa responde. O exemplo do pedido
+  dizia "ainda hoje", que contradiz a regra de 1 dia útil: valeu a regra, e o
+  exemplo virou "até amanhã".
+- Gravação: colunas novas em `rascunhos` (migration
+  `20261015120000_passagem_de_bastao`, aditiva): `passada_em`, `resumo`,
+  `sugestao`, `ponte` (o que o SDR escreveu, mesmo barrada),
+  `ponte_excecao`, `lembrete_em`, `admin_avisado_em`. A ação da ponte fica em
+  `acao_id`, com chave `ponte:<rascunho>`. Tudo na mesma transação da
+  transição para `escalado_humano`: se você assumiu enquanto o modelo pensava,
+  nada é gravado nem enviado.
+- A ponte sai pelo despachante como as outras respostas do SDR (atraso
+  humano no automático; fila no "Aprovo cada resposta"). Resposta do SDR
+  sozinho só sai em `em_conversa`; a ponte é a exceção e só sai em
+  `escalado_humano`: devolveu ao SDR, não sai; você respondeu depois de ela
+  entrar na fila, é cancelada; a checagem na Unipile antes do envio continua
+  valendo.
+- Passagem aberta (`passagemAberta`): o rascunho mais recente com
+  `passada_em`, lead em `escalado_humano`, sem mensagem de saída com autor
+  humano depois e sem transição saindo de `escalado_humano` depois. A ponte
+  tem autor `ia` e não fecha a passagem: Dashboard e Chats mostram a conversa
+  em "Precisa de você" mesmo com a ponte como última mensagem.
+- Prazo do admin: **1 dia útil**, no mesmo horário local, contado da próxima
+  abertura da janela (`somarUmDiaUtil`), e nunca antes do lembrete. 24 horas
+  corridas avisariam o admin num sábado por uma passagem de sexta à tarde,
+  antes até do lembrete de 4 horas úteis (que cairia na segunda); 24 horas
+  úteis, com janela de 9 horas, seriam quase 3 dias. Um dia útil é o que
+  "24 horas" quer dizer para quem trabalha na janela da conta.
+- Lembrete vai para o dono do perfil (o mesmo destino do aviso da passagem);
+  o aviso de 1 dia útil vai para os admins ativos da organização do perfil
+  (`destino: "admins_da_organizacao"` em `enfileirarAlerta`), sem o
+  `alerta_admin_email` global. Os dois só são enfileirados (T-4). A etapa
+  `passagens` roda no tick antes da do SLA.
+- O aviso genérico de SLA estourado pula conversas com passagem aberta: sem
+  isso, quem opera recebia dois e-mails em 4 horas úteis e o admin global um
+  terceiro.
+- Fora: o eval não soma o custo da chamada da passagem nas chamadas da
+  rodada (só classificação, rascunho e juiz).

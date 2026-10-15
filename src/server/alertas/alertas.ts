@@ -15,6 +15,11 @@ export type NovoAlerta = {
   texto: string;
   /** O Arthur (alerta_admin_email) também recebe. Padrão: sim. */
   incluirAdmin?: boolean;
+  /**
+   * Quem recebe pelo perfil: o dono dele (padrão) ou os admins ativos da
+   * organização do perfil (passagem sem resposta, SDR-66).
+   */
+  destino?: "dono_do_perfil" | "admins_da_organizacao";
 };
 
 /**
@@ -24,7 +29,15 @@ export type NovoAlerta = {
  */
 export async function enfileirarAlerta(db: Db, alerta: NovoAlerta): Promise<void> {
   const destinatarios = new Set<string>();
-  if (alerta.perfilId) {
+  if (alerta.perfilId && alerta.destino === "admins_da_organizacao") {
+    const admins = await db.query<{ email: string }>(
+      `select o.email from public.operadores o join public.perfis p on p.organizacao_id = o.organizacao_id
+        where p.id = $1::uuid and o.papel = 'admin' and o.ativo and o.email is not null
+        order by o.email`,
+      [alerta.perfilId],
+    );
+    for (const admin of admins) destinatarios.add(admin.email);
+  } else if (alerta.perfilId) {
     const [dono] = await db.query<{ email: string | null }>(
       `select coalesce(p.email_alerta, o.email) as email
          from public.perfis p left join public.operadores o on o.id = p.operador_id

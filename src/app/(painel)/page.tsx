@@ -46,6 +46,14 @@ function PrecisaDeVoce({ itens }: { itens: ItemDoPrecisa[] }) {
               <div className="min-w-0 flex-1 basis-52">
                 <p className="text-sm font-medium">{item.texto}</p>
                 {item.detalhe && <p className="mt-0.5 line-clamp-2 text-[13px] text-tinta-suave">{item.detalhe}</p>}
+                {item.passagem?.resumo && (
+                  <p className="mt-1.5 whitespace-pre-line text-[13px] leading-relaxed">{item.passagem.resumo}</p>
+                )}
+                {item.passagem?.sugestao && (
+                  <p className="mt-1.5 line-clamp-3 text-[13px] text-tinta-suave">
+                    <span className="font-medium text-destaque">Sugestão do SDR:</span> {item.passagem.sugestao}
+                  </p>
+                )}
               </div>
               <Link href={item.href} className={`botao botao-pequeno shrink-0 ${indice === 0 ? "botao-primario" : ""}`}>
                 {item.acao}

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Aviso } from "@/components/aviso";
 import { Avatar } from "@/components/avatar";
 import type { EstadoDoLead } from "@/domain/estados";
-import { abrirChat, lerFiltro, listarChats } from "@/server/chats/chats";
+import { abrirChat, lerFiltro, listarChats, type PassagemDoChat } from "@/server/chats/chats";
 import { contextoDoPerfil } from "@/server/campanhas/perfil";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
@@ -25,6 +25,22 @@ const SITUACAO = {
   voce: { texto: "Com você", classe: "etiqueta etiqueta-ponto" },
   precisa: { texto: "Precisa de você", classe: "etiqueta etiqueta-ponto etiqueta-atencao" },
 } as const;
+
+/** O que o SDR deixou ao passar a conversa (SDR-66): motivo, resumo e o que ele disse à pessoa. */
+function PassagemDoSdr({ passagem, ponteSaiu }: { passagem: PassagemDoChat; ponteSaiu: boolean }) {
+  return (
+    <div className="border-t border-linha bg-destaque/[0.04] px-4 py-3 text-[13px]">
+      <p className="font-medium text-destaque">O SDR passou a conversa para você{passagem.motivo ? `: ${passagem.motivo}` : ""}</p>
+      {passagem.resumo && <p className="mt-1 whitespace-pre-line leading-relaxed">{passagem.resumo}</p>}
+      {passagem.ponte && !passagem.ponteExcecao && (
+        <p className="mt-1 text-tinta-suave">
+          {ponteSaiu ? "Antes de parar, ele avisou a pessoa" : "A mensagem que avisa a pessoa ainda não saiu"}: &ldquo;{passagem.ponte}&rdquo;
+        </p>
+      )}
+      {passagem.ponteExcecao && <p className="mt-1 text-tinta-suave">Ele não avisou a pessoa ({passagem.ponteExcecao}).</p>}
+    </div>
+  );
+}
 
 export default async function ChatDoLeadPage({ params, searchParams }: PageProps<"/chats/[leadId]">) {
   const operador = await exigirOperadorNoApp();
@@ -91,7 +107,20 @@ export default async function ChatDoLeadPage({ params, searchParams }: PageProps
             </li>
           </ol>
 
-          <FormularioDeResposta leadId={lead.id} contexto={contexto} bloqueio={bloqueio} aviso={aviso} />
+          {chat.passagem && !bloqueio && (
+            <PassagemDoSdr
+              passagem={chat.passagem}
+              ponteSaiu={chat.fio.some((item) => item.tipo === "mensagem" && item.quem === "sdr" && item.texto.trim() === chat.passagem?.ponte?.trim())}
+            />
+          )}
+          <FormularioDeResposta
+            key={chat.passagem ? `passagem-${new Date(chat.passagem.em).getTime()}` : "resposta"}
+            leadId={lead.id}
+            contexto={contexto}
+            bloqueio={bloqueio}
+            aviso={aviso}
+            sugestao={chat.passagem?.sugestao ?? null}
+          />
         </section>
 
         <aside className="cartao hidden overflow-y-auto p-5 xl:block">

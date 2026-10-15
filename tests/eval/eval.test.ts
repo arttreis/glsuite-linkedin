@@ -79,7 +79,13 @@ describe("rubrica", () => {
     const preco = caso("br-05");
     expect(avaliarCaso(preco, rascunho("Depende do escopo."), BOA).acao?.passou).toBe(false);
     expect(avaliarCaso(preco, rascunho("Depende do escopo.", "responder", "pergunta de preço"), BOA).acao?.passou).toBe(true);
-    const escalado: Desfecho = { ...(rascunho(null) as Extract<Desfecho, { tipo: "rascunho" }>), tipo: "escalar", motivo: "preço" };
+    const semPassagem = { resumo: null, sugestao: null, ponte: null, ponteEscrita: null, ponteExcecao: null };
+    const escalado: Desfecho = {
+      ...(rascunho(null) as Extract<Desfecho, { tipo: "rascunho" }>),
+      tipo: "escalar",
+      motivo: "preço",
+      passagem: semPassagem,
+    };
     expect(avaliarCaso(preco, escalado, null).acao?.passou).toBe(true);
   });
 

@@ -1,4 +1,5 @@
 import { STATUS_SAUDAVEIS } from "@/domain/conta";
+import { passagemAberta } from "@/server/agente/passagem";
 import type { Db } from "@/server/db/tipos";
 
 /** Uma coisa esperando alguém, com o lugar onde ela se resolve (§4.9). */
@@ -8,6 +9,8 @@ export type ItemDoPrecisa = {
   detalhe: string | null;
   href: string;
   acao: string;
+  /** Quando o SDR passou a conversa (SDR-66): o resumo do lead e a resposta que ele sugere. */
+  passagem?: { resumo: string | null; sugestao: string | null };
 };
 
 /** Conversas listadas uma a uma; o resto vira um item que leva aos Chats. */
@@ -21,6 +24,8 @@ type ConversaChamando = {
   empresa: string | null;
   motivo: string | null;
   pelo_agente: boolean;
+  resumo: string | null;
+  sugestao: string | null;
 };
 
 type Conta = {
@@ -40,8 +45,9 @@ type Conta = {
  */
 export async function precisaDeVoce(db: Db): Promise<ItemDoPrecisa[]> {
   // A conversa precisa de você quando está com humano (o SDR chamou ou você
-  // assumiu) e a última mensagem é da pessoa.
-  const chamando = await db.query<ConversaChamando & { total: number }>(
+  // assumiu) e a última mensagem é da pessoa, ou quando o SDR passou e você
+  // ainda não respondeu (a ponte dele não conta como resposta, SDR-66).
+  const chamando = await db.query<ConversaChamando & { aberta: boolean; total: number }>(
     `with abertas as (
        select l.id, l.estado, l.perfil_id,
               (select m.direcao from public.mensagens m where m.lead_id = l.id order by m.em desc limit 1) as ultima,
@@ -53,6 +59,7 @@ export async function precisaDeVoce(db: Db): Promise<ItemDoPrecisa[]> {
      select a.id as lead_id, pe.nome, pe.empresa,
             e.payload ->> 'motivo' as motivo,
             coalesce(e.ator = 'agente', false) as pelo_agente,
+            pa.resumo, pa.sugestao, coalesce(pa.aberta, false) as aberta,
             count(*) over ()::int as total
        from abertas a
        join public.leads l on l.id = a.id
@@ -63,7 +70,12 @@ export async function precisaDeVoce(db: Db): Promise<ItemDoPrecisa[]> {
             and ev.payload ->> 'para' = 'escalado_humano'
           order by ev.em desc limit 1
        ) e on a.estado = 'escalado_humano'
-      where a.ultima = 'entrada'
+       left join lateral (
+         select r.resumo, r.sugestao, true as aberta from public.rascunhos r
+          where r.lead_id = a.id and ${passagemAberta("r", "l")}
+          order by r.passada_em desc limit 1
+       ) pa on true
+      where a.ultima = 'entrada' or pa.aberta
       order by a.ultima_em desc
       limit ${CONVERSAS_UMA_A_UMA}`,
   );
@@ -76,6 +88,7 @@ export async function precisaDeVoce(db: Db): Promise<ItemDoPrecisa[]> {
       : "Esperando a sua resposta.",
     href: `/chats/${c.lead_id}`,
     acao: "Responder",
+    ...(c.aberta && (c.resumo || c.sugestao) ? { passagem: { resumo: c.resumo, sugestao: c.sugestao } } : {}),
   }));
   const restantes = (chamando[0]?.total ?? 0) - chamando.length;
   if (restantes > 0) {

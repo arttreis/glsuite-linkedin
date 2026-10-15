@@ -1,3 +1,4 @@
+import { leadsComPassagemAberta } from "@/server/agente/passagem";
 import { enfileirarAlerta } from "@/server/alertas/alertas";
 import type { Db } from "@/server/db/tipos";
 import { listarConversas } from "./inbox";
@@ -44,12 +45,17 @@ export async function alertarNovaMensagem(
   });
 }
 
-/** SLA estourado vira alerta (uma vez por mensagem sem retorno). Roda no tick. */
+/**
+ * SLA estourado vira alerta (uma vez por mensagem sem retorno). Roda no tick.
+ * Conversa que o SDR passou para você tem os avisos dela (SDR-66): lembrete e
+ * admin, em `cobrarPassagens`.
+ */
 export async function alertarSlasEstourados(db: Db, agora: Date): Promise<number> {
   const conversas = await listarConversas(db, { agora, estado: "abertas" });
+  const passadas = await leadsComPassagemAberta(db);
   let alertas = 0;
   for (const conversa of conversas) {
-    if (conversa.sla?.tipo !== "estourado" || !conversa.ultimaEntrada) continue;
+    if (conversa.sla?.tipo !== "estourado" || !conversa.ultimaEntrada || passadas.has(conversa.leadId)) continue;
     await enfileirarAlerta(db, {
       chave: `sla/${conversa.leadId}/${new Date(conversa.ultimaEntrada).toISOString()}`,
       tipo: "sla",

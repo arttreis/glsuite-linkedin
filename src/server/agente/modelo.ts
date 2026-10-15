@@ -23,6 +23,18 @@ export const decisao = z.object({
 export type Decisao = z.infer<typeof decisao>;
 
 /**
+ * Passagem de bastão (SDR-66): o que a pessoa recebe quando o SDR passa a
+ * conversa (resumo e resposta sugerida) e a ponte que ele manda antes de
+ * parar, quando o caso pede.
+ */
+export const passagem = z.object({
+  resumo: z.string(),
+  sugestao: z.string(),
+  ponte: z.string().nullable(),
+});
+export type PassagemDaIa = z.infer<typeof passagem>;
+
+/**
  * T1 personalizado (SDR-15): ângulos tirados da pesquisa do prospect e a nota
  * do convite escrita sobre o melhor deles.
  */
@@ -51,6 +63,8 @@ export type Resposta<T> = { saida: T; uso: Uso; modelo: string };
 export interface ModeloDeLinguagem {
   classificar(p: { sistema: string; entrada: string }): Promise<Resposta<Classificacao>>;
   rascunhar(p: { sistema: string; entrada: string }): Promise<Resposta<Decisao>>;
+  /** Passagem de bastão (SDR-66): chamada barata, no modelo da classificação. */
+  passar(p: { sistema: string; entrada: string }): Promise<Resposta<PassagemDaIa>>;
   escreverConvite(p: { sistema: string; entrada: string }): Promise<Resposta<ConviteT1>>;
 }
 

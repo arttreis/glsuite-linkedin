@@ -17,6 +17,8 @@ export type Reserva = {
   origem: "template" | "ia" | "humano";
   /** Alguém aprovou ou escreveu (`aprovada_por`). Sem isso, a resposta é do SDR sozinho. */
   aprovada: boolean;
+  /** A ponte que o SDR manda ao passar a conversa (SDR-66). */
+  ponte?: boolean;
   tentativas: number;
   texto: string | null;
   provider_id: string;
@@ -27,10 +29,12 @@ export type Reserva = {
 export type ContextoDaReserva = { agora: Date; feriados: Feriados; cooldownDias: number };
 
 /** Em que estado o lead precisa estar para cada ação sair (§5.1, passo 4). */
-export function estadosPermitidos(acao: { tipo: string; toque: string | null; aprovada: boolean }): EstadoDoLead[] {
+export function estadosPermitidos(acao: { tipo: string; toque: string | null; aprovada: boolean; ponte?: boolean }): EstadoDoLead[] {
   if (acao.tipo === "convite") return ["na_fila"];
   if (acao.tipo === "retirar_convite") return ["convite_enviado"];
   if (acao.tipo === "dm" && acao.toque) return ["aceito", "em_sequencia"];
+  // A ponte sai com a conversa já passada para você; se você devolveu ao SDR, não sai (SDR-66).
+  if (acao.tipo === "dm" && acao.ponte && !acao.aprovada) return ["escalado_humano"];
   // Resposta do SDR sozinho só sai enquanto a conversa é dele: se você assumiu
   // no meio do caminho (pelo Chats ou direto no LinkedIn), ela não sai (§4.7).
   if (acao.tipo === "dm" && !acao.aprovada) return ["em_conversa"];
@@ -71,6 +75,15 @@ async function revalidar(
     return { tipo: "cancelar", motivo: `lead fora da régua (${lead.estado})` };
   }
   if (lead.optout_em || (await temOptout(tx, acao.provider_id))) return { tipo: "cancelar", motivo: "opt-out" };
+  if (acao.ponte && !acao.aprovada) {
+    const [respondeu] = await tx.query(
+      `select 1 from public.mensagens m join public.acoes a on a.id = $2::uuid
+        where m.lead_id = $1::uuid and m.direcao = 'saida' and m.autor = 'humano' and m.em > a.criada_em
+        limit 1`,
+      [acao.lead_id, acao.id],
+    );
+    if (respondeu) return { tipo: "cancelar", motivo: "você já respondeu: a ponte não sai" };
+  }
   if (acao.toque && !lead.angulo) return { tipo: "cancelar", motivo: "toque sem ângulo registrado" };
 
   if (acao.toque) {
@@ -160,7 +173,7 @@ export async function reservarProximaAcao(
 
       const [acao] = await tx.query<Candidata>(
         `select a.id, a.lead_id, a.tipo, a.toque, a.origem, a.aprovada_por is not null as aprovada, a.tentativas,
-                pe.provider_id, l.chat_id, l.convite_id
+                a.idempotency_key like 'ponte:%' as ponte, pe.provider_id, l.chat_id, l.convite_id
            from public.acoes a
            join public.leads l on l.id = a.lead_id
            join public.campanhas c on c.id = l.campanha_id

@@ -18,6 +18,11 @@ export function dataLocal(instante: Date, fuso: string): string {
   return zoned(instante, fuso).toPlainDate().toString();
 }
 
+/** O horário local (`HH:MM:SS`) de um instante, no fuso. */
+export function horaLocal(instante: Date, fuso: string): string {
+  return zoned(instante, fuso).toPlainTime().toString({ smallestUnit: "second" });
+}
+
 export function ehDiaUtil(data: string, feriados: Feriados): boolean {
   return Temporal.PlainDate.from(data).dayOfWeek <= 5 && !feriados.has(data);
 }
@@ -111,6 +116,16 @@ export function somarHorasUteis(inicio: Date, horas: number, fuso: string, janel
     restante -= disponivel;
     cursor = instanteLocal(somarDiasUteis(data, 1, feriados), janela.inicio, fuso);
   }
+}
+
+/**
+ * Um dia útil depois, no mesmo horário local. Começa na próxima abertura da
+ * janela (passagem num sábado conta da segunda): é o "24 horas" do aviso ao
+ * admin na passagem de bastão (SDR-66), sem fim de semana nem feriado.
+ */
+export function somarUmDiaUtil(instante: Date, fuso: string, janela: Janela, feriados: Feriados): Date {
+  const inicio = proximaAbertura(instante, fuso, janela, feriados);
+  return instanteLocal(somarDiasUteis(dataLocal(inicio, fuso), 1, feriados), horaLocal(inicio, fuso), fuso);
 }
 
 /** Minutos de intervalo aleatório entre ações (jitter, §4.3). */
