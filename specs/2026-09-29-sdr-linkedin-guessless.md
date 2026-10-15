@@ -1858,3 +1858,21 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   caracteres. Pedido sem cargo mantém os cargos (a busca precisa de um).
 - A busca do LinkedIn não filtra porte nem exclui cargo; o prompt manda dizer
   isso em vez de inventar filtro.
+
+### SDR-63 · Sugestão de públicos que não quebra por um campo longo (15/10/2026)
+
+- Causa: `zodOutputFormat` não manda `maxLength`, `maxItems` nem
+  `minItems` acima de 1 para a API como restrição (só como texto na
+  descrição), mas valida a resposta com o esquema zod inteiro. Um campo acima
+  do limite em um dos públicos (o `quem_nao_e` com vários sinais passava fácil
+  de 400) fazia o SDK lançar `AnthropicError`, e a tela mostrava "a IA não
+  respondeu" para a sugestão inteira.
+- `sugestaoDePublicos` virou um esquema próprio, sem limite de tamanho. Os
+  limites ficam no prompt (`publicos-4`) e em `publicosDaSugestao`: cargos e
+  setores a mais são cortados nos primeiros; texto longo descarta só aquele
+  público.
+- Erro de parse da saída estruturada vira `ErroDoModelo` ("A resposta veio
+  fora do formato") nos três clientes de `publicos/claude.ts`, com o detalhe
+  no log. Erro de API continua "a IA não respondeu".
+- O sugeridor sobe de 16k para 32k de `max_tokens`, como o leitor do site:
+  pensamento adaptativo mais 5 públicos com aderência chegava perto do teto.

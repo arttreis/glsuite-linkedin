@@ -784,6 +784,14 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   empresas; nada é salvo nem buscado sem o clique da pessoa; sem cargo no
   pedido, os cargos ficam; IA fora do ar não mexe nos filtros.
 
+**SDR-63 · Sugestão de públicos que não quebra**
+- Pedido: na abordagem, "Não consegui sugerir públicos: a IA não respondeu".
+- Um público com texto longo demais sai sozinho, e os outros ficam; cargos e
+  setores a mais ficam nos primeiros. Resposta fora do formato diz isso, e
+  não que a IA não respondeu.
+- Aceite: resposta com um campo longo num público traz os outros; 12 cargos
+  viram os 10 primeiros.
+
 ## 10 · Decisões abertas
 
 | # | Decisão | Sugestão | Dono |
