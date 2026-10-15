@@ -160,43 +160,36 @@ describe("análise do site: progresso da leitura e Mercado (SDR-41)", () => {
 
   const progresso = async () => (await ofertaDaOrganizacao(banco.db, guessless, AGORA)).leitura.progresso;
 
-  it("as páginas aparecem conforme abrem, e depois vem a etapa de montar a análise", async () => {
+  it("as páginas aparecem conforme abrem, com título e trecho; depois vêm a análise e o Mercado", async () => {
     const { ofertaId } = await iniciar();
     expect(await progresso()).toEqual({ etapa: "paginas", paginas: [] });
 
+    const inicial = { url: "https://guessless.com.br/", titulo: "GuessLess", trecho: "Consultoria de crescimento para e-commerce." };
+    const sobre = { url: "https://guessless.com.br/sobre", titulo: "Sobre", trecho: null };
     const vistos: unknown[] = [];
+    const esperar = () => new Promise((resolver) => setTimeout(resolver, 50));
     const leitor: LeitorDeSite = {
       async ler(p) {
-        p.aoAbrirPagina?.({ url: "https://guessless.com.br/", titulo: "GuessLess" });
-        await new Promise((resolver) => setTimeout(resolver, 50));
+        p.aoAbrirPagina?.(inicial);
+        await esperar();
         vistos.push(await progresso());
-        p.aoAbrirPagina?.({ url: "https://guessless.com.br/sobre", titulo: "Sobre" });
-        return {
-          notas: "A GuessLess vende diagnóstico de margem.",
-          fontes: [
-            { url: "https://guessless.com.br/", titulo: "GuessLess" },
-            { url: "https://guessless.com.br/sobre", titulo: "Sobre" },
-          ],
-          uso: USO,
-          modelo: "claude-sonnet-5",
-        };
+        p.aoAbrirPagina?.(sobre);
+        return { notas: "A GuessLess vende diagnóstico de margem.", fontes: [inicial, sobre], uso: USO, modelo: "claude-sonnet-5" };
       },
-      async estruturar() {
+      async estruturar(p) {
         vistos.push(await progresso());
+        p.aoComecarMercado?.();
+        await esperar();
+        vistos.push((await progresso()).etapa);
         return { saida: DOSSIE, uso: USO, modelo: "claude-sonnet-5" };
       },
     };
     await concluirLeitura({ db: banco.db, leitor, agora: () => AGORA }, { ofertaId });
 
     expect(vistos).toEqual([
-      { etapa: "paginas", paginas: [{ url: "https://guessless.com.br/", titulo: "GuessLess" }] },
-      {
-        etapa: "analise",
-        paginas: [
-          { url: "https://guessless.com.br/", titulo: "GuessLess" },
-          { url: "https://guessless.com.br/sobre", titulo: "Sobre" },
-        ],
-      },
+      { etapa: "paginas", paginas: [inicial], maxPaginas: 8 },
+      { etapa: "analise", paginas: [inicial, sobre], maxPaginas: 8 },
+      "mercado",
     ]);
   });
 

@@ -38,8 +38,10 @@ meio volta para o passo em que parou. O passo **Concorrentes** entra entre
 Objetivo e SDR com o SDR-68; Leads e Abordagem viraram uma tela só no SDR-56.
 
 1. **Site.** "Qual o site da sua empresa?" Um campo e um botão.
-2. **Análise.** Enquanto o Kakou lê o site, a tela mostra o que ele está lendo.
-   O resultado vem em três blocos: **Negócio** (o que a empresa é e para quem),
+2. **Análise.** Enquanto o Kakou lê o site, a tela mostra o que ele está lendo:
+   a etapa em que está (abrindo o site, lendo as páginas, entendendo o negócio
+   e o produto, montando o mercado), cada página aberta com título, caminho e
+   um trecho, e há quanto tempo começou. O resultado vem em três blocos: **Negócio** (o que a empresa é e para quem),
    **Produto** (o que vende, diferenciais e provas) e **Mercado** (quem compra,
    o que usa hoje no lugar, o que faz ser a hora de comprar). A pessoa corrige
    qualquer item ali mesmo e confirma (§4.2).
@@ -840,6 +842,22 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
 - Aceite: o prompt da primeira mensagem exige a pergunta mesmo com um SDR
   antigo cuja abertura não fala nela; a regra aparece entre as regras da casa
   e o ajuste do SDR não a desliga.
+
+**SDR-65 · O que a tela mostra enquanto o Kakou trabalha**
+- Pedido: o aviso de que o site está sendo analisado podia ser melhor.
+- Na Análise (§2.1, passo 2), as etapas em lista: abrindo o site, lendo as
+  páginas (quantas de até quantas), entendendo o negócio e o produto,
+  montando o mercado, pronto. A atual em destaque, as feitas com check, as
+  próximas apagadas. Cada página aberta com título, caminho e um trecho do
+  texto. Há quanto tempo começou; depois de 2 minutos, o aviso de que site
+  grande demora e dá para fechar a aba.
+- Na Abordagem, enquanto gera: escolhendo públicos, escrevendo o convite e as
+  mensagens, revisando as regras.
+- Sem percentual nem tempo restante: só o que o servidor sabe.
+- Aceite: sem página aberta, "Abrindo o site" é a atual; com páginas, a tela
+  conta quantas de até quantas e mostra cada uma; quando a IA passa ao
+  Mercado, Negócio e Produto ficam feitos; leitura de mais de 2 minutos mostra
+  o aviso; leitura antiga, sem o teto gravado, conta só as lidas.
 
 **SDR-67 · Passo Objetivo no primeiro acesso**
 - Pedido: perguntar, antes de montar o SDR, o que a pessoa quer vender e o

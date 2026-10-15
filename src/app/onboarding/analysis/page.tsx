@@ -1,56 +1,94 @@
-import { Check, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AtualizarSozinho } from "@/components/atualizar-sozinho";
 import { Aviso } from "@/components/aviso";
+import { tempoDecorrido } from "@/lib/tempo";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
+import type { FonteDoSite } from "@/server/oferta/leitor";
 import { ofertaDaOrganizacao, type SituacaoDaOferta } from "@/server/oferta/oferta";
 import { lerDeNovo } from "../acoes";
+import { type Etapa, Etapas } from "../etapas";
 import { Pergunta } from "../pergunta";
 import { abrirPasso } from "../portao";
 import { EditorDaAnalise } from "./editor-da-analise";
+import { etapasDaLeitura, type IdDaEtapaDaLeitura } from "./etapas-da-leitura";
 
 // "Tentar de novo" dispara a leitura daqui, depois da resposta (after).
 export const maxDuration = 300;
 
 const dominio = (url: string | null) => (url ? new URL(url).hostname.replace(/^www\./, "") : "o site");
 
-/** Enquanto a IA lê: as páginas aparecem conforme abrem, e depois a montagem da análise. */
-function Lendo({ oferta }: { oferta: SituacaoDaOferta }) {
-  const { etapa, paginas } = oferta.leitura.progresso;
+/** Depois disso sem terminar, a tela avisa que site grande demora e que dá para sair. */
+const DEMORANDO_MS = 2 * 60 * 1000;
+
+/** O que acontece na etapa atual, numa linha. */
+const DETALHE_DA_ETAPA: Partial<Record<IdDaEtapaDaLeitura, string>> = {
+  abrir: "Começando pela página inicial.",
+  negocio: "O que a empresa é, para quem, o que vende e por que escolhem vocês.",
+  mercado: "Quem compra, o que usa hoje no lugar e o que faz ser a hora.",
+};
+
+const caminho = (url: string) => new URL(url).pathname;
+
+/** As páginas abertas, na ordem: título, caminho e o começo do texto. A mais nova em destaque enquanto lê. */
+function PaginasAbertas({ paginas, lendo }: { paginas: FonteDoSite[]; lendo: boolean }) {
+  return (
+    <ul className="mt-3 flex flex-col gap-2">
+      {paginas.map((pagina, indice) => (
+        <li
+          key={pagina.url}
+          className={`rounded-xl border px-3.5 py-2.5 ${lendo && indice === paginas.length - 1 ? "border-destaque/35 bg-destaque/5" : "border-linha bg-superficie"}`}
+        >
+          <p className="flex min-w-0 flex-col text-sm sm:flex-row sm:items-baseline sm:gap-2">
+            <span className="min-w-0 truncate font-medium">{pagina.titulo ?? caminho(pagina.url)}</span>
+            {caminho(pagina.url) !== "/" && (
+              <span className="min-w-0 truncate text-xs text-tinta-fraca sm:max-w-[50%] sm:shrink-0">{caminho(pagina.url)}</span>
+            )}
+          </p>
+          {pagina.trecho && <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-tinta-suave">“{pagina.trecho}”</p>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * Enquanto a IA lê: as etapas, as páginas que abriu (com o que diz cada uma),
+ * há quanto tempo começou e, se demorar, o aviso de que dá para sair.
+ */
+function Lendo({ oferta, agora }: { oferta: SituacaoDaOferta; agora: Date }) {
+  const { progresso, iniciadaEm } = oferta.leitura;
+  const lendoPaginas = progresso.etapa === "paginas";
+  const etapas: Etapa[] = etapasDaLeitura(progresso).map((etapa) => ({
+    ...etapa,
+    detalhe: etapa.estado === "atual" ? DETALHE_DA_ETAPA[etapa.id] : undefined,
+    conteudo:
+      etapa.id === "paginas" && progresso.paginas.length > 0 ? (
+        <PaginasAbertas paginas={progresso.paginas} lendo={lendoPaginas} />
+      ) : undefined,
+  }));
+  const demorando = iniciadaEm !== null && agora.getTime() - new Date(iniciadaEm).getTime() > DEMORANDO_MS;
   return (
     <>
       <Pergunta passo="analise" titulo={`Lendo ${dominio(oferta.url)}`}>
-        Abrimos as páginas que mais dizem sobre o que você vende. Leva de 30 segundos a 2 minutos; pode fechar a aba e
-        voltar depois.
+        Abrimos as páginas que mais dizem sobre o que você vende e montamos a análise com o que está nelas. Costuma levar de 30
+        segundos a 2 minutos.
       </Pergunta>
-      <ol role="status" aria-live="polite" className="mt-10 flex flex-col gap-3">
-        {paginas.map((pagina) => (
-          <li key={pagina.url} className="flex items-center gap-3 text-sm">
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-destaque/50 text-destaque">
-              <Check className="size-3.5" aria-hidden />
-            </span>
-            <span className="min-w-0 truncate">
-              {pagina.titulo ?? pagina.url}
-              {new URL(pagina.url).pathname !== "/" && (
-                <span className="ml-2 text-tinta-fraca">{new URL(pagina.url).pathname}</span>
-              )}
-            </span>
-          </li>
-        ))}
-        <li className="flex items-center gap-3 text-sm text-tinta-suave">
-          <span className="relative flex size-6 shrink-0 items-center justify-center">
-            <span className="absolute size-6 animate-ping rounded-full bg-destaque/25" />
-            <span className="size-2.5 rounded-full bg-destaque" />
-          </span>
-          {etapa === "analise"
-            ? "Montando a análise de negócio, produto e mercado..."
-            : paginas.length === 0
-              ? "Abrindo a página inicial..."
-              : "Abrindo a próxima página..."}
-        </li>
-      </ol>
+      {iniciadaEm && (
+        <p className="mt-4 text-sm text-tinta-fraca">
+          Começou há <span className="tabular-nums">{tempoDecorrido(iniciadaEm, agora)}</span>
+        </p>
+      )}
+      <div role="status" aria-live="polite" className="mt-10">
+        <Etapas etapas={etapas} />
+      </div>
+      {demorando && (
+        <Aviso className="mt-8">
+          Sites grandes demoram mais. Pode fechar a aba: a leitura continua sem você e a análise fica aqui quando voltar.
+        </Aviso>
+      )}
       <AtualizarSozinho segundos={3} />
     </>
   );
@@ -82,12 +120,11 @@ function Falhou({ oferta }: { oferta: SituacaoDaOferta }) {
 export default async function PassoAnalise({ searchParams }: PageProps<"/onboarding/analysis">) {
   const { operador } = await abrirPasso("analise");
   const { msg } = await searchParams;
-  const oferta = await comOperador(obterDb(), operador.id, (tx) =>
-    ofertaDaOrganizacao(tx, operador.organizacaoId, new Date()),
-  );
+  const agora = new Date();
+  const oferta = await comOperador(obterDb(), operador.id, (tx) => ofertaDaOrganizacao(tx, operador.organizacaoId, agora));
   const { status } = oferta.leitura;
 
-  if (status === "lendo") return <Lendo oferta={oferta} />;
+  if (status === "lendo") return <Lendo oferta={oferta} agora={agora} />;
   if (!oferta.dossie) {
     if (status === "erro" || status === "parada") return <Falhou oferta={oferta} />;
     redirect("/onboarding/site");

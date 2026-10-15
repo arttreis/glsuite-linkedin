@@ -13,22 +13,11 @@ import { listarPublicos, publicoDoPrimeiroAcesso, sugerirPublicos } from "@/serv
 import { obterSdr } from "@/server/sdr/sdr";
 import { abrirPasso } from "../portao";
 import { AreaDeTrabalho, type PreviaDaTela } from "./area-de-trabalho";
+import { GerandoAbordagem } from "./gerando";
 import { Lateral } from "./lateral";
 
 // Sugerir o público, buscar a prévia e escrever a abordagem são chamadas longas na abertura do passo.
 export const maxDuration = 300;
-
-function Pensando() {
-  return (
-    <div role="status" className="cartao mx-auto mt-10 flex min-h-64 max-w-2xl flex-col items-center justify-center gap-4 p-8 text-center">
-      <span className="relative flex size-10 items-center justify-center">
-        <span className="absolute size-10 animate-ping rounded-full bg-destaque/20" />
-        <span className="size-3.5 rounded-full bg-destaque" />
-      </span>
-      <p className="font-medium">Pensando em quem compra de você...</p>
-    </div>
-  );
-}
 
 /** A prévia do público em uso: a que já existe, ou uma busca nova pela conta da casa. */
 async function garantirPrevia(organizacaoId: string, publicoId: string): Promise<PreviaDaTela> {
@@ -131,7 +120,7 @@ export default async function PassoAbordagem({ searchParams }: PageProps<"/onboa
           {msg}
         </Aviso>
       )}
-      <Suspense fallback={<Pensando />}>
+      <Suspense fallback={<GerandoAbordagem etapa="publicos" className="mx-auto mt-10 max-w-2xl" />}>
         <Area operador={operador} />
       </Suspense>
     </>
