@@ -74,6 +74,25 @@ export async function salvarSdrDoPainel(entrada: { sdr: unknown }): Promise<{ ok
   return resultado;
 }
 
+/** Quando o SDR passa a conversa para você (§4.7): os casos da pessoa e a cautela. O resto do SDR fica como está. */
+export async function salvarPassagemDoPainel(entrada: {
+  quando_chamar_voce: unknown;
+  cautela: unknown;
+}): Promise<{ ok: true; versao: number } | { ok: false; erro: string }> {
+  const operador = await exigirOperador();
+  const resultado = await comOperador(obterDb(), operador.id, (tx) =>
+    salvarSdr(tx, {
+      organizacaoId: operador.organizacaoId,
+      sdr: { quando_chamar_voce: entrada.quando_chamar_voce, cautela: entrada.cautela },
+      resumo: "Mudou quando o SDR passa a conversa para você.",
+      operadorId: operador.id,
+      agora: new Date(),
+    }),
+  );
+  if (resultado.ok) revalidatePath("/settings/sdr");
+  return resultado;
+}
+
 /** Organização que já existia monta o SDR aqui, da análise confirmada (§4.1). */
 export async function montarSdrDoPainel() {
   const operador = await exigirOperador();

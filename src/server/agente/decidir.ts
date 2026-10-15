@@ -1,5 +1,6 @@
 import { contextoDeValidacao } from "@/domain/campanha";
 import { detectarOptout } from "@/domain/optout";
+import { limiarDaCautela } from "@/domain/passagem";
 import type { Sdr } from "@/domain/sdr";
 import { validarMensagem, type Praca, type ResultadoDaValidacao } from "@/domain/validador";
 import type { Configuracao } from "@/server/configuracoes";
@@ -129,7 +130,8 @@ export async function abrirConversa(p: {
  * regras duras que não dependem do prompt:
  * - opt-out claro é reconhecido antes de qualquer IA;
  * - preço, reclamação, opt-out ambíguo, baixa confiança e reunião sem link
- *   fazem o SDR parar e chamar você (§4.7), em qualquer modo;
+ *   fazem o SDR parar e chamar você (§4.7), em qualquer modo; "baixa" é
+ *   abaixo do nível de cautela do SDR (`limiarDaCautela`);
  * - todo texto passa pelo validador (§4.13); texto barrado vira resposta
  *   para aprovar, com o motivo, e nunca sai sozinho.
  *
@@ -205,7 +207,9 @@ export async function decidirResposta(p: {
   if (decisao.acao === "propor_reuniao" && !ctx.linkDeAgenda) excecoes.push("quer marcar a reunião e não há link de agenda");
   if (classificacao.sinais.preco) excecoes.push("pergunta de preço");
   if (classificacao.sinais.reclamacao) excecoes.push("reclamação");
-  if (decisao.confianca < configuracao.limiar_confianca) excecoes.push("baixa confiança");
+  // Com SDR, o limiar é o nível de cautela que a pessoa escolheu; sem ele, o global.
+  const limiar = ctx.sdr ? limiarDaCautela(ctx.sdr.sdr.cautela) : configuracao.limiar_confianca;
+  if (decisao.confianca < limiar) excecoes.push("baixa confiança");
   if (excecoes.length > 0) return { tipo: "escalar", classificacao, decisao, motivo: excecoes.join("; ") };
 
   // Texto barrado pelo validador nunca sai: vira resposta para aprovar, com o motivo.

@@ -1676,3 +1676,31 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   ações. O despachante confere a janela na hora de enviar, então vale na
   próxima ação, sem reagendar nada.
 - Rampa, teto e dias da semana continuam fixos: mexem no risco da conta.
+
+### SDR-60 · Quando o SDR passa a conversa para você (14/10/2026)
+
+- **Onde mora a cautela:** no JSON do SDR (`sdr.cautela`, opcional), e não
+  numa coluna nova. Assim ela ganha versão, histórico e "voltar para esta"
+  como o resto do SDR, e o chat de teste usa a mesma regra da produção sem
+  mais nada. Versão antiga sem o campo vale como "equilibrado". Sem
+  migration.
+- **Limiar:** mais cauteloso 0,8 · equilibrado 0,7 · mais solto 0,6
+  (`NIVEIS_DE_CAUTELA`, em `src/domain/passagem.ts`). Vale só para a baixa
+  confiança que chama você. `agente.limiar_confianca` continua global para a
+  ausência automática e para conta sem SDR.
+- **O que a IA não toca:** `sdrDaIa` omite `link_agenda` e `cautela`;
+  `soDaPessoa` devolve os dois para a geração e o ajuste pelo chat.
+- **Duas telas, um SDR:** o editor do SDR e a seção da passagem salvam só a
+  sua parte, e `salvarSdr` completa com a versão atual. Antes, o editor
+  mandava o SDR inteiro, e salvar um desfaria o que o outro acabou de gravar.
+- **Os casos fixos** (preço, reclamação, pedido fora do comum, opt-out
+  ambíguo, reunião sem link) continuam no código e não se desligam; a tela só
+  passa a mostrá-los (`SEMPRE_CHAMA`). O texto da tela acompanha
+  `decidirResposta`: mudar um exige mudar o outro.
+- **Últimas passagens** vêm de `rascunhos` (`resultado = 'escalado'`, motivo
+  em `excecao`), e não de `eventos`: o rascunho já tem conta e motivo, e a
+  proporção sai da mesma tabela (escalado sobre escalado, agendado, na fila e
+  sugestão). RLS de `rascunhos` limita às contas que a pessoa opera.
+- **Casos de teste** preenchem o campo do chat, sem enviar: a pessoa vê a
+  mensagem e pode mudar antes. Só em Configurações; o primeiro acesso fica
+  como está.

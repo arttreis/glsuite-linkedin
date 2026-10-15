@@ -136,7 +136,8 @@ confirmada e guardada em versões. Ele tem:
 | Qualificação | os sinais e as perguntas que mostram que o lead serve |
 | Objeções | objeção → como responder |
 | Regras | as regras da pessoa ("não falo de preço por mensagem") |
-| Quando chamar você | o que faz o SDR parar e passar a conversa para você |
+| Quando chamar você | o que faz o SDR parar e passar a conversa para você, além do que sempre passa (§4.7) |
+| Cautela | o quanto ele arrisca sozinho na dúvida: mais cauteloso, equilibrado (padrão) ou mais solto. Quem escolhe é a pessoa, nunca a IA |
 | Link de agenda | vai só depois que o lead aceitar conversar |
 
 - As **regras da casa** ficam por cima do SDR e não se editam: no máximo 30
@@ -237,9 +238,17 @@ confirmada e guardada em versões. Ele tem:
   automático sai; o eval continua como ferramenta interna para comparar
   versões de prompt.
 - O SDR chama você e para de responder naquela conversa quando: a pessoa
-  pergunta preço, reclama, pede algo fora do comum, a confiança da decisão
-  fica abaixo de `agente.limiar_confianca`, ou bate um item de "Quando chamar
-  você" (§4.3). Você é avisado por e-mail e no Dashboard.
+  pergunta preço, reclama, pede algo fora do comum, o pedido de parar não
+  fica claro, quer marcar e não há link de agenda, a confiança da decisão
+  fica abaixo do nível de cautela do SDR (mais cauteloso 0,8 · equilibrado
+  0,7 · mais solto 0,6; sem SDR, `agente.limiar_confianca`), ou bate um item
+  de "Quando chamar você" (§4.3). Os casos fixos não se desligam. Você é
+  avisado por e-mail e no Dashboard.
+- **Tudo isso numa seção só**, em Configurações > SDR: o que sempre passa, os
+  casos da pessoa e a cautela, editáveis, com as conversas que o SDR passou
+  nos últimos 30 dias (motivo e proporção sobre as mensagens que ele tratou)
+  e o que acontece depois que ele passa. O chat de teste tem mensagens de
+  lead prontas para cada caso fixo.
 - **Você assume quando responde.** Respondeu pelo Chats ou direto no LinkedIn, o
   SDR sai daquela conversa (o lead vai para `escalado_humano`). "Devolver ao
   SDR" põe ele de volta.
@@ -316,7 +325,7 @@ confirmada e guardada em versões. Ele tem:
 | Aba | O que tem |
 |---|---|
 | Empresa | a análise (Negócio, Produto, Mercado), editável; ler o site de novo |
-| SDR | os campos do SDR, editáveis; "Testar no chat", que abre o chat de teste; histórico de ajustes com desfazer; modo de resposta (sozinho ou aprovo cada resposta); link de agenda |
+| SDR | os campos do SDR, editáveis; "Testar no chat", que abre o chat de teste; histórico de ajustes com desfazer; quando o SDR passa a conversa para você (§4.7); modo de resposta (sozinho ou aprovo cada resposta); link de agenda |
 | LinkedIn | contas vinculadas, status, rampa, teto, janela; nome e janela editáveis (o admin ou quem vinculou a conta); pausar e retomar; reconectar; vincular outra conta |
 | Equipe | membros, papel (admin ou operador) e as contas que cada um opera. Só o admin muda |
 
@@ -666,6 +675,20 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   troca; janela com menos de 1 hora ou fim antes do início é recusada; quem
   só opera a conta não edita; a edição fica na trilha.
 
+**SDR-60 · Quando o SDR passa a conversa para você, numa seção só**
+- Em Configurações > SDR, a seção da §4.7: o que sempre passa (não se
+  desliga), os casos da pessoa e a cautela (mais cauteloso, equilibrado,
+  mais solto), que sai do limiar global e passa a ser do SDR da organização.
+- As conversas que o SDR passou nos últimos 30 dias, com o motivo, a conta,
+  se ainda estão com você e a proporção sobre as mensagens que ele tratou;
+  e o que acontece depois que ele passa.
+- No chat de teste de Configurações, mensagens de lead prontas para cada caso
+  fixo (preço, reclamação, pedido fora do comum, marcar conversa).
+- Aceite: com cautela "mais cauteloso", uma decisão com 0,75 de certeza chama
+  você; com "mais solto", vira resposta; SDR sem cautela vale o equilibrado;
+  salvar a seção não desfaz o editor do SDR, e vice-versa; gerar o SDR de
+  novo ou ajustar pelo chat não muda a cautela.
+
 ## 10 · Decisões abertas
 
 | # | Decisão | Sugestão | Dono |
@@ -673,7 +696,7 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
 | D1 | Que conta do LinkedIn é a conta da casa | ✅ decidido em 10/10: a do Arthur, só para busca; nenhuma campanha roda nela | Arthur |
 | D2 | Tamanho da prévia por organização | 25 pessoas | Arthur |
 | D3 | Rampa e teto de uma conta nova | 8 · 12 · 15 convites/dia, 75/semana, 15 · 20 · 25 mensagens/dia | Arthur |
-| D4 | O que faz o SDR chamar você, além do que a pessoa configurar | preço, reclamação, pedido fora do comum, confiança abaixo de 0,7 | Arthur |
+| D4 | O que faz o SDR chamar você, além do que a pessoa configurar | preço, reclamação, pedido fora do comum, confiança abaixo de 0,7. Desde o SDR-60, o 0,7 é o "equilibrado" e a pessoa escolhe 0,8 ou 0,6 | Arthur |
 | D5 | Quando abrir o cadastro além de `guessless.com.br` | depois de cobrança e termos | Arthur |
 
 Continuam decididas, do épico anterior: teto de busca de 100 resultados por

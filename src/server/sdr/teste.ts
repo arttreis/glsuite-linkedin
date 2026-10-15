@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { dossie as esquemaDoDossie, resumoDaOferta, type Dossie } from "@/domain/dossie";
-import { sdr as esquemaDoSdr, type Sdr } from "@/domain/sdr";
+import { sdr as esquemaDoSdr, sdrDaIa, soDaPessoa, type Sdr } from "@/domain/sdr";
 import {
   nomeDoLeadDeTeste,
   notaDoDesfecho,
@@ -25,6 +25,8 @@ export type TesteDoSdr = {
   segmento: string;
   /** Os segmentos do Mercado da análise, para a pessoa escolher quem faz. */
   segmentos: string[];
+  /** O idioma da análise: o do lead e dos casos prontos de teste. */
+  idioma: Dossie["idioma"];
   /** O nome do lead que a pessoa faz. */
   lead: string;
   mensagens: ItemDoTeste[];
@@ -175,6 +177,7 @@ async function montar(db: Db, ctx: Contexto, t: { segmento: string; mensagens: I
   return {
     segmento: t.segmento,
     segmentos: segmentosDa(ctx.analise),
+    idioma: ctx.analise.idioma,
     lead: nomeDoLeadDeTeste(ctx.analise.idioma),
     mensagens: t.mensagens,
     sdrVersao: ctx.sdr.versao,
@@ -292,13 +295,14 @@ export async function ajustarNoTeste(
   if (!ctx || !atual) return { ok: false, erro: SEM_SDR };
 
   const referencia = atual.mensagens.find((item) => item.id === p.referenciaId && item.tipo === "sdr");
-  const { link_agenda: linkAtual, ...semLink } = ctx.sdr.sdr;
+  // A IA ajusta só o que é dela; link de agenda e cautela ficam como estão.
+  const daIa = sdrDaIa.parse(ctx.sdr.sdr);
   let ajuste: Resposta<AjusteDoSdr>;
   try {
     ajuste = await deps.ajustador.ajustar({
       sistema: promptDoAjuste(),
       entrada: entradaDoAjuste({
-        sdr: semLink,
+        sdr: daIa,
         pedido,
         referencia: referencia?.texto ?? null,
         conversa: conversaEmTexto(atual.mensagens, ctx.nome, atual.lead),
@@ -315,7 +319,7 @@ export async function ajustarNoTeste(
     return { ok: true, teste: { ...atual, mensagens } };
   }
 
-  const novo = esquemaDoSdr.safeParse({ ...ajuste.saida.sdr, link_agenda: linkAtual });
+  const novo = esquemaDoSdr.safeParse({ ...ajuste.saida.sdr, ...soDaPessoa(ctx.sdr.sdr) });
   if (!novo.success) return { ok: false, erro: "O ajuste saiu fora do formato. Tente dizer de outro jeito." };
   const gravado = await gravarVersaoDoSdr(deps.db, {
     organizacaoId: p.organizacaoId,

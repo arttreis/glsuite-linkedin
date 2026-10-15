@@ -68,11 +68,14 @@ export function ChatDoSdr({
   inicial,
   nome,
   comSeguir = true,
+  casosDeTeste = [],
 }: {
   inicial: TesteDoSdr;
   nome: string;
   /** "Ficou bom, seguir" só no primeiro acesso; em Configurações o chat é só teste. */
   comSeguir?: boolean;
+  /** Mensagens de lead prontas para ver se o SDR passa a conversa (Configurações). */
+  casosDeTeste?: readonly { rotulo: string; texto: string }[];
 }) {
   const [teste, setTeste] = useState(inicial);
   const [mensagens, setMensagens] = useState<ItemDoTeste[]>(inicial.mensagens);
@@ -258,6 +261,25 @@ export function ChatDoSdr({
               </button>
             ))}
           </div>
+          {modo === "lead" && casosDeTeste.length > 0 && (
+            <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs text-tinta-suave">
+              <span>Ele chama você?</span>
+              {casosDeTeste.map((caso) => (
+                <button
+                  key={caso.rotulo}
+                  type="button"
+                  onClick={() => {
+                    setTexto(caso.texto);
+                    campo.current?.focus();
+                  }}
+                  disabled={pendente}
+                  className="rounded-full border border-linha px-2.5 py-1 hover:border-linha-forte hover:text-tinta"
+                >
+                  {caso.rotulo}
+                </button>
+              ))}
+            </div>
+          )}
           {modo === "ajuste" && referencia && (
             <p className="mb-2 flex items-start gap-2 rounded-lg border border-linha bg-fundo px-3 py-2 text-xs text-tinta-suave">
               <span className="min-w-0 flex-1">

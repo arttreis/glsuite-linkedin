@@ -1,6 +1,6 @@
 import { dossie as esquemaDoDossie } from "@/domain/dossie";
 import { limparEdicao } from "@/domain/edicao";
-import { explicarErroDoSdr, sdr as esquemaDoSdr, type Sdr, type SdrDaIa } from "@/domain/sdr";
+import { explicarErroDoSdr, sdr as esquemaDoSdr, soDaPessoa, type Sdr, type SdrDaIa } from "@/domain/sdr";
 import { ErroDoModelo, type Resposta } from "@/server/agente/modelo";
 import type { Db } from "@/server/db/tipos";
 import { custoDaChamada } from "@/server/eval/custo";
@@ -142,7 +142,7 @@ export async function gravarVersaoDoSdr(
 /**
  * Gera o SDR da análise confirmada (§4.3), em nome de `nome` (quem vai
  * conversar). Sem análise confirmada, recusa. Se já existe SDR, a geração vira
- * versão nova e mantém o link de agenda.
+ * versão nova e mantém o que só a pessoa decide (link de agenda, cautela).
  */
 export async function gerarSdr(
   deps: { db: Db; gerador: GeradorDeSdr },
@@ -165,7 +165,7 @@ export async function gerarSdr(
   }
 
   const atual = await obterSdr(db, p.organizacaoId);
-  const novo = esquemaDoSdr.safeParse({ ...resposta.saida, link_agenda: atual?.sdr.link_agenda ?? null });
+  const novo = esquemaDoSdr.safeParse({ ...resposta.saida, ...soDaPessoa(atual?.sdr) });
   if (!novo.success) return { ok: false, erro: "A IA devolveu um SDR fora do formato. Tente de novo." };
 
   const gravado = await gravarVersaoDoSdr(db, {
@@ -207,17 +207,24 @@ export async function garantirSdr(
   return gerarSdr({ db: deps.db, gerador: deps.gerador }, p);
 }
 
-/** Edição humana do SDR: vira versão nova. Roda como o operador. */
+/**
+ * Edição humana do SDR: vira versão nova. Roda como o operador. `sdr` pode
+ * trazer só uma parte (o editor do SDR, a seção da passagem para você): o
+ * resto vem da versão atual, e uma tela não desfaz o que a outra salvou.
+ */
 export async function salvarSdr(
   db: Db,
-  p: { organizacaoId: string; sdr: unknown; operadorId: string; agora: Date },
+  p: { organizacaoId: string; sdr: unknown; operadorId: string; agora: Date; resumo?: string | null },
 ): Promise<{ ok: true; versao: number } | { ok: false; erro: string }> {
-  const validado = esquemaDoSdr.safeParse(limparEdicao(p.sdr));
+  const parte = limparEdicao(p.sdr);
+  const atual = await obterSdr(db, p.organizacaoId);
+  const validado = esquemaDoSdr.safeParse(parte !== null && typeof parte === "object" ? { ...atual?.sdr, ...parte } : parte);
   if (!validado.success) return { ok: false, erro: explicarErroDoSdr(validado.error) };
   const gravado = await gravarVersaoDoSdr(db, {
     organizacaoId: p.organizacaoId,
     sdr: validado.data,
     origem: "humano",
+    resumo: p.resumo ?? null,
     por: p.operadorId,
     agora: p.agora,
   });

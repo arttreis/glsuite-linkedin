@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { explicarErroDeEdicao } from "./edicao";
+import { CAUTELAS } from "./passagem";
 
 /**
  * O SDR da organização (§4.3): como ela conversa no LinkedIn. Nasce da análise
@@ -22,12 +23,26 @@ export const sdr = z.object({
   quando_chamar_voce: z.array(z.string().min(1).max(200)).max(8),
   /** Vai só depois que o lead aceitar conversar. Quem preenche é a pessoa, nunca a IA. */
   link_agenda: z.url({ protocol: /^https$/ }).nullable(),
+  /**
+   * O quanto o SDR arrisca sozinho antes de chamar a pessoa (§4.7). Quem
+   * escolhe é a pessoa, nunca a IA. Versão sem o campo vale como "equilibrado".
+   */
+  cautela: z.enum(CAUTELAS).optional(),
 });
 export type Sdr = z.infer<typeof sdr>;
 
-/** O que a IA devolve ao gerar o SDR: tudo menos o link de agenda, que ela não tem como saber. */
-export const sdrDaIa = sdr.omit({ link_agenda: true });
+/** O que a IA devolve ao gerar ou ajustar o SDR: tudo menos o que só a pessoa decide. */
+export const sdrDaIa = sdr.omit({ link_agenda: true, cautela: true });
 export type SdrDaIa = z.infer<typeof sdrDaIa>;
+
+/** O que só a pessoa decide e atravessa a geração e o ajuste pela IA sem mudar. */
+export const soDaPessoa = (s: Sdr | null | undefined): Pick<Sdr, "link_agenda" | "cautela"> => ({
+  link_agenda: s?.link_agenda ?? null,
+  ...(s?.cautela ? { cautela: s.cautela } : {}),
+});
+
+/** A parte do SDR que a seção "Quando o SDR passa a conversa para você" edita; o editor do SDR edita o resto. */
+export const CAMPOS_DA_PASSAGEM = ["quando_chamar_voce", "cautela"] as const;
 
 const SECOES: Record<string, string> = {
   objetivo: "Objetivo",
@@ -38,6 +53,7 @@ const SECOES: Record<string, string> = {
   regras: "Regras",
   quando_chamar_voce: "Quando chamar você",
   link_agenda: "Link de agenda",
+  cautela: "Quando ficar em dúvida",
 };
 
 const CAMPOS: Record<string, string> = { objecao: "objeção", resposta: "resposta" };

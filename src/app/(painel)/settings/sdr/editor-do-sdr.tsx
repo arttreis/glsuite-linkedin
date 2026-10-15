@@ -4,13 +4,13 @@ import { Save } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Aviso } from "@/components/aviso";
 import { Adicionar, ListaDeFrases, Remover, Secao } from "@/components/campos-de-edicao";
-import type { Sdr } from "@/domain/sdr";
+import { CAMPOS_DA_PASSAGEM, type Sdr } from "@/domain/sdr";
 import { salvarSdrDoPainel } from "../acoes";
 
 /**
  * Os campos do SDR (§4.3), editáveis. Salvar valida e grava uma versão nova:
  * dá para voltar no histórico. As regras da casa ficam por cima e não moram
- * aqui.
+ * aqui; "Quando chamar você" e a cautela ficam em `PassagemParaVoce`.
  */
 export function EditorDoSdr({ inicial }: { inicial: Sdr }) {
   const [s, setS] = useState<Sdr>(inicial);
@@ -23,7 +23,9 @@ export function EditorDoSdr({ inicial }: { inicial: Sdr }) {
 
   const salvar = () =>
     iniciar(async () => {
-      const resultado = await salvarSdrDoPainel({ sdr: s });
+      // Quando chamar você e a cautela têm seção própria: não vão daqui.
+      const semPassagem = Object.fromEntries(Object.entries(s).filter(([campo]) => !(CAMPOS_DA_PASSAGEM as readonly string[]).includes(campo)));
+      const resultado = await salvarSdrDoPainel({ sdr: semPassagem });
       setRetorno(resultado.ok ? { tom: "ok", texto: `Salvo como versão ${resultado.versao}. Vale para a próxima resposta.` } : { tom: "erro", texto: resultado.erro });
     });
 
@@ -73,9 +75,6 @@ export function EditorDoSdr({ inicial }: { inicial: Sdr }) {
       </Secao>
       <Secao titulo="Regras" ajuda='As suas regras. Ex.: "não falo de preço por mensagem".'>
         <ListaDeFrases nome="Regra" itens={s.regras} maximo={12} aoMudar={(regras) => mudar({ regras })} desabilitado={pendente} />
-      </Secao>
-      <Secao titulo="Quando chamar você" ajuda="O que faz o SDR parar e passar a conversa para você. Preço, reclamação e dúvida já chamam sempre.">
-        <ListaDeFrases nome="Caso" itens={s.quando_chamar_voce} maximo={8} aoMudar={(quando_chamar_voce) => mudar({ quando_chamar_voce })} desabilitado={pendente} />
       </Secao>
       <Secao titulo="Link de agenda" ajuda="Vai só depois que o lead aceitar conversar. Sem link, o SDR chama você na hora de marcar.">
         <input
