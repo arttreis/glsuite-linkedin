@@ -245,11 +245,40 @@ confirmada e guardada em versões. Ele tem:
   0,7 · mais solto 0,6; sem SDR, `agente.limiar_confianca`), ou bate um item
   de "Quando chamar você" (§4.3). Os casos fixos não se desligam. Você é
   avisado por e-mail e no Dashboard.
+- **Passagem de bastão.** Em preço, pedido fora do comum, "quer marcar e não
+  há link de agenda" e nos casos de "Quando chamar você", o SDR manda antes
+  uma **ponte** curta, na voz da conta, e para. Ex.: "Boa pergunta, deixa eu
+  ver isso direitinho e te respondo até amanhã."
+  - A ponte nunca diz que vai chamar outra pessoa (o SDR escreve como o dono
+    da conta) e nunca promete prazo menor que 1 dia útil.
+  - Segue as regras da casa (no máximo 30 palavras, numa linha, sem pergunta
+    obrigatória) e passa no validador como qualquer texto do SDR. Barrada,
+    não sai, e fica só a passagem.
+  - Em reclamação, pedido de parar que não ficou claro e baixa confiança:
+    sem ponte, silêncio.
+  - Em "Aprovo cada resposta", a ponte vira resposta para aprovar, como as
+    outras. No chat de teste, ela aparece como mensagem do SDR, e a nota diz
+    que ali ele passaria a conversa.
+- **O que você recebe.** No e-mail e em Dashboard › Precisa de você: um
+  resumo do lead em até 3 linhas (quem é, o que já conversaram, o que ele
+  pediu), o motivo e uma **resposta sugerida** pelo SDR. No Chats, a conversa
+  passada traz a sugestão no campo de resposta, preenchida e editável, com o
+  rótulo "Sugestão do SDR". Enviar continua sendo seu: passa pelo validador
+  como texto humano e fica marcado "Você". A ponte não conta como resposta:
+  a conversa segue em Precisa de você até você responder.
+- **Prazo.** Conversa passada sem resposta sua em **4 horas úteis** (janela,
+  dias úteis e feriados da conta): um lembrete para quem opera a conta. Sem
+  resposta em **1 dia útil** (24 horas sem contar fim de semana e feriado,
+  nunca antes do lembrete): aviso para os admins da organização. Cada um sai
+  no máximo uma vez por passagem. Se você responder (pelo Chats ou direto no
+  LinkedIn) ou devolver ao SDR, nada mais sai. Nessas conversas, o aviso
+  genérico de SLA não se repete.
 - **Tudo isso numa seção só**, em Configurações > SDR: o que sempre passa, os
   casos da pessoa e a cautela, editáveis, com as conversas que o SDR passou
   nos últimos 30 dias (motivo e proporção sobre as mensagens que ele tratou)
-  e o que acontece depois que ele passa. O chat de teste tem mensagens de
-  lead prontas para cada caso fixo.
+  e o que acontece depois que ele passa (ponte, aviso com resumo e
+  sugestão, lembrete em 4 horas úteis, admin em 1 dia útil). O chat de teste
+  tem mensagens de lead prontas para cada caso fixo.
 - **Você assume quando responde.** Respondeu pelo Chats ou fora do Kakou
   (LinkedIn no site, no celular ou em outra ferramenta), o SDR para naquela
   conversa: o lead vai para `escalado_humano` e nada mais sai sozinho, nem a
@@ -805,6 +834,20 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
 - Aceite: o prompt da primeira mensagem exige a pergunta mesmo com um SDR
   antigo cuja abertura não fala nela; a regra aparece entre as regras da casa
   e o ajuste do SDR não a desliga.
+
+**SDR-66 · Passagem de bastão**
+- Pedido: "tem que ser definido, crucial isso, como vai ser feito a passagem
+  de bastão", quando o SDR para e passa a conversa para a pessoa.
+- Ponte para o lead nos casos que a pedem, silêncio nos outros; resumo,
+  motivo e resposta sugerida no e-mail, no Dashboard e no Chats; lembrete em
+  4 horas úteis e aviso ao admin em 1 dia útil (§4.7). Configurações › SDR
+  diz o que acontece depois da passagem.
+- Aceite: preço gera ponte e passagem; reclamação gera passagem sem ponte;
+  ponte barrada não sai e a passagem acontece mesmo assim; no modo de
+  aprovação, a ponte espera aprovação; a passagem grava resumo e sugestão; o
+  lembrete sai uma vez depois de 4 horas úteis e não sai se a pessoa
+  respondeu ou devolveu; o admin é avisado uma vez em 1 dia útil; no chat de
+  teste, a ponte aparece e a nota diz que ali o SDR passaria a conversa.
 
 ## 10 · Decisões abertas
 
