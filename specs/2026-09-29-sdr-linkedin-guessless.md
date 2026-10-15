@@ -1859,6 +1859,40 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
 - A busca do LinkedIn não filtra porte nem exclui cargo; o prompt manda dizer
   isso em vez de inventar filtro.
 
+### SDR-63 · Sugestão de públicos que não quebra por um campo longo (15/10/2026)
+
+- Causa: `zodOutputFormat` não manda `maxLength`, `maxItems` nem
+  `minItems` acima de 1 para a API como restrição (só como texto na
+  descrição), mas valida a resposta com o esquema zod inteiro. Um campo acima
+  do limite em um dos públicos (o `quem_nao_e` com vários sinais passava fácil
+  de 400) fazia o SDK lançar `AnthropicError`, e a tela mostrava "a IA não
+  respondeu" para a sugestão inteira.
+- `sugestaoDePublicos` virou um esquema próprio, sem limite de tamanho. Os
+  limites ficam no prompt (`publicos-4`) e em `publicosDaSugestao`: cargos e
+  setores a mais são cortados nos primeiros; texto longo descarta só aquele
+  público.
+- Erro de parse da saída estruturada vira `ErroDoModelo` ("A resposta veio
+  fora do formato") nos três clientes de `publicos/claude.ts`, com o detalhe
+  no log. Erro de API continua "a IA não respondeu".
+- O sugeridor sobe de 16k para 32k de `max_tokens`, como o leitor do site:
+  pensamento adaptativo mais 5 públicos com aderência chegava perto do teto.
+
+### SDR-64 · Mensagem que dá para responder (15/10/2026)
+
+- A mensagem sem pergunta vinha de três prompts: a geração do SDR descrevia
+  a abertura como "uma observação, sem pedir reunião", a entrada da abertura
+  não pedia pergunta e a DM 1 do estilo "casa" dizia "Não pergunta nada".
+- `entradaDaAbertura` exige a pergunta com par bom e ruim (o caso da
+  Marina). Vai na entrada, e não só no SDR, porque os SDRs já gerados guardam
+  a abertura antiga e valem até alguém gerar de novo.
+- Na abordagem, a DM 1 "casa" passa a ter a pergunta e a DM 2 retoma com um
+  ponto novo e outra pergunta: duas na sequência, dentro do teto de duas por
+  conversa.
+- Versões: `sdr-2`, `fluxo-3` e prompts do agente `2026-10-15.1`. A regra
+  nova entra em `REGRAS_DA_CASA`, que o ajuste do SDR não pode desligar e o
+  chat de teste mostra. Não há checagem no validador: dizer se uma frase é
+  "de efeito" exige julgamento, e o eval é o lugar de medir.
+
 ### SDR-65 · O que a tela mostra enquanto o Kakou trabalha (15/10/2026)
 
 - Pedido do Arthur: o aviso de que o site está sendo analisado podia ser
