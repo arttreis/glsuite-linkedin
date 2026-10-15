@@ -142,7 +142,8 @@ confirmada e guardada em versões. Ele tem:
 
 - As **regras da casa** ficam por cima do SDR e não se editam: no máximo 30
   palavras por mensagem, uma pergunta por mensagem e duas na conversa, sem
-  travessão, sem palavras vazias, sem prometer resultado, sem levar para
+  travessão, sem palavras vazias, sem frase de efeito (a primeira mensagem
+  termina com uma pergunta fácil de responder), sem prometer resultado, sem levar para
   WhatsApp ou e-mail, nunca dizer que não é robô, dizer a verdade sobre de onde
   veio o contato. E o validador (§4.13) vale para tudo.
 - **O chat de teste é o mesmo agente da produção.** Mesmo prompt, mesmo
@@ -783,6 +784,19 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   "cria uma lista com A, B e C" cria a lista, põe na busca e procura as
   empresas; nada é salvo nem buscado sem o clique da pessoa; sem cargo no
   pedido, os cargos ficam; IA fora do ar não mexe nos filtros.
+
+**SDR-64 · Mensagem que dá para responder**
+- Pedido: "Oi Marina, tudo bem? Toda vez que vejo uma AGC sendo montada no
+  meio de planilha, e-mail e videochamada separados, penso em quanto tempo
+  isso consome do administrador." Ninguém fala assim, e não tem o que
+  responder.
+- A primeira mensagem depois do aceite (abertura do SDR e DM 1 da
+  abordagem) termina com uma pergunta curta sobre a realidade do lead, que
+  ele responde em poucas palavras. Frase de efeito e reflexão em primeira
+  pessoa viram regra da casa (§4.3).
+- Aceite: o prompt da primeira mensagem exige a pergunta mesmo com um SDR
+  antigo cuja abertura não fala nela; a regra aparece entre as regras da casa
+  e o ajuste do SDR não a desliga.
 
 ## 10 · Decisões abertas
 

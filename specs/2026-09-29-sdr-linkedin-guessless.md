@@ -1858,3 +1858,19 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   caracteres. Pedido sem cargo mantém os cargos (a busca precisa de um).
 - A busca do LinkedIn não filtra porte nem exclui cargo; o prompt manda dizer
   isso em vez de inventar filtro.
+
+### SDR-64 · Mensagem que dá para responder (15/10/2026)
+
+- A mensagem sem pergunta vinha de três prompts: a geração do SDR descrevia
+  a abertura como "uma observação, sem pedir reunião", a entrada da abertura
+  não pedia pergunta e a DM 1 do estilo "casa" dizia "Não pergunta nada".
+- `entradaDaAbertura` exige a pergunta com par bom e ruim (o caso da
+  Marina). Vai na entrada, e não só no SDR, porque os SDRs já gerados guardam
+  a abertura antiga e valem até alguém gerar de novo.
+- Na abordagem, a DM 1 "casa" passa a ter a pergunta e a DM 2 retoma com um
+  ponto novo e outra pergunta: duas na sequência, dentro do teto de duas por
+  conversa.
+- Versões: `sdr-2`, `fluxo-3` e prompts do agente `2026-10-15.1`. A regra
+  nova entra em `REGRAS_DA_CASA`, que o ajuste do SDR não pode desligar e o
+  chat de teste mostra. Não há checagem no validador: dizer se uma frase é
+  "de efeito" exige julgamento, e o eval é o lugar de medir.
