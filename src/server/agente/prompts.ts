@@ -13,7 +13,7 @@ import type { Classificacao } from "./modelo";
  * nunca do lead: é estável e vai para o cache. Lead, instruções da campanha e
  * conversa vão na mensagem do usuário.
  */
-export const VERSAO_DOS_PROMPTS = "2026-10-11.1";
+export const VERSAO_DOS_PROMPTS = "2026-10-15.1";
 
 export type PerfilDoAgente = {
   nome: string;
@@ -111,6 +111,7 @@ Regras da casa (valem sempre):`;
 - Não comece a mensagem com verbo no imperativo (veja, confira, olha).
 - Não repita o nome da pessoa em toda mensagem.
 - Nunca use palavras vazias como impressionado, inspirador, admiro, adoro, fascinante, notei, nem o equivalente em outro idioma.
+- Nada de frase de efeito nem reflexão em primeira pessoa ("toda vez que vejo...", "penso em quanto..."). Escreva como quem puxa conversa, não como quem posta.
 - Nome de empresa todo em caixa alta: escreva só com a inicial maiúscula.
 - No máximo uma pergunta por mensagem e no máximo 2 perguntas em toda a conversa (conte as que já foram feitas no histórico).
 - Nunca use travessão (—) nem meia-risca (–).
@@ -195,7 +196,12 @@ export function entradaDaAbertura(p: { lead: LeadDoAgente; instrucoesDaCampanha?
 - Empresa: ${nomeDeEmpresa(lead.empresa) ?? "não informada"}
 - Campanha: ${lead.campanha}${lead.nicho ? ` (nicho: ${lead.nicho})` : ""}${instrucoes}
 
-A pessoa acabou de aceitar o seu convite de conexão e ainda não escreveu nada. Escreva a primeira mensagem da conversa, do jeito da abertura do SDR. É a primeira: pode cumprimentar uma vez, pelo primeiro nome. Não peça reunião. Use a ação "responder".`;
+A pessoa acabou de aceitar o seu convite de conexão e ainda não escreveu nada. Escreva a primeira mensagem da conversa, do jeito da abertura do SDR. É a primeira: pode cumprimentar uma vez, pelo primeiro nome. Não peça reunião. Use a ação "responder".
+
+A mensagem termina com uma pergunta curta sobre a realidade da pessoa, que ela responde em poucas palavras sem precisar pensar muito: como ela faz algo hoje, o que usa, quem cuida. Mesmo que a abertura do SDR não fale em pergunta, esta tem.
+Bom: "Oi Marina, tudo bem? Vi que você cuida das AGCs na administradora. Hoje vocês montam a assembleia em ferramenta própria ou no braço?"
+Ruim: "Oi Marina, tudo bem? Toda vez que vejo uma AGC sendo montada no meio de planilha, e-mail e videochamada separados, penso em quanto tempo isso consome do administrador." (é reflexão, não conversa: a pessoa não tem o que responder)
+Os exemplos mostram a forma; o assunto vem do SDR, da campanha e do lead.`;
 }
 
 /**

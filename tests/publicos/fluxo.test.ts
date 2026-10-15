@@ -105,7 +105,7 @@ describe("fluxo gerado pelo público (SDR-29)", () => {
     // O prompt leva o público, a prova dele e a régua da casa.
     expect(escritor.chamadas[0]!.sistema).toContain("A margem que o marketplace esconde");
     expect(escritor.chamadas[0]!.sistema).toContain(`"${PROVA}"`);
-    expect(escritor.chamadas[0]!.sistema).toContain("Não pergunta nada.");
+    expect(escritor.chamadas[0]!.sistema).toContain("uma pergunta fácil sobre como a pessoa lida com isso hoje");
     await ativar(campanhaId);
     const [campanha] = await banco.db.query<{ status: string; permitida_em: Date | null; permitida_por: string | null }>(
       "select status, permitida_em, permitida_por from public.campanhas where id = $1::uuid",
