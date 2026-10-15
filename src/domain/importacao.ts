@@ -138,10 +138,10 @@ export function ehLinhaInvalida(valor: PessoaImportada | LinhaInvalida): valor i
 }
 
 /**
- * CSV (RFC 4180) com detecção de separador: vírgula, ponto e vírgula (Excel em
- * português) ou tab. A primeira linha é o cabeçalho.
+ * Linhas de um CSV (RFC 4180) com detecção de separador: vírgula, ponto e
+ * vírgula (Excel em português) ou tab. Linhas em branco ficam de fora.
  */
-export function lerCsv(conteudo: string): Record<string, string>[] {
+export function lerLinhasCsv(conteudo: string): string[][] {
   const texto = conteudo.replace(/^﻿/, "");
   const primeiraLinha = texto.split(/\r?\n/, 1)[0] ?? "";
   const separador = [";", "\t", ","].reduce((melhor, candidato) =>
@@ -183,7 +183,12 @@ export function lerCsv(conteudo: string): Record<string, string>[] {
     linhas.push(linha);
   }
 
-  const [cabecalho, ...dados] = linhas.filter((l) => l.some((valor) => valor.trim() !== ""));
+  return linhas.filter((l) => l.some((valor) => valor.trim() !== ""));
+}
+
+/** CSV com cabeçalho na primeira linha: um objeto por linha de dados. */
+export function lerCsv(conteudo: string): Record<string, string>[] {
+  const [cabecalho, ...dados] = lerLinhasCsv(conteudo);
   if (!cabecalho) return [];
   return dados.map((valores) =>
     Object.fromEntries(cabecalho.map((coluna, indice) => [coluna.trim(), (valores[indice] ?? "").trim()])),

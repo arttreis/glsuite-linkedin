@@ -12,6 +12,7 @@ import type {
   PostLinkedIn,
   ParametroDeBusca,
   ResultadoDeBusca,
+  TipoDeParametro,
   WebhookUnipile,
 } from "@/server/unipile/cliente";
 
@@ -152,7 +153,7 @@ export class UnipileFalso implements ClienteUnipile {
     return { itens: this.paginasDeBusca[pagina] ?? [], cursor: proxima, total: this.totalDaBusca };
   }
 
-  async listarParametrosDeBusca(accountId: string, tipo: "LOCATION" | "INDUSTRY", texto: string) {
+  async listarParametrosDeBusca(accountId: string, tipo: TipoDeParametro, texto: string) {
     this.registrar("listarParametrosDeBusca", { accountId, tipo, texto });
     return this.parametrosDeBusca.get(`${tipo}:${texto}`) ?? [];
   }

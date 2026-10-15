@@ -1,4 +1,4 @@
-import { Download, Plus } from "lucide-react";
+import { Building2, Download, Plus } from "lucide-react";
 import Link from "next/link";
 import { Aviso } from "@/components/aviso";
 import { Cabecalho } from "@/components/cabecalho";
@@ -24,6 +24,10 @@ export default async function CampanhasPage({ searchParams }: PageProps<"/campai
           <Download aria-hidden />
           Planilha (CSV)
         </a>
+        <Link href="/campaigns/company-lists" className="botao" title="Nomes de empresas para a busca procurar pessoas só nelas">
+          <Building2 aria-hidden />
+          Listas de empresas
+        </Link>
         <Link href="/campaigns/new" className="botao botao-primario">
           <Plus aria-hidden />
           Nova campanha

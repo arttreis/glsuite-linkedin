@@ -6,7 +6,10 @@ const BUSCA: BuscaDoPublico = {
   palavras: "",
   regioes: [{ id: "106057199", nome: "Brasil" }],
   setores: [],
+  lista: null,
+  parte: 0,
   cursor: "pagina-3",
+  assinatura: null,
   esgotada: false,
 };
 
@@ -19,6 +22,17 @@ describe("busca do público", () => {
     expect(mesmosFiltros(BUSCA, { ...BUSCA, cursor: null, esgotada: true })).toBe(true);
     expect(mesmosFiltros(BUSCA, { ...BUSCA, palavras: "marketplace" })).toBe(false);
     expect(mesmosFiltros(BUSCA, { ...BUSCA, regioes: [] })).toBe(false);
+  });
+
+  it("trocar a lista de empresas muda o filtro; onde parou na lista, não", () => {
+    const lista = { id: "6f1c1f0e-7a4b-4c3a-9d7e-1a2b3c4d5e6f", nome: "Administradoras judiciais" };
+    expect(mesmosFiltros(BUSCA, { ...BUSCA, lista })).toBe(false);
+    expect(mesmosFiltros({ ...BUSCA, lista }, { ...BUSCA, lista: { ...lista, nome: "Outro nome" }, parte: 3, assinatura: "abc" })).toBe(true);
+  });
+
+  it("busca salva antes da lista de empresas continua valendo, sem lista e do começo", () => {
+    const antiga = { cargos: ["CEO"], palavras: "", regioes: [], setores: [], cursor: null, esgotada: false };
+    expect(buscaDoPublico.parse(antiga)).toEqual({ ...antiga, lista: null, parte: 0, assinatura: null });
   });
 
   it("saldo do dia nunca fica negativo", () => {

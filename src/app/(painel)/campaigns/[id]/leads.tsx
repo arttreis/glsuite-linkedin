@@ -69,6 +69,7 @@ export function AbaLeads({
             tetoDoDia={busca.tetoDoDia}
             suspensaAte={busca.suspensaAte?.toISOString() ?? null}
             atalhos={atalhos}
+            listas={busca.listas}
             destinoDosLeads={destino}
           />
         </section>

@@ -305,6 +305,35 @@ confirmada e guardada em versões. Ele tem:
   **Resultados**.
 - "Nova campanha" repete os passos 4 e 5 do primeiro acesso, com a busca já
   pela conta da pessoa. Termina na mesma permissão.
+- **Listas de empresas.** A organização guarda listas de empresas (nome da
+  lista e as empresas, com o nome como veio), para buscar pessoas só nelas.
+  Uma lista serve para várias campanhas. Entrada: colar os nomes, um por
+  linha, ou subir CSV/TXT; a coluna é reconhecida pelo nome (empresa, nome,
+  company, razão social, nome fantasia, organization…), e sem cabeçalho
+  reconhecível vale a primeira coluna. Empresa repetida (mesma chave de
+  empresa da §4.13: sem acento, pontuação e sufixo societário) entra uma vez.
+  Não há teto de empresas por lista.
+- Cada empresa é procurada no LinkedIn pela conta conectada e saudável da
+  organização (a conta da casa só se não houver outra; sem conta, a tela
+  avisa). Sem nenhuma página, a empresa fica **sem página** e a busca procura
+  o nome dela no texto da empresa atual da pessoa. Se, entre as páginas
+  achadas, exatamente uma tem a mesma chave do nome, ela é a **achada**. Senão
+  a pessoa **escolhe** entre até 5 páginas, ou "nenhuma destas" (vira sem
+  página). A procura vai de 20 em 20, com uma pausa aleatória de 1 a 3 s entre
+  uma empresa e outra; erro de limite do LinkedIn para a procura e avisa. A
+  procura não conta no teto de busca do dia (é consulta de lista, como região
+  e setor).
+- A busca da campanha tem o filtro opcional **"Só nestas empresas"**: uma
+  lista salva. Com lista, a região deixa de ser obrigatória (a lista já
+  delimita); cargos, palavras-chave, setor e região continuam valendo juntos.
+  Empresa ainda não procurada ou esperando escolha fica fora da busca até ser
+  resolvida, e a tela diz quantas são. A busca roda por partes: as achadas em
+  grupos de 10 páginas e uma parte para cada empresa sem página. Teto do dia,
+  suspensão por limite, opt-out, um alvo um dono, cooldown e nota seguem
+  iguais. Trocar a lista é mudar o filtro: a busca recomeça do início. Se a
+  lista mudar (empresa entra, sai ou é escolhida), a busca também recomeça do
+  início da lista: quem já entrou aparece como repetido, ninguém fica de fora.
+  Lista apagada: a busca não roda e pede outra lista ou tirar o filtro.
 - Pausar e retomar a campanha. Fluxo de campanha ativa com leads em andamento
   não muda por baixo deles: editar cria uma versão nova para quem entrar
   depois.
@@ -651,6 +680,24 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   código dos primeiros passos.
 - Aceite: build, lint, testes e typecheck sem referência ao que saiu; nenhuma
   rota antiga devolve 404 (redireciona).
+
+**SDR-59 · Lista de empresas na busca**
+- Pedido: alimentar o Kakou com uma planilha que não é de leads (ex.: só os
+  nomes de administradoras judiciais) para ele buscar pessoas nessas empresas.
+- Listas de empresas da organização (§4.11) em Campanhas › Listas de
+  empresas: criar colando nomes ou subindo CSV/TXT, procurar no LinkedIn,
+  escolher a página certa quando há dúvida, adicionar, tirar, renomear e
+  apagar.
+- Na aba Leads, o filtro "Só nestas empresas" com uma lista salva. Com lista,
+  a região fica opcional; a busca roda por partes (páginas achadas em grupos
+  de 10, uma parte por empresa sem página) e recomeça do início quando a lista
+  muda.
+- Aceite: empresa repetida entra uma vez; lista grande entra inteira (sem
+  teto de empresas); empresa com uma página de mesmo nome fica achada, com
+  dúvida pede escolha, sem página vai pela busca do nome; pendentes ficam fora
+  da busca e a tela diz quantas; busca com lista e sem região roda; a última
+  parte esgotada encerra a busca; lista mudada recomeça do início; lista
+  apagada não roda; sem lista, a busca é a mesma de antes.
 
 ## 10 · Decisões abertas
 
