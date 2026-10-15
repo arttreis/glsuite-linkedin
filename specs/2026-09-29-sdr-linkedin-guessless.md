@@ -1025,7 +1025,8 @@ migrations das duas linhas já estão no banco (conferido em 09/10).
   cargos dele), sem gravar nada.
 - Filtros: os cargos vão em `advanced_keywords.title` como `"A" OR "B"`;
   palavras em `keywords`; região e setor em `location` e `industry`. Porte de
-  empresa não tem filtro (§3). Região é obrigatória para rodar.
+  empresa não tem filtro (§3). Região é obrigatória para rodar (desde o
+  SDR-59, só quando a busca não tem lista de empresas).
 - Ids de região e setor: o humano procura na lista do LinkedIn
   (`/linkedin/search/parameters`) pela conta da campanha, com atalhos que
   usam o texto do público. A consulta não conta no teto.
@@ -1686,6 +1687,82 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   (contado no dia local da conta), a suspensão por erro de limite até o dia
   útil seguinte e o status da conta na Unipile.
 - Convites, mensagens e a visita de perfil da pesquisa seguem na janela.
+
+### SDR-59 · Lista de empresas na busca (14/10/2026)
+
+- Pedido do Arthur: alimentar o Kakou com uma planilha que não é de leads (ex.:
+  só os nomes de administradoras judiciais) para ele buscar pessoas nessas
+  empresas. A lista é **salva por organização** e reaproveitada por várias
+  campanhas, porque a mesma planilha serve a públicos diferentes (sócio,
+  jurídico, financeiro) e a procura das páginas no LinkedIn é cara: fazer uma
+  vez e guardar.
+- **Sem teto de empresas por lista**, por decisão do Arthur ("pode ser
+  infinitas"). O que existe é só cuidado de transporte: o navegador manda os
+  nomes em partes de 1000 por chamada (o corpo da server action na Vercel vai
+  até 4,5 MB) e o servidor insere em blocos de 500. A tela da lista mostra até
+  300 empresas de cada situação, com as contagens completas.
+- Tabelas `listas_de_empresas` e `empresas_da_lista` (migration
+  `20261014120000_listas_de_empresas`), com RLS pela organização do operador
+  (as empresas pela lista delas) e o grant para `sdr_servidor`. A empresa
+  guarda o nome como veio, a chave (`chaveDaEmpresa`, única por lista: a
+  repetida entra uma vez), a situação (`a_procurar`, `achada`, `escolher`,
+  `sem_pagina`), a página do LinkedIn e as opções da procura.
+- Leitura (`domain/lista-de-empresas.ts`, roda no navegador e no servidor):
+  CSV, ou texto colado com tab (planilha), vira tabela e a coluna vem pelo
+  apelido (nome da empresa, empresa, company, nome fantasia, razão social,
+  organization…; empresa ganha de nome); sem cabeçalho reconhecível, a
+  primeira coluna desde a primeira linha. TXT e texto colado sem tab são um
+  nome por linha (vírgula no nome não quebra), sem a primeira linha se ela for
+  só o título da coluna. O parser de CSV da importação virou `lerLinhasCsv`.
+- **Procura** (`server/listas/listas.ts`): `GET /linkedin/search/parameters`
+  com `type=COMPANY`, até 20 empresas por chamada, pausa aleatória de 1 a 3 s
+  entre consultas (injetável; os testes não esperam). A tela repete a chamada
+  até não faltar nenhuma, mostra o progresso e tem "Parar". Cada resultado é
+  gravado na hora, então parar ou cair no meio não perde o que já foi feito.
+  Erro de limite para a leva e devolve a mensagem; não suspende a busca do
+  perfil (é consulta de lista, como região e setor, e não conta no teto).
+- **Conta usada na procura:** a primeira conta da organização com LinkedIn
+  conectado e status saudável (ou sem status ainda), deixando a conta da casa
+  por último (`order by casa, criado_em`). Sem nenhuma, a tela manda vincular
+  em Configurações. A consulta roda como o operador (perfis são visíveis para
+  toda a organização); a chamada à Unipile fica fora da transação.
+- **Classificação:** nenhuma página = `sem_pagina`. Se, entre as páginas
+  devolvidas, exatamente uma tem a mesma chave do nome, ela é a `achada`
+  (interpretação: "uma opção com a mesma chave", não "uma opção só"; o
+  LinkedIn quase sempre devolve várias parecidas). Senão `escolher`. Em todos
+  os casos ficam guardadas até 5 opções (as de mesma chave primeiro), para o
+  humano escolher, ou trocar depois uma achada ou uma "nenhuma destas".
+  [verificar] com conta real se `title` do parâmetro `COMPANY` é o nome da
+  página como aparece no perfil e se o `id` é o mesmo que o filtro `company`
+  da busca aceita.
+- **Busca com lista** (`campanhas.busca`): ganhou `lista` ({id, nome}),
+  `parte` e `assinatura`, todos com padrão (busca salva antes continua
+  valendo). Com lista, a região deixa de ser obrigatória. As partes são as
+  páginas achadas em grupos de 10 (`company`) e uma parte por empresa sem
+  página (`advanced_keywords.company` = nome, junto com `title`), em ordem
+  estável (ids em ordem; nomes pela chave). [verificar] com conta real quantos
+  ids o filtro `company` aceita de uma vez e se o `advanced_keywords.company`
+  procura na empresa atual ou em qualquer experiência.
+- A posição é {parte, cursor}: parte que acaba passa para a próxima com cursor
+  vazio; a última acabando, `esgotada`. Página trazida pela metade recomeça
+  nela, como antes. Sem lista é uma parte só e o laço é o mesmo de antes.
+  Como parte vazia gasta uma consulta sem trazer ninguém (lista com muitas
+  empresas sem página), cada rodada vai até 30 páginas; a próxima continua de
+  onde parou.
+- **Assinatura:** FNV-1a de 32 bits do JSON das partes, sem dependência de
+  servidor. Se a lista mudou (empresa entrou, saiu ou foi escolhida), a busca
+  volta à parte 0 com cursor vazio e tira a marca de esgotada: quem já entrou
+  aparece como repetido, ninguém fica de fora. A aba Leads já mostra a busca
+  recomeçando antes de rodar. Trocar a lista é mudar o filtro
+  (`mesmosFiltros` inclui o id): cursor, parte e assinatura zeram ao salvar.
+- Lista apagada (ou de outra organização): salvar e rodar recusam pedindo
+  outra lista ou tirar o filtro; o seletor mostra a lista como "(apagada)".
+  Empresas `a_procurar` e `escolher` ficam fora da busca e a aba Leads diz
+  quantas, com link para a lista. Lista só com pendentes não roda.
+- Telas: `/campaigns/company-lists` (listas com contagens e "Nova lista") e
+  `/campaigns/company-lists/[id]` (procurar, escolher, achadas, sem página,
+  não procuradas, adicionar, renomear, apagar com confirmação, e as campanhas
+  que usam a lista). Botão "Listas de empresas" em Campanhas.
 
 ### SDR-60 · Quando o SDR passa a conversa para você (14/10/2026)
 

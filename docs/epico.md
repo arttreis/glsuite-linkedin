@@ -238,7 +238,6 @@ confirmada e guardada em versões. Ele tem:
   automático sai; o eval continua como ferramenta interna para comparar
   versões de prompt.
 - O SDR chama você e para de responder naquela conversa quando: a pessoa
-<<<<<<< HEAD
   pergunta preço, reclama, pede algo fora do comum, o pedido de parar não
   fica claro, quer marcar e não há link de agenda, a confiança da decisão
   fica abaixo do nível de cautela do SDR (mais cauteloso 0,8 · equilibrado
@@ -250,20 +249,12 @@ confirmada e guardada em versões. Ele tem:
   nos últimos 30 dias (motivo e proporção sobre as mensagens que ele tratou)
   e o que acontece depois que ele passa. O chat de teste tem mensagens de
   lead prontas para cada caso fixo.
-- **Você assume quando responde.** Respondeu pelo Chats ou direto no LinkedIn, o
-  SDR sai daquela conversa (o lead vai para `escalado_humano`). "Devolver ao
-  SDR" põe ele de volta.
-=======
-  pergunta preço, reclama, pede algo fora do comum, a confiança da decisão
-  fica abaixo de `agente.limiar_confianca`, ou bate um item de "Quando chamar
-  você" (§4.3). Você é avisado por e-mail e no Dashboard.
 - **Você assume quando responde.** Respondeu pelo Chats ou fora do Kakou
   (LinkedIn no site, no celular ou em outra ferramenta), o SDR para naquela
   conversa: o lead vai para `escalado_humano` e nada mais sai sozinho, nem a
   sequência nem uma resposta que já estava agendada. Vale em qualquer etapa,
   inclusive antes da pessoa responder e depois de a sequência terminar sem
   resposta. "Devolver ao SDR" põe ele de volta.
->>>>>>> origin/main
 - Em Configurações, a pessoa troca para **"Aprovo cada resposta"**: o SDR
   escreve, e a resposta espera dentro do próprio chat, com Enviar, Editar e
   Descartar.
@@ -328,6 +319,35 @@ confirmada e guardada em versões. Ele tem:
   **Resultados**.
 - "Nova campanha" repete os passos 4 e 5 do primeiro acesso, com a busca já
   pela conta da pessoa. Termina na mesma permissão.
+- **Listas de empresas.** A organização guarda listas de empresas (nome da
+  lista e as empresas, com o nome como veio), para buscar pessoas só nelas.
+  Uma lista serve para várias campanhas. Entrada: colar os nomes, um por
+  linha, ou subir CSV/TXT; a coluna é reconhecida pelo nome (empresa, nome,
+  company, razão social, nome fantasia, organization…), e sem cabeçalho
+  reconhecível vale a primeira coluna. Empresa repetida (mesma chave de
+  empresa da §4.13: sem acento, pontuação e sufixo societário) entra uma vez.
+  Não há teto de empresas por lista.
+- Cada empresa é procurada no LinkedIn pela conta conectada e saudável da
+  organização (a conta da casa só se não houver outra; sem conta, a tela
+  avisa). Sem nenhuma página, a empresa fica **sem página** e a busca procura
+  o nome dela no texto da empresa atual da pessoa. Se, entre as páginas
+  achadas, exatamente uma tem a mesma chave do nome, ela é a **achada**. Senão
+  a pessoa **escolhe** entre até 5 páginas, ou "nenhuma destas" (vira sem
+  página). A procura vai de 20 em 20, com uma pausa aleatória de 1 a 3 s entre
+  uma empresa e outra; erro de limite do LinkedIn para a procura e avisa. A
+  procura não conta no teto de busca do dia (é consulta de lista, como região
+  e setor).
+- A busca da campanha tem o filtro opcional **"Só nestas empresas"**: uma
+  lista salva. Com lista, a região deixa de ser obrigatória (a lista já
+  delimita); cargos, palavras-chave, setor e região continuam valendo juntos.
+  Empresa ainda não procurada ou esperando escolha fica fora da busca até ser
+  resolvida, e a tela diz quantas são. A busca roda por partes: as achadas em
+  grupos de 10 páginas e uma parte para cada empresa sem página. Teto do dia,
+  suspensão por limite, opt-out, um alvo um dono, cooldown e nota seguem
+  iguais. Trocar a lista é mudar o filtro: a busca recomeça do início. Se a
+  lista mudar (empresa entra, sai ou é escolhida), a busca também recomeça do
+  início da lista: quem já entrou aparece como repetido, ninguém fica de fora.
+  Lista apagada: a busca não roda e pede outra lista ou tirar o filtro.
 - Pausar e retomar a campanha. Fluxo de campanha ativa com leads em andamento
   não muda por baixo deles: editar cria uma versão nova para quem entrar
   depois.
@@ -693,7 +713,24 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   de busca do dia e a suspensão por limite do LinkedIn continuam.
 - Aceite: busca no sábado e de madrugada roda; o teto do dia segue valendo.
 
-<<<<<<< HEAD
+**SDR-59 · Lista de empresas na busca**
+- Pedido: alimentar o Kakou com uma planilha que não é de leads (ex.: só os
+  nomes de administradoras judiciais) para ele buscar pessoas nessas empresas.
+- Listas de empresas da organização (§4.11) em Campanhas › Listas de
+  empresas: criar colando nomes ou subindo CSV/TXT, procurar no LinkedIn,
+  escolher a página certa quando há dúvida, adicionar, tirar, renomear e
+  apagar.
+- Na aba Leads, o filtro "Só nestas empresas" com uma lista salva. Com lista,
+  a região fica opcional; a busca roda por partes (páginas achadas em grupos
+  de 10, uma parte por empresa sem página) e recomeça do início quando a lista
+  muda.
+- Aceite: empresa repetida entra uma vez; lista grande entra inteira (sem
+  teto de empresas); empresa com uma página de mesmo nome fica achada, com
+  dúvida pede escolha, sem página vai pela busca do nome; pendentes ficam fora
+  da busca e a tela diz quantas; busca com lista e sem região roda; a última
+  parte esgotada encerra a busca; lista mudada recomeça do início; lista
+  apagada não roda; sem lista, a busca é a mesma de antes.
+
 **SDR-60 · Quando o SDR passa a conversa para você, numa seção só**
 - Em Configurações > SDR, a seção da §4.7: o que sempre passa (não se
   desliga), os casos da pessoa e a cautela (mais cauteloso, equilibrado,
@@ -707,7 +744,7 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   você; com "mais solto", vira resposta; SDR sem cautela vale o equilibrado;
   salvar a seção não desfaz o editor do SDR, e vice-versa; gerar o SDR de
   novo ou ajustar pelo chat não muda a cautela.
-=======
+
 **SDR-61 · Quem escreve fora do Kakou tira o SDR**
 - Mensagem da conta escrita fora do Kakou faz o SDR parar naquela conversa em
   qualquer etapa (§4.7), inclusive com a sequência terminada sem resposta ou
@@ -719,7 +756,6 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   agendada ou com ela já saindo, e nada sai; depois da sequência sem
   resposta, a pessoa responde e o SDR não volta; a nota do convite que chega
   depois do aceite não tira o SDR.
->>>>>>> origin/main
 
 ## 10 · Decisões abertas
 

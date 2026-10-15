@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { criarClienteUnipile } from "@/server/unipile/cliente";
+import { corpoDaBuscaClassica, criarClienteUnipile } from "@/server/unipile/cliente";
 import { classificarErro, ErroUnipile } from "@/server/unipile/erros";
 
 type Requisicao = { url: URL; metodo: string; headers: Record<string, string>; corpo: unknown };
@@ -107,5 +107,40 @@ describe("cliente da Unipile", () => {
     [400, "too_many_characters", "permanente"],
   ])("classifica %i %s como %s", (status, tipo, classe) => {
     expect(classificarErro(new ErroUnipile({ status, tipo, titulo: "x" }))).toBe(classe);
+  });
+});
+
+describe("busca clássica com empresas (SDR-59)", () => {
+  it("páginas de empresa vão em `company`; o nome de empresa sem página, em `advanced_keywords.company` junto com o cargo", () => {
+    expect(corpoDaBuscaClassica({ cargo: '"CEO"', regioes: [], empresas: ["1035", "2041"] })).toEqual({
+      api: "classic",
+      category: "people",
+      advanced_keywords: { title: '"CEO"' },
+      company: ["1035", "2041"],
+    });
+    expect(corpoDaBuscaClassica({ cargo: '"CEO"', empresa: " Acme Administração Judicial " })).toEqual({
+      api: "classic",
+      category: "people",
+      advanced_keywords: { title: '"CEO"', company: "Acme Administração Judicial" },
+    });
+  });
+
+  it("sem empresa, o corpo é o de sempre", () => {
+    expect(corpoDaBuscaClassica({ cargo: '"CEO"', palavras: "", regioes: ["106057199"], setores: [], empresas: [] })).toEqual({
+      api: "classic",
+      category: "people",
+      advanced_keywords: { title: '"CEO"' },
+      location: ["106057199"],
+    });
+  });
+
+  it("consulta empresa no LinkedIn com type=COMPANY", async () => {
+    const { cliente, requisicoes } = clienteComFetch([
+      { status: 200, corpo: { items: [{ object: "LinkedinSearchParameter", id: "1035", title: "Acme" }] } },
+    ]);
+    expect(await cliente.listarParametrosDeBusca("acc", "COMPANY", "Acme")).toEqual([{ id: "1035", nome: "Acme" }]);
+    expect(requisicoes[0]!.url.pathname).toBe("/api/v1/linkedin/search/parameters");
+    expect(requisicoes[0]!.url.searchParams.get("type")).toBe("COMPANY");
+    expect(requisicoes[0]!.url.searchParams.get("keywords")).toBe("Acme");
   });
 });

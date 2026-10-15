@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { Aviso } from "@/components/aviso";
 import { ListaDeFrases } from "@/components/campos-de-edicao";
 import type { BuscaDoPublico } from "@/domain/busca";
+import type { ListaParaBusca } from "@/server/publicos/busca";
 import { procurarParametrosDoPainel, rodarBuscaDoPainel, salvarBuscaDoPainel } from "../acoes-do-publico";
 
 type Parametro = BuscaDoPublico["regioes"][number];
@@ -112,10 +113,65 @@ function Escolha({
   );
 }
 
+/** "Só nestas empresas": uma lista de empresas da organização, ou qualquer empresa (§4.11). */
+function SoNestasEmpresas({
+  listas,
+  escolhida,
+  aoMudar,
+  desabilitado,
+}: {
+  listas: ListaParaBusca[];
+  escolhida: BuscaDoPublico["lista"];
+  aoMudar: (lista: BuscaDoPublico["lista"]) => void;
+  desabilitado: boolean;
+}) {
+  const lista = escolhida ? listas.find((l) => l.id === escolhida.id) : null;
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="rotulo max-w-md">
+        Só nestas empresas (opcional)
+        <select
+          value={escolhida?.id ?? ""}
+          onChange={(e) => {
+            const nova = listas.find((l) => l.id === e.target.value);
+            aoMudar(nova ? { id: nova.id, nome: nova.nome } : null);
+          }}
+          className="campo"
+          disabled={desabilitado}
+        >
+          <option value="">Nenhuma lista: qualquer empresa</option>
+          {escolhida && !lista && <option value={escolhida.id}>{escolhida.nome} (apagada)</option>}
+          {listas.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.nome} ({l.empresas} {l.empresas === 1 ? "empresa" : "empresas"})
+            </option>
+          ))}
+        </select>
+      </label>
+      <Link href={lista ? `/campaigns/company-lists/${lista.id}` : "/campaigns/company-lists"} className="link w-fit text-xs">
+        Criar ou editar listas de empresas
+      </Link>
+      {escolhida && !lista && (
+        <Aviso tom="atencao">A lista &quot;{escolhida.nome}&quot; foi apagada. Escolha outra lista ou volte para qualquer empresa.</Aviso>
+      )}
+      {lista && lista.pendentes > 0 && (
+        <Aviso tom="atencao">
+          {lista.pendentes} {lista.pendentes === 1 ? "empresa desta lista ainda não está pronta" : "empresas desta lista ainda não estão prontas"}{" "}
+          (falta procurar no LinkedIn ou escolher qual é) e {lista.pendentes === 1 ? "fica" : "ficam"} fora da busca.{" "}
+          <Link href={`/campaigns/company-lists/${lista.id}`} className="link">
+            Resolver na lista
+          </Link>
+        </Aviso>
+      )}
+    </div>
+  );
+}
+
 /**
  * A busca do público no LinkedIn, na aba Leads (§4.13). Monta com os cargos do
- * público; região e setor vêm da lista do LinkedIn. O que a busca trouxer vai
- * para "quem entra na campanha", pelas regras de importação.
+ * público; região e setor vêm da lista do LinkedIn; a lista de empresas é
+ * opcional (§4.11). O que a busca trouxer vai para "quem entra na campanha",
+ * pelas regras de importação.
  */
 export function BuscaDaCampanha({
   campanhaId,
@@ -125,6 +181,7 @@ export function BuscaDaCampanha({
   tetoDoDia,
   suspensaAte,
   atalhos,
+  listas,
   destinoDosLeads,
 }: {
   campanhaId: string;
@@ -134,6 +191,8 @@ export function BuscaDaCampanha({
   tetoDoDia: number;
   suspensaAte: string | null;
   atalhos: { regioes: string[]; setores: string[] };
+  /** As listas de empresas da organização, para o filtro "Só nestas empresas". */
+  listas: ListaParaBusca[];
   /** Para onde levam os leads que a busca trouxe. */
   destinoDosLeads: string;
 }) {
@@ -174,6 +233,8 @@ export function BuscaDaCampanha({
     });
 
   const travado = pendente || Boolean(suspensaAte);
+  // Com lista de empresas, a região é opcional: a lista já limita a busca.
+  const semLimite = busca.regioes.length === 0 && !busca.lista;
 
   return (
     <div className="recuo mt-4 flex flex-col gap-4">
@@ -186,7 +247,9 @@ export function BuscaDaCampanha({
       {suspensaAte && (
         <Aviso tom="atencao">O LinkedIn limitou as buscas desta conta. A busca volta no próximo dia útil; convites e mensagens seguem.</Aviso>
       )}
-      {!salva && <p className="text-xs text-tinta-fraca">Montada com os cargos do público. Escolha a região antes de buscar.</p>}
+      {!salva && (
+        <p className="text-xs text-tinta-fraca">Montada com os cargos do público. Escolha a região, ou uma lista de empresas, antes de buscar.</p>
+      )}
       {busca.esgotada && (
         <Aviso tom="atencao">Esta busca já trouxe todo mundo que o LinkedIn mostra com esses filtros. Mude algum filtro para achar mais gente.</Aviso>
       )}
@@ -206,8 +269,9 @@ export function BuscaDaCampanha({
           disabled={travado}
         />
       </label>
+      <SoNestasEmpresas listas={listas} escolhida={busca.lista} aoMudar={(lista) => mudar({ lista })} desabilitado={travado} />
       <Escolha
-        rotulo="Regiões"
+        rotulo={busca.lista ? "Regiões (opcional com lista de empresas)" : "Regiões"}
         tipo="LOCATION"
         campanhaId={campanhaId}
         escolhidos={busca.regioes}
@@ -237,7 +301,7 @@ export function BuscaDaCampanha({
         </Aviso>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className="botao botao-primario" onClick={buscar} disabled={travado || saldoHoje === 0 || busca.regioes.length === 0}>
+        <button type="button" className="botao botao-primario" onClick={buscar} disabled={travado || saldoHoje === 0 || semLimite}>
           <Search aria-hidden />
           {pendente ? "Buscando…" : `Buscar ${quantidade} pessoas`}
         </button>

@@ -73,8 +73,8 @@ export type ResultadoDeBusca = {
 
 /**
  * Filtros da busca clássica de pessoas (`api: "classic"`, `category: "people"`).
- * Região e setor vão por id do LinkedIn, tirados de `listarParametrosDeBusca`.
- * A busca clássica não filtra porte de empresa (§3).
+ * Região, setor e empresa vão por id do LinkedIn, tirados de
+ * `listarParametrosDeBusca`. A busca clássica não filtra porte de empresa (§3).
  */
 export type FiltrosDaBusca = {
   palavras?: string;
@@ -82,9 +82,15 @@ export type FiltrosDaBusca = {
   cargo?: string;
   regioes?: string[];
   setores?: string[];
+  /** Páginas de empresa do LinkedIn (`company`): a empresa atual da pessoa é uma delas. */
+  empresas?: string[];
+  /** Vai em `advanced_keywords.company`: o nome no texto da empresa atual, para empresa sem página. */
+  empresa?: string;
 };
 
 export type ParametroDeBusca = { id: string; nome: string };
+
+export type TipoDeParametro = "LOCATION" | "INDUSTRY" | "COMPANY";
 
 export type ConviteEnviado = { id: string; providerId: string | null; data: string | null };
 
@@ -123,8 +129,8 @@ export interface ClienteUnipile {
     busca: { url: string } | { keywords: string; api?: "classic" | "sales_navigator" } | { filtros: FiltrosDaBusca },
     cursor?: string,
   ): Promise<{ itens: ResultadoDeBusca[]; cursor: string | null; total: number | null }>;
-  /** Ids do LinkedIn para os filtros de região e setor da busca clássica. */
-  listarParametrosDeBusca(accountId: string, tipo: "LOCATION" | "INDUSTRY", texto: string): Promise<ParametroDeBusca[]>;
+  /** Ids do LinkedIn para os filtros de região, setor e empresa da busca clássica. */
+  listarParametrosDeBusca(accountId: string, tipo: TipoDeParametro, texto: string): Promise<ParametroDeBusca[]>;
   criarWebhook(p: { url: string; fonte: "messaging" | "users" | "account_status"; nome: string; headers: Record<string, string>; eventos?: string[] }): Promise<string>;
   listarWebhooks(): Promise<WebhookUnipile[]>;
 }
@@ -152,9 +158,13 @@ export function totalDaBusca(paging: unknown): number | null {
 export function corpoDaBuscaClassica(filtros: FiltrosDaBusca): Record<string, unknown> {
   const corpo: Record<string, unknown> = { api: "classic", category: "people" };
   if (filtros.palavras?.trim()) corpo.keywords = filtros.palavras.trim();
-  if (filtros.cargo?.trim()) corpo.advanced_keywords = { title: filtros.cargo.trim() };
+  const avancadas: Record<string, string> = {};
+  if (filtros.cargo?.trim()) avancadas.title = filtros.cargo.trim();
+  if (filtros.empresa?.trim()) avancadas.company = filtros.empresa.trim();
+  if (Object.keys(avancadas).length > 0) corpo.advanced_keywords = avancadas;
   if (filtros.regioes && filtros.regioes.length > 0) corpo.location = filtros.regioes;
   if (filtros.setores && filtros.setores.length > 0) corpo.industry = filtros.setores;
+  if (filtros.empresas && filtros.empresas.length > 0) corpo.company = filtros.empresas;
   return corpo;
 }
 
