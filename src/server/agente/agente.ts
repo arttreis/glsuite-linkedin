@@ -186,7 +186,8 @@ async function concluir(db: Db, rascunhoId: string, r: Registro): Promise<void> 
 }
 
 async function escalar(db: Db, ctx: Contexto, p: { rascunhoId: string; motivo: string; agora: Date }): Promise<void> {
-  await transicionarLead(db, { leadId: ctx.leadId, para: "escalado_humano", ator: "agente", agora: p.agora, motivo: p.motivo });
+  // Se você assumiu enquanto o modelo pensava, a conversa já é sua: sem e-mail.
+  if (!(await transicionarLead(db, { leadId: ctx.leadId, para: "escalado_humano", ator: "agente", agora: p.agora, motivo: p.motivo }))) return;
   await enfileirarAlerta(db, {
     chave: `escalado/${p.rascunhoId}`,
     tipo: "revisao",
@@ -264,35 +265,47 @@ export async function processarComAgente(deps: DependenciasDoAgente, mensagemId:
     const { classificacao, decisao, texto, validacao, excecao } = desfecho;
     const base = { classificacao, decisao, texto, validacao, excecao, modelos, uso, sdrVersao };
 
-    // Rascunho mais novo substitui o que ainda estava na fila para o mesmo lead.
-    await db.query(
-      `update public.acoes set status = 'cancelada', erro = 'substituída por rascunho mais novo'
-        where lead_id = $1::uuid and origem = 'ia' and toque is null and status in ('pendente', 'aguardando_aprovacao')`,
-      [ctx.leadId],
-    );
-
     const automatico = ctx.modo === "automatico" && excecao === null;
     const [minimo, maximo] = configuracao.atraso_minutos;
     const atraso = minimo + (deps.aleatorio ?? Math.random)() * (maximo - minimo);
-    const acaoId = await agendarAcao(db, {
-      leadId: ctx.leadId,
-      perfilId: ctx.perfil.id,
-      tipo: "dm",
-      toque: null,
-      origem: "ia",
-      agendadaPara: automatico ? new Date(agora.getTime() + atraso * 60_000) : agora,
-      chave: `ia:${rascunhoId}`,
-      status: automatico ? "pendente" : "aguardando_aprovacao",
-      textoGerado: texto,
-      motivoRevisao: excecao,
+    const agendamento = await db.transacao(async (tx) => {
+      // Enquanto o modelo pensava, você pode ter assumido (pelo Chats ou direto
+      // no LinkedIn): aí o rascunho não entra (§4.7).
+      const [atual] = await tx.query<{ estado: EstadoDoLead }>("select estado from public.leads where id = $1::uuid for update", [ctx.leadId]);
+      if (atual?.estado !== "em_conversa") return { descartado: atual?.estado ?? "estado desconhecido" };
+
+      // Rascunho mais novo substitui o que ainda estava na fila para o mesmo lead.
+      await tx.query(
+        `update public.acoes set status = 'cancelada', erro = 'substituída por rascunho mais novo'
+          where lead_id = $1::uuid and origem = 'ia' and toque is null and status in ('pendente', 'aguardando_aprovacao')`,
+        [ctx.leadId],
+      );
+      const acaoId = await agendarAcao(tx, {
+        leadId: ctx.leadId,
+        perfilId: ctx.perfil.id,
+        tipo: "dm",
+        toque: null,
+        origem: "ia",
+        agendadaPara: automatico ? new Date(agora.getTime() + atraso * 60_000) : agora,
+        chave: `ia:${rascunhoId}`,
+        status: automatico ? "pendente" : "aguardando_aprovacao",
+        textoGerado: texto,
+        motivoRevisao: excecao,
+      });
+      if (acaoId) {
+        await tx.query("update public.acoes set validacao = $2::jsonb, texto_final = $3 where id = $1::uuid", [
+          acaoId,
+          validacao ? JSON.stringify(validacao) : null,
+          automatico ? texto : null,
+        ]);
+      }
+      return { acaoId };
     });
-    if (acaoId) {
-      await db.query("update public.acoes set validacao = $2::jsonb, texto_final = $3 where id = $1::uuid", [
-        acaoId,
-        validacao ? JSON.stringify(validacao) : null,
-        automatico ? texto : null,
-      ]);
+    if ("descartado" in agendamento) {
+      await concluir(db, rascunhoId, { ...base, resultado: "descartado", excecao: `lead em ${agendamento.descartado}` });
+      return "descartado";
     }
+    const { acaoId } = agendamento;
     const resultado = automatico ? "agendado" : "na_fila";
     await concluir(db, rascunhoId, { ...base, resultado, acaoId });
     await registrarEvento(db, {

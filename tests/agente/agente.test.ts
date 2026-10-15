@@ -5,7 +5,11 @@ import { processarComAgente, processarMensagensPendentes } from "@/server/agente
 import { ErroDoModelo } from "@/server/agente/modelo";
 import { listarConversas } from "@/server/conversas/inbox";
 import { despachar } from "@/server/despachante/despachante";
+import { executarReserva } from "@/server/despachante/envio";
+import { carregarPerfil } from "@/server/despachante/perfis";
+import { reservarProximaAcao } from "@/server/despachante/reserva";
 import { registrarMensagem } from "@/server/reacoes/mensagem";
+import { criarVerificadorDeResposta } from "@/server/reacoes/verificar-resposta";
 import { trocarModo } from "@/server/perfis/modo";
 import { passagensRecentes } from "@/server/sdr/passagens";
 import { gravarVersaoDoSdr } from "@/server/sdr/sdr";
@@ -252,6 +256,99 @@ describe("agente de conversa (SDR-10)", () => {
 
     expect(await eco("Oi Maria, aqui é o Arthur mesmo. Te ligo amanhã?")).toMatchObject({ tipo: "humano_no_linkedin" });
     expect(await lead(leadId)).toBe("escalado_humano");
+  });
+
+  describe("quem escreve fora do Kakou tira o SDR (SDR-61)", () => {
+    const donoEscreve = (leadId: string) =>
+      banco.db
+        .query<{ chat_id: string }>("select chat_id from public.leads where id = $1::uuid", [leadId])
+        .then(([l]) =>
+          registrarMensagem(
+            banco.db,
+            {
+              accountId: "acc-arthur",
+              chatId: l!.chat_id,
+              messageId: `msg-${randomUUID().slice(0, 8)}`,
+              texto: "Oi Maria, aqui é o Arthur mesmo. Te ligo amanhã?",
+              em: AGORA.toISOString(),
+              remetenteProviderId: "ACoArthur",
+              remetenteNome: "Arthur",
+              enviadaPelaConta: true,
+              participantes: [{ providerId: "ACoArthur", nome: "Arthur" }, { providerId: "ACoProspect", nome: "Maria" }],
+            },
+            AGORA,
+          ),
+        );
+
+    it("o dono escreve enquanto o modelo pensa: o rascunho não entra e nada sai", async () => {
+      const { leadId, mensagemId } = await pessoaResponde("Me conta mais?", { modo: "automatico" });
+      const rascunhar = modelo.rascunhar.bind(modelo);
+      modelo.rascunhar = async (p) => {
+        await donoEscreve(leadId);
+        return rascunhar(p);
+      };
+
+      expect(await rodar(mensagemId!)).toBe("descartado");
+      expect(await acoesDaIa(leadId)).toEqual([]);
+      expect(await lead(leadId)).toBe("escalado_humano");
+      expect((await rascunho(mensagemId!))!.excecao).toBe("lead em escalado_humano");
+    });
+
+    it("o SDR decide chamar você depois que você já assumiu: sem e-mail", async () => {
+      const { leadId, mensagemId } = await pessoaResponde("E quanto custa?", { modo: "automatico" });
+      modelo.classificacoes.push({ categoria: "pergunta", confianca: 0.9, sinais: { preco: true, reclamacao: false, idioma: "pt" } });
+      const rascunhar = modelo.rascunhar.bind(modelo);
+      modelo.rascunhar = async (p) => {
+        await donoEscreve(leadId);
+        return rascunhar(p);
+      };
+
+      expect(await rodar(mensagemId!)).toBe("escalado");
+      const [contagem] = await banco.db.query<{ n: number }>("select count(*)::int as n from public.alertas where chave like 'escalado/%'");
+      expect(contagem!.n).toBe(0);
+    });
+
+    it("a resposta automática já reservada pelo despachante não sai depois que o dono escreve", async () => {
+      const { leadId, mensagemId } = await pessoaResponde("Tenho interesse, pode falar.", { modo: "automatico" });
+      expect(await rodar(mensagemId!)).toBe("agendado");
+      const depois = new Date(AGORA.getTime() + 10 * 60_000);
+      const perfil = (await carregarPerfil(banco.db, await idDoPerfil(banco.db, "arthur")))!;
+      const reserva = await reservarProximaAcao(banco.db, perfil, { agora: depois, feriados: new Set(), cooldownDias: 30 });
+      expect("reserva" in reserva).toBe(true);
+
+      await donoEscreve(leadId); // chega com a resposta já reservada (enviando)
+
+      const unipile = new UnipileFalso();
+      const envio = await executarReserva(
+        { db: banco.db, unipile, agora: depois, aleatorio: () => 0.5, feriados: new Set() },
+        perfil,
+        (reserva as { reserva: Parameters<typeof executarReserva>[2] }).reserva,
+      );
+      expect(envio).toMatchObject({ resultado: "cancelada" });
+      expect(unipile.chamadasDe("enviarMensagem")).toHaveLength(0);
+      expect(await lead(leadId)).toBe("escalado_humano");
+    });
+
+    it("webhook perdido: a checagem na Unipile antes da resposta automática acha o dono escrevendo", async () => {
+      const { leadId, mensagemId } = await pessoaResponde("Tenho interesse, pode falar.", { modo: "automatico" });
+      expect(await rodar(mensagemId!)).toBe("agendado");
+      // O convite saiu antes da simulação: a checagem só olha o que veio depois dele.
+      const [{ chat_id: chat }] = await banco.db.query<{ chat_id: string }>(
+        "update public.leads set convite_enviado_em = $2 where id = $1::uuid returning chat_id",
+        [leadId, new Date(AGORA.getTime() - 7 * 86_400_000)],
+      );
+      const unipile = new UnipileFalso();
+      unipile.mensagensPorChat.set(chat, [
+        { id: "dono-sem-webhook", texto: "Maria, te ligo amanhã!", enviadaPelaConta: true, remetenteProviderId: "ACoArthur", em: AGORA.toISOString() },
+      ]);
+      const depois = new Date(AGORA.getTime() + 10 * 60_000);
+      const verificarResposta = criarVerificadorDeResposta({ db: banco.db, unipile, agora: depois });
+
+      const [resultado] = await despachar({ db: banco.db, unipile, agora: depois, aleatorio: () => 0.5, verificarResposta });
+      expect(resultado!.resultado).toBe("cancelada");
+      expect(unipile.chamadasDe("enviarMensagem")).toHaveLength(0);
+      expect(await lead(leadId)).toBe("escalado_humano");
+    });
   });
 
   it("escalar_humano passa a conversa para o dono do perfil, com alerta", async () => {

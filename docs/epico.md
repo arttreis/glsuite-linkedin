@@ -238,6 +238,7 @@ confirmada e guardada em versões. Ele tem:
   automático sai; o eval continua como ferramenta interna para comparar
   versões de prompt.
 - O SDR chama você e para de responder naquela conversa quando: a pessoa
+<<<<<<< HEAD
   pergunta preço, reclama, pede algo fora do comum, o pedido de parar não
   fica claro, quer marcar e não há link de agenda, a confiança da decisão
   fica abaixo do nível de cautela do SDR (mais cauteloso 0,8 · equilibrado
@@ -252,6 +253,17 @@ confirmada e guardada em versões. Ele tem:
 - **Você assume quando responde.** Respondeu pelo Chats ou direto no LinkedIn, o
   SDR sai daquela conversa (o lead vai para `escalado_humano`). "Devolver ao
   SDR" põe ele de volta.
+=======
+  pergunta preço, reclama, pede algo fora do comum, a confiança da decisão
+  fica abaixo de `agente.limiar_confianca`, ou bate um item de "Quando chamar
+  você" (§4.3). Você é avisado por e-mail e no Dashboard.
+- **Você assume quando responde.** Respondeu pelo Chats ou fora do Kakou
+  (LinkedIn no site, no celular ou em outra ferramenta), o SDR para naquela
+  conversa: o lead vai para `escalado_humano` e nada mais sai sozinho, nem a
+  sequência nem uma resposta que já estava agendada. Vale em qualquer etapa,
+  inclusive antes da pessoa responder e depois de a sequência terminar sem
+  resposta. "Devolver ao SDR" põe ele de volta.
+>>>>>>> origin/main
 - Em Configurações, a pessoa troca para **"Aprovo cada resposta"**: o SDR
   escreve, e a resposta espera dentro do próprio chat, com Enviar, Editar e
   Descartar.
@@ -449,7 +461,7 @@ em_conversa ─┬─► qualificado ─► reuniao_marcada
              ├─► encerrado_nao
              ├─► optout
              └─► escalado_humano ──(devolver ao SDR)──► em_conversa
-o SDR chama você, ou você responde ──► escalado_humano
+o SDR chama você, ou você responde (pelo Chats ou fora do Kakou) ──► escalado_humano
 perfil pausado ⇒ ações congeladas, estado preservado
 ```
 
@@ -681,6 +693,7 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   de busca do dia e a suspensão por limite do LinkedIn continuam.
 - Aceite: busca no sábado e de madrugada roda; o teto do dia segue valendo.
 
+<<<<<<< HEAD
 **SDR-60 · Quando o SDR passa a conversa para você, numa seção só**
 - Em Configurações > SDR, a seção da §4.7: o que sempre passa (não se
   desliga), os casos da pessoa e a cautela (mais cauteloso, equilibrado,
@@ -694,6 +707,19 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   você; com "mais solto", vira resposta; SDR sem cautela vale o equilibrado;
   salvar a seção não desfaz o editor do SDR, e vice-versa; gerar o SDR de
   novo ou ajustar pelo chat não muda a cautela.
+=======
+**SDR-61 · Quem escreve fora do Kakou tira o SDR**
+- Mensagem da conta escrita fora do Kakou faz o SDR parar naquela conversa em
+  qualquer etapa (§4.7), inclusive com a sequência terminada sem resposta ou
+  o convite retirado.
+- A resposta do SDR que já estava agendada ou saindo não sai mais; a checagem
+  na Unipile antes de cada mensagem do SDR também procura mensagem da conta
+  que o webhook não trouxe.
+- Aceite: o dono escreve no LinkedIn enquanto o SDR rascunha, com a resposta
+  agendada ou com ela já saindo, e nada sai; depois da sequência sem
+  resposta, a pessoa responde e o SDR não volta; a nota do convite que chega
+  depois do aceite não tira o SDR.
+>>>>>>> origin/main
 
 ## 10 · Decisões abertas
 
