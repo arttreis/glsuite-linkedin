@@ -4,7 +4,7 @@ import type { SdrDaIa } from "@/domain/sdr";
 import { REGRAS_DA_CASA } from "@/domain/teste-do-sdr";
 
 /** Sobe quando o prompt de gerar o SDR muda: vai gravado no evento. */
-export const VERSAO_DO_PROMPT_DO_SDR = "sdr-2";
+export const VERSAO_DO_PROMPT_DO_SDR = "sdr-3";
 
 /**
  * Prompt de sistema para gerar o SDR a partir da análise e do objetivo
@@ -26,7 +26,7 @@ export function promptDeGerarSdr(p: { nome: string; comObjetivo?: boolean }): st
 Cada campo:
 ${objetivo}
 - "voz": como ${p.nome} escreve no LinkedIn, a partir do tom do site, adaptado para conversa: curta, oral, direta, tratamento por você no português. Duas ou três frases.
-- "abertura": como é a primeira mensagem depois do aceite. Uma observação ligada a uma dor do mercado do lead, sem pedir reunião e sem vender. Descreva o jeito, não escreva a mensagem.
+- "abertura": como é a primeira mensagem depois do aceite. Um contexto curto e concreto sobre o trabalho do lead e uma pergunta fácil sobre como ele faz algo hoje, que ele responde em poucas palavras. Sem pedir reunião, sem vender, sem reflexão ou frase de efeito. Descreva o jeito, não escreva a mensagem.
 - "qualificacao": de 2 a 5 sinais ou perguntas que mostram que o lead serve, tirados de "para quem" e do mercado.
 - "objecoes": as objeções da análise e mais as comuns para esse tipo de produto, até 6, cada uma com uma resposta curta e honesta.
 - "regras": de 2 a 6 regras específicas desta empresa, que a análise sugere (ex.: o que não oferecer para quem). Não repita regra de estilo geral (tamanho, travessão, cumprimento): essas já existem.

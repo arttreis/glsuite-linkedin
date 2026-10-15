@@ -226,7 +226,7 @@ describe("o objetivo da organização (SDR-67)", () => {
       "select payload from public.eventos where tipo = 'sdr_gerado'",
     );
     expect(evento!.payload).toMatchObject({ versao_prompt: VERSAO_DO_PROMPT_DO_SDR, com_objetivo: true });
-    expect(VERSAO_DO_PROMPT_DO_SDR).toBe("sdr-2");
+    expect(VERSAO_DO_PROMPT_DO_SDR).toBe("sdr-3");
   });
 
   it("mudar o objetivo não gera o SDR de novo: só avisa, e gerar de novo tira o aviso", async () => {

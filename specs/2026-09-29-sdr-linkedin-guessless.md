@@ -1858,3 +1858,89 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   caracteres. Pedido sem cargo mantém os cargos (a busca precisa de um).
 - A busca do LinkedIn não filtra porte nem exclui cargo; o prompt manda dizer
   isso em vez de inventar filtro.
+
+### SDR-63 · Sugestão de públicos que não quebra por um campo longo (15/10/2026)
+
+- Causa: `zodOutputFormat` não manda `maxLength`, `maxItems` nem
+  `minItems` acima de 1 para a API como restrição (só como texto na
+  descrição), mas valida a resposta com o esquema zod inteiro. Um campo acima
+  do limite em um dos públicos (o `quem_nao_e` com vários sinais passava fácil
+  de 400) fazia o SDK lançar `AnthropicError`, e a tela mostrava "a IA não
+  respondeu" para a sugestão inteira.
+- `sugestaoDePublicos` virou um esquema próprio, sem limite de tamanho. Os
+  limites ficam no prompt (`publicos-4`) e em `publicosDaSugestao`: cargos e
+  setores a mais são cortados nos primeiros; texto longo descarta só aquele
+  público.
+- Erro de parse da saída estruturada vira `ErroDoModelo` ("A resposta veio
+  fora do formato") nos três clientes de `publicos/claude.ts`, com o detalhe
+  no log. Erro de API continua "a IA não respondeu".
+- O sugeridor sobe de 16k para 32k de `max_tokens`, como o leitor do site:
+  pensamento adaptativo mais 5 públicos com aderência chegava perto do teto.
+
+### SDR-64 · Mensagem que dá para responder (15/10/2026)
+
+- A mensagem sem pergunta vinha de três prompts: a geração do SDR descrevia
+  a abertura como "uma observação, sem pedir reunião", a entrada da abertura
+  não pedia pergunta e a DM 1 do estilo "casa" dizia "Não pergunta nada".
+- `entradaDaAbertura` exige a pergunta com par bom e ruim (o caso da
+  Marina). Vai na entrada, e não só no SDR, porque os SDRs já gerados guardam
+  a abertura antiga e valem até alguém gerar de novo.
+- Na abordagem, a DM 1 "casa" passa a ter a pergunta e a DM 2 retoma com um
+  ponto novo e outra pergunta: duas na sequência, dentro do teto de duas por
+  conversa.
+- Versões: `sdr-2`, `fluxo-3` e prompts do agente `2026-10-15.1`. A regra
+  nova entra em `REGRAS_DA_CASA`, que o ajuste do SDR não pode desligar e o
+  chat de teste mostra. Não há checagem no validador: dizer se uma frase é
+  "de efeito" exige julgamento, e o eval é o lugar de medir.
+
+### SDR-67 · Passo Objetivo (15/10/2026)
+
+- Pedido do Arthur: perguntar, antes de configurar o SDR, o que a pessoa quer
+  vender e o que o SDR deve fazer, e trazer a resposta para ela validar.
+  Decisão dele: passo novo, **Objetivo**, entre Análise e SDR. O Concorrentes
+  (SDR-68) entra depois dele, noutra branch.
+- `objetivo` entra em `PASSOS_DO_PRIMEIRO_ACESSO` entre `analise` e `sdr`,
+  com slug `/onboarding/goal`. Confirmar a análise agora leva ao objetivo.
+- **Migração do passo**: o objetivo conta como feito quando foi confirmado
+  **ou** quando a organização já tem SDR (`exists sdrs`). O SDR é montado ao
+  abrir o passo SDR, logo depois da análise; então quem já tem SDR estava no
+  passo SDR ou além e não é empurrado de volta. Sem dado na migration: a
+  regra vale também para quem confirmar a análise na janela entre aplicar a
+  migration e publicar o código. Quem confirmou a análise e nunca abriu o
+  passo SDR (a geração falhou) cai no Objetivo, sem ter visto SDR nenhum.
+- **"Agendar a reunião direto na sua agenda"** aparece com "em breve",
+  desabilitada, e não é valor do esquema (`ACOES_DO_SDR` só tem
+  `qualificar` e `propor_conversa`). Gravar e cair em "propor conversa" faria
+  o resumo validado dizer uma coisa e o SDR fazer outra, e deixaria no banco
+  uma escolha que o SDR-69 teria de reinterpretar. O SDR-69 soma o valor.
+- Tabela `objetivos` (uma por organização, RLS pela organização, como
+  `abordagens`): `respostas` é o rascunho, gravado a cada mudança (marcar na
+  hora; texto ao sair do campo), e `resumo` é o da IA para aquele rascunho:
+  mudar uma resposta apaga o resumo. `confirmado` (respostas + resumo),
+  `confirmado_em` e `confirmado_por` são o que vale, como `dossie` e
+  `dossie_confirmado` na oferta. `sdrs.gerado_de_objetivo_em` guarda que
+  confirmação o SDR levou em conta.
+- Padrões: o primeiro produto da análise marcado e principal, "propor uma
+  conversa", 20 minutos, quem atende = o nome do operador. Produto pelo nome;
+  o "outro" é um campo livre só. "Nunca" até 300 caracteres.
+- **Resumo**: modelo de classificação (`IA_MODELO_CLASSIFICACAO`, Haiku),
+  sem pensamento, saída estruturada `{ resumo }`. Pela lição do SDR-63, o
+  esquema da IA não tem limite; `limparResumo` corta em 4 frases e 600
+  caracteres (numa palavra inteira, com "…"), nunca recusa. Erro de parse do
+  SDK vira `ErroDoModelo` ("A IA devolveu o resumo fora do formato. Tente de
+  novo."); erro de rede segue "a IA não respondeu". Falha deixa as respostas
+  salvas. Evento `objetivo_resumido` (modelo, custo, `objetivo-1`, se cortou)
+  e `objetivo_confirmado`. Nenhuma variável de ambiente nova.
+- **SDR**: `gerarSdr` lê o objetivo confirmado e manda em
+  `<objetivo_confirmado>` (principal, outros produtos, o que fazer com quem e
+  quanto tempo, o "nunca" e o resumo validado). O prompt `sdr-3` pede o campo
+  `objetivo` pelo objetivo, as perguntas em torno do produto principal, o
+  "nunca" como regra e, para "qualificar", o lead que serve em "quando chamar
+  você". Sem objetivo (organização antiga), o prompt é o de antes. O evento
+  `sdr_gerado` ganha `com_objetivo`.
+- **Mudar depois**: em Configurações › SDR (onde o SDR é editado), a seção
+  Objetivo mostra o confirmado e abre o mesmo formulário. Confirmar de novo
+  não regenera: com `confirmado_em > gerado_de_objetivo_em`, a tela mostra
+  "Gerar o SDR de novo com o novo objetivo", que cria uma versão nova (o
+  histórico guarda as anteriores). No primeiro acesso, o passo SDR mostra o
+  mesmo aviso; lá, gerar de novo também recomeça a conversa de teste.
