@@ -136,6 +136,36 @@ describe("o SDR da organização (SDR-42)", () => {
     });
   });
 
+  it("salvar só uma parte mantém o resto: a passagem para você e o editor não se desfazem (SDR-60)", async () => {
+    await confirmarAnalise();
+    await gerar(geradorFalso());
+    const salvar = (sdr: unknown, resumo?: string) =>
+      comOperador(banco.db, admin, (tx) => salvarSdr(tx, { organizacaoId: organizacao, sdr, operadorId: admin, agora: AGORA, resumo }));
+
+    expect(await salvar({ quando_chamar_voce: ["Pedido de proposta formal"], cautela: "cauteloso" }, "Mudou a passagem.")).toEqual({ ok: true, versao: 2 });
+    expect((await obterSdr(banco.db, organizacao))!.sdr).toEqual({
+      ...GERADO,
+      link_agenda: null,
+      quando_chamar_voce: ["Pedido de proposta formal"],
+      cautela: "cauteloso",
+    });
+
+    const { quando_chamar_voce: casos, ...editor } = GERADO;
+    expect(casos).toHaveLength(1);
+    expect(await salvar({ ...editor, voz: "Mais seca.", link_agenda: "https://cal.com/duda" })).toEqual({ ok: true, versao: 3 });
+    expect((await obterSdr(banco.db, organizacao))!.sdr).toMatchObject({
+      voz: "Mais seca.",
+      quando_chamar_voce: ["Pedido de proposta formal"],
+      cautela: "cauteloso",
+    });
+
+    expect(await salvar({ cautela: "ousado" })).toMatchObject({ ok: false, erro: expect.stringContaining("Quando ficar em dúvida") });
+
+    // Gerar de novo da análise não mexe no que só a pessoa decide.
+    await gerar(geradorFalso());
+    expect((await obterSdr(banco.db, organizacao))!.sdr).toMatchObject({ link_agenda: "https://cal.com/duda", cautela: "cauteloso" });
+  });
+
   it("outra organização não lê nem grava o SDR", async () => {
     await confirmarAnalise();
     await gerar(geradorFalso());

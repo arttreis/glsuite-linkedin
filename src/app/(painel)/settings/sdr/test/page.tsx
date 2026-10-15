@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Aviso } from "@/components/aviso";
+import { CASOS_DE_TESTE } from "@/domain/passagem";
 import { obterDb } from "@/server/db";
 import type { Operador } from "@/server/db/operador";
 import { obterModeloDeLinguagem } from "@/server/dependencias";
@@ -40,7 +41,8 @@ async function Chat({ operador }: { operador: Operador }) {
     if (!comecado.ok) return <Aviso tom="erro">{comecado.erro}</Aviso>;
     teste = comecado.teste;
   }
-  return <ChatDoSdr inicial={teste} nome={operador.nome} comSeguir={false} />;
+  const casosDeTeste = CASOS_DE_TESTE.map((caso) => ({ rotulo: caso.rotulo, texto: caso.texto[teste.idioma] }));
+  return <ChatDoSdr inicial={teste} nome={operador.nome} comSeguir={false} casosDeTeste={casosDeTeste} />;
 }
 
 /** Testar o SDR em Configurações (§4.12): o mesmo chat do primeiro acesso, sem o "seguir". */
@@ -54,7 +56,7 @@ export default async function TesteDoSdrPage() {
       </Link>
       <p className="text-sm text-tinta-suave">
         Responda como um cliente responderia. Quando algo não soar certo, troque para &quot;Ajustar o SDR&quot; e diga o que mudar: vira uma versão
-        nova, que você desfaz quando quiser.
+        nova, que você desfaz quando quiser. Para ver se ele passa a conversa para você na hora certa, use as mensagens prontas acima do campo.
       </p>
       <Suspense fallback={<Abrindo />}>
         <Chat operador={operador} />

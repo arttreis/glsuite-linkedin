@@ -53,9 +53,10 @@ const SDR: Sdr = {
   regras: [],
   quando_chamar_voce: ["Pedido de tabela de atacado"],
   link_agenda: "https://cal.com/duda/20min",
+  cautela: "cauteloso",
 };
 
-// O esquema da IA não tem o link: o parse tira.
+// O esquema da IA não tem o link nem a cautela: o parse tira.
 const semLink = (sdr: Sdr): SdrDaIa => sdrDaIa.parse(sdr);
 
 function ajustadorFalso(saidas: AjusteDoSdr[]): AjustadorDeSdr & { chamadas: { sistema: string; entrada: string }[] } {
@@ -145,6 +146,26 @@ describe("chat de teste do SDR (SDR-43)", () => {
     expect(modelo.chamadas).toHaveLength(chamadasAntes);
   });
 
+  it("o nível de cautela do SDR decide quando a dúvida chama a pessoa (SDR-60)", async () => {
+    await comecar();
+    // Cauteloso (0,8): uma resposta com 0,75 de certeza passa a conversa.
+    modelo.decisoes.push({ ...modelo.decisaoPadrao, confianca: 0.75 });
+    let teste = await responder("Como funciona?");
+    expect(teste.mensagens.at(-1)).toMatchObject({ tipo: "nota", texto: "Aqui o SDR pararia e chamaria Duda: baixa confiança." });
+
+    // Mais solto (0,6): a mesma certeza vira resposta.
+    await gravarVersaoDoSdr(banco.db, { organizacaoId: organizacao, sdr: { ...SDR, cautela: "solto" }, origem: "humano", por: duda, agora: AGORA });
+    modelo.decisoes.push({ ...modelo.decisaoPadrao, confianca: 0.75 });
+    teste = await responder("E na prática?");
+    expect(teste.mensagens.at(-1)).toMatchObject({ tipo: "sdr", texto: modelo.decisaoPadrao.mensagem });
+
+    // Sem cautela gravada (SDR antigo) vale o equilibrado (0,7).
+    await gravarVersaoDoSdr(banco.db, { organizacaoId: organizacao, sdr: { ...SDR, cautela: undefined }, origem: "humano", por: duda, agora: AGORA });
+    modelo.decisoes.push({ ...modelo.decisaoPadrao, confianca: 0.65 });
+    teste = await responder("Hum.");
+    expect(teste.mensagens.at(-1)).toMatchObject({ tipo: "nota", texto: "Aqui o SDR pararia e chamaria Duda: baixa confiança." });
+  });
+
   it("falha da IA não grava a mensagem do lead", async () => {
     const comecado = await comecar();
     modelo.falhas.push(new ErroDoModelo("fora do formato"));
@@ -165,13 +186,14 @@ describe("chat de teste do SDR (SDR-43)", () => {
     expect(ajustador.chamadas[0]!.entrada).toContain("<pedido>\nmais informal\n</pedido>");
     expect(ajustador.chamadas[0]!.entrada).toContain(`Resposta do SDR que o pedido aponta:\n"${respostaAntiga.tipo === "sdr" ? respostaAntiga.texto : ""}"`);
     expect(ajustador.chamadas[0]!.entrada).not.toContain("cal.com");
+    expect(ajustador.chamadas[0]!.entrada).not.toContain("cauteloso");
     expect(teste.mensagens.map((m) => (m.tipo === "nota" ? m.nota : m.tipo))).toEqual(["sdr", "lead", "ajuste", "sdr"]);
     expect(teste.mensagens.find((m) => m.id === respostaAntiga.id)).toBeUndefined();
     expect(teste).toMatchObject({ sdrVersao: 2, podeDesfazer: true });
     expect(rascunhos().at(-1)!.sistema).toContain("Bem informal, com gíria leve.");
 
     const sdr = await obterSdr(banco.db, organizacao);
-    expect(sdr!.sdr.link_agenda).toBe(SDR.link_agenda);
+    expect(sdr!.sdr).toMatchObject({ link_agenda: SDR.link_agenda, cautela: "cauteloso" });
     const [versao] = await banco.db.query<{ origem: string; pedido: string; resumo: string }>(
       "select origem, pedido, resumo from public.sdr_versoes where versao = 2",
     );
