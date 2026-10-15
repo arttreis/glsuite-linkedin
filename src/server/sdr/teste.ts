@@ -126,6 +126,13 @@ async function responder(deps: DependenciasDoTeste, ctx: Contexto, segmento: str
     configuracao: await lerConfiguracao(deps.db, "agente"),
     consumo,
   });
+  if (desfecho.tipo === "escalar" && desfecho.passagem.ponte) {
+    // A ponte aparece como mensagem do SDR, e a nota diz que ali ele passaria a conversa (SDR-66).
+    return [
+      { id: randomUUID(), tipo: "sdr", texto: desfecho.passagem.ponte, em: deps.agora.toISOString(), acao: "escalar_humano", aviso: null },
+      nota("desfecho", notaDoDesfecho({ tipo: "escalar", motivo: desfecho.motivo, comPonte: true }, ctx.nome)!, deps.agora),
+    ];
+  }
   if (desfecho.tipo !== "rascunho") {
     const texto = notaDoDesfecho(desfecho.tipo === "escalar" ? { tipo: "escalar", motivo: desfecho.motivo } : desfecho, ctx.nome);
     return [nota("desfecho", texto ?? "O SDR não responderia.", deps.agora)];

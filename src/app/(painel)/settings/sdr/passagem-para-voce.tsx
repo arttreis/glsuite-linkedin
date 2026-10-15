@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Aviso } from "@/components/aviso";
 import { ListaDeFrases } from "@/components/campos-de-edicao";
-import { CAUTELA_PADRAO, CAUTELAS, NIVEIS_DE_CAUTELA, SEMPRE_CHAMA, type Cautela } from "@/domain/passagem";
+import { CAUTELA_PADRAO, CAUTELAS, DEPOIS_DA_PASSAGEM, NIVEIS_DE_CAUTELA, SEMPRE_CHAMA, type Cautela } from "@/domain/passagem";
 import { salvarPassagemDoPainel } from "../acoes";
 
 /**
@@ -37,7 +37,7 @@ export function PassagemParaVoce({
         Quando o SDR passa a conversa para você
       </h2>
       <p className="mt-1 text-[13px] text-tinta-suave">
-        Nesses casos ele para de responder aquela conversa, não manda nada e avisa você. Confira aqui e teste no chat se ele chama na hora certa.
+        Nesses casos ele para de responder aquela conversa e passa para você. Confira aqui e teste no chat se ele chama na hora certa.
       </p>
 
       <h3 className="mt-5 text-xs uppercase tracking-[0.12em] text-tinta-fraca">Sempre passa, em qualquer conta</h3>
@@ -110,6 +110,18 @@ export function PassagemParaVoce({
           ))}
         </div>
       </fieldset>
+
+      <h3 className="mt-6 text-xs uppercase tracking-[0.12em] text-tinta-fraca">Depois que ele passa</h3>
+      <ol className="mt-2 flex flex-col gap-2">
+        {DEPOIS_DA_PASSAGEM.map((item, indice) => (
+          <li key={item.passo} className="flex items-start gap-2.5 text-sm">
+            <span className="mt-px w-4 shrink-0 text-center text-xs tabular-nums text-tinta-fraca">{indice + 1}</span>
+            <span>
+              {item.passo}. <span className="text-tinta-suave">{item.detalhe}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
 
       {retorno && (
         <Aviso tom={retorno.tom} className="mt-4">

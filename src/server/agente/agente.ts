@@ -11,7 +11,7 @@ import { registrarEvento } from "@/server/eventos";
 import { transicionarLead } from "@/server/leads/transicoes";
 import { dossieConfirmado } from "@/server/oferta/oferta";
 import { obterSdr } from "@/server/sdr/sdr";
-import { decidirResposta, type Consumo, type EntradaDoAgente } from "./decidir";
+import { decidirResposta, type Consumo, type EntradaDoAgente, type Passagem } from "./decidir";
 import type { Classificacao, Decisao, ModeloDeLinguagem, Uso } from "./modelo";
 import { VERSAO_DOS_PROMPTS, type MensagemDoHistorico } from "./prompts";
 
@@ -185,23 +185,87 @@ async function concluir(db: Db, rascunhoId: string, r: Registro): Promise<void> 
   );
 }
 
-async function escalar(db: Db, ctx: Contexto, p: { rascunhoId: string; motivo: string; agora: Date }): Promise<void> {
-  // Se você assumiu enquanto o modelo pensava, a conversa já é sua: sem e-mail.
-  if (!(await transicionarLead(db, { leadId: ctx.leadId, para: "escalado_humano", ator: "agente", agora: p.agora, motivo: p.motivo }))) return;
-  await enfileirarAlerta(db, {
-    chave: `escalado/${p.rascunhoId}`,
-    tipo: "revisao",
-    perfilId: ctx.perfil.id,
-    incluirAdmin: false,
-    assunto: `[Kakou] O SDR chamou você na conversa com ${ctx.lead.nome} (${ctx.perfil.nome})`,
-    texto: [
-      `O SDR parou de responder ${ctx.lead.nome} e passou a conversa para você.`,
-      ``,
-      `Motivo: ${p.motivo}`,
-      ``,
-      `Responda pelo Chats: ${urlPublicaDoApp()}/chats/${ctx.leadId}`,
-      `Quando quiser, devolva a conversa ao SDR por lá.`,
-    ].join("\n"),
+/** O motivo que a ponte leva na fila, no modo "Aprovo cada resposta". */
+const PONTE_PARA_APROVAR = "O SDR passou a conversa para você. Esta é a mensagem curta que avisa a pessoa que você responde.";
+
+/** O que o e-mail diz sobre a ponte, quando o caso pedia uma. */
+function linhaDaPonte(passagem: Passagem, automatico: boolean): string | null {
+  if (passagem.ponte) {
+    return automatico
+      ? `O SDR avisou a pessoa: "${passagem.ponte}"`
+      : `A mensagem que avisa a pessoa espera a sua aprovação no Chats: "${passagem.ponte}"`;
+  }
+  return passagem.ponteExcecao ? `O SDR não avisou a pessoa (${passagem.ponteExcecao}).` : null;
+}
+
+/**
+ * Passa a conversa para você (§4.7, SDR-66). Numa transação: o lead vai para
+ * `escalado_humano`, a ponte (quando cabe) entra na fila como as outras
+ * respostas do SDR, a passagem fica gravada no rascunho e o e-mail sai com
+ * resumo, motivo e resposta sugerida. Se você assumiu enquanto o modelo
+ * pensava, a conversa já é sua: nada disso acontece.
+ */
+async function escalar(
+  deps: DependenciasDoAgente,
+  ctx: Contexto,
+  p: { rascunhoId: string; motivo: string; passagem: Passagem; atrasoMinutos: number },
+): Promise<{ passou: boolean; acaoId: string | null }> {
+  const { db, agora } = deps;
+  const { passagem } = p;
+  const automatico = ctx.modo === "automatico";
+  return db.transacao(async (tx) => {
+    const passou = await transicionarLead(tx, { leadId: ctx.leadId, para: "escalado_humano", ator: "agente", agora, motivo: p.motivo });
+    if (!passou) return { passou: false, acaoId: null };
+
+    let acaoId: string | null = null;
+    if (passagem.ponte) {
+      // A ponte substitui o que ainda estava na fila para o mesmo lead, como um rascunho mais novo.
+      await tx.query(
+        `update public.acoes set status = 'cancelada', erro = 'substituída pela ponte da passagem'
+          where lead_id = $1::uuid and origem = 'ia' and toque is null and status in ('pendente', 'aguardando_aprovacao')`,
+        [ctx.leadId],
+      );
+      acaoId = await agendarAcao(tx, {
+        leadId: ctx.leadId,
+        perfilId: ctx.perfil.id,
+        tipo: "dm",
+        toque: null,
+        origem: "ia",
+        agendadaPara: automatico ? new Date(agora.getTime() + p.atrasoMinutos * 60_000) : agora,
+        chave: `ponte:${p.rascunhoId}`,
+        status: automatico ? "pendente" : "aguardando_aprovacao",
+        textoGerado: passagem.ponte,
+        motivoRevisao: automatico ? null : PONTE_PARA_APROVAR,
+      });
+      if (acaoId && automatico) await tx.query("update public.acoes set texto_final = $2 where id = $1::uuid", [acaoId, passagem.ponte]);
+    }
+
+    await tx.query(
+      `update public.rascunhos
+          set passada_em = $2, resumo = $3, sugestao = $4, ponte = $5, ponte_excecao = $6
+        where id = $1::uuid`,
+      [p.rascunhoId, agora, passagem.resumo, passagem.sugestao, passagem.ponteEscrita, passagem.ponteExcecao],
+    );
+    await enfileirarAlerta(tx, {
+      chave: `escalado/${p.rascunhoId}`,
+      tipo: "revisao",
+      perfilId: ctx.perfil.id,
+      incluirAdmin: false,
+      assunto: `[Kakou] O SDR chamou você na conversa com ${ctx.lead.nome} (${ctx.perfil.nome})`,
+      texto: [
+        `O SDR parou de responder ${ctx.lead.nome} e passou a conversa para você.`,
+        ``,
+        `Motivo: ${p.motivo}`,
+        ...(passagem.resumo ? [``, `Resumo:`, passagem.resumo] : []),
+        ...(passagem.sugestao ? [``, `Resposta sugerida pelo SDR (já está no campo de resposta do Chats):`, passagem.sugestao] : []),
+        ...[linhaDaPonte(passagem, automatico)].flatMap((linha) => (linha ? [``, linha] : [])),
+        ``,
+        `Responda pelo Chats: ${urlPublicaDoApp()}/chats/${ctx.leadId}`,
+        `Sem resposta em 4 horas úteis, você recebe um lembrete; em 1 dia útil, o admin da organização é avisado.`,
+        `Quando quiser, devolva a conversa ao SDR por lá.`,
+      ].join("\n"),
+    });
+    return { passou: true, acaoId };
   });
 }
 
@@ -255,10 +319,13 @@ export async function processarComAgente(deps: DependenciasDoAgente, mensagemId:
       });
       return "sem_resposta_necessaria";
     }
+    const [minimo, maximo] = configuracao.atraso_minutos;
+    const atraso = minimo + (deps.aleatorio ?? Math.random)() * (maximo - minimo);
+
     if (desfecho.tipo === "escalar") {
-      const { classificacao, decisao, motivo } = desfecho;
-      await escalar(db, ctx, { rascunhoId, motivo, agora });
-      await concluir(db, rascunhoId, { resultado: "escalado", classificacao, decisao, excecao: motivo, modelos, uso, sdrVersao });
+      const { classificacao, decisao, motivo, passagem } = desfecho;
+      const { acaoId } = await escalar(deps, ctx, { rascunhoId, motivo, passagem, atrasoMinutos: atraso });
+      await concluir(db, rascunhoId, { resultado: "escalado", classificacao, decisao, excecao: motivo, acaoId, modelos, uso, sdrVersao });
       return "escalado";
     }
 
@@ -266,8 +333,6 @@ export async function processarComAgente(deps: DependenciasDoAgente, mensagemId:
     const base = { classificacao, decisao, texto, validacao, excecao, modelos, uso, sdrVersao };
 
     const automatico = ctx.modo === "automatico" && excecao === null;
-    const [minimo, maximo] = configuracao.atraso_minutos;
-    const atraso = minimo + (deps.aleatorio ?? Math.random)() * (maximo - minimo);
     const agendamento = await db.transacao(async (tx) => {
       // Enquanto o modelo pensava, você pode ter assumido (pelo Chats ou direto
       // no LinkedIn): aí o rascunho não entra (§4.7).

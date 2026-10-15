@@ -56,11 +56,18 @@ export const SEGMENTO_PADRAO = "Um cliente típico";
  * no próprio balão (`aviso`), não aqui.
  */
 export function notaDoDesfecho(
-  desfecho: { tipo: "optout" } | { tipo: "sem_resposta" } | { tipo: "escalar"; motivo: string } | { tipo: "rascunho"; acao: AcaoDoSdr },
+  desfecho:
+    | { tipo: "optout" }
+    | { tipo: "sem_resposta" }
+    | { tipo: "escalar"; motivo: string; comPonte?: boolean }
+    | { tipo: "rascunho"; acao: AcaoDoSdr },
   nome: string,
 ): string | null {
   if (desfecho.tipo === "optout") return "Aqui o SDR registraria o opt-out: nunca mais falaria com essa pessoa.";
   if (desfecho.tipo === "sem_resposta") return "Resposta automática de ausência: o SDR não responderia.";
+  if (desfecho.tipo === "escalar" && desfecho.comPonte) {
+    return `Aqui o SDR mandaria essa mensagem e passaria a conversa para ${nome}: ${desfecho.motivo}.`;
+  }
   if (desfecho.tipo === "escalar") return `Aqui o SDR pararia e chamaria ${nome}: ${desfecho.motivo}.`;
   if (desfecho.acao === "encerrar") return "O SDR encerraria a conversa aqui.";
   return null;

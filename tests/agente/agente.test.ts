@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { instanteLocal } from "@/domain/calendario";
 import { processarComAgente, processarMensagensPendentes } from "@/server/agente/agente";
 import { ErroDoModelo } from "@/server/agente/modelo";
+import { cobrarPassagens } from "@/server/agente/passagem";
+import { abrirChat, devolverAoSdr } from "@/server/chats/chats";
+import { alertarSlasEstourados } from "@/server/conversas/alertas";
+import { precisaDeVoce } from "@/server/painel/precisa";
 import { listarConversas } from "@/server/conversas/inbox";
 import { despachar } from "@/server/despachante/despachante";
 import { executarReserva } from "@/server/despachante/envio";
@@ -157,10 +161,9 @@ describe("agente de conversa (SDR-10)", () => {
   });
 
   it.each([
-    ["pergunta de preço", "automatico", { categoria: "pergunta", confianca: 0.9, sinais: { preco: true, reclamacao: false, idioma: "pt" } }, 0.9],
     ["reclamação", "automatico", { categoria: "objecao", confianca: 0.9, sinais: { preco: false, reclamacao: true, idioma: "pt" } }, 0.9],
     ["baixa confiança", "automatico", { categoria: "pergunta", confianca: 0.9, sinais: { preco: false, reclamacao: false, idioma: "pt" } }, 0.4],
-    ["pergunta de preço", "aprovacao", { categoria: "pergunta", confianca: 0.9, sinais: { preco: true, reclamacao: false, idioma: "pt" } }, 0.9],
+    ["reclamação", "aprovacao", { categoria: "objecao", confianca: 0.9, sinais: { preco: false, reclamacao: true, idioma: "pt" } }, 0.9],
   ] as const)("%s faz o SDR chamar você no modo %s: nada sai e a conversa fica com humano (SDR-52)", async (motivo, modo, classificacao, confianca) => {
     const { leadId, mensagemId } = await pessoaResponde("E quanto custa?", { modo });
     modelo.classificacoes.push(classificacao);
@@ -221,7 +224,8 @@ describe("agente de conversa (SDR-10)", () => {
     );
     const [mensagem] = await banco.db.query<{ id: string }>("select id from public.mensagens where provider_message_id = $1", [nova]);
     expect(await rodar(mensagem!.id)).toBe("descartado");
-    expect(await acoesDaIa(leadId)).toEqual([]);
+    // Só a ponte da passagem (SDR-66); nenhuma resposta nova.
+    expect((await acoesDaIa(leadId)).map((a) => a.texto_gerado)).toEqual([modelo.passagemPadrao.ponte]);
     expect(await lead(leadId)).toBe("escalado_humano");
   });
 
@@ -432,6 +436,168 @@ describe("agente de conversa (SDR-10)", () => {
       [outro, new Date(AGORA.getTime() - 1_800_000)],
     );
     expect(await processarMensagensPendentes({ db: banco.db, modelo, agora: AGORA })).toEqual([]);
+  });
+
+  describe("passagem de bastão (SDR-66)", () => {
+    const PRECO = { categoria: "pergunta", confianca: 0.9, sinais: { preco: true, reclamacao: false, idioma: "pt" } } as const;
+    const RECLAMACAO = { categoria: "objecao", confianca: 0.9, sinais: { preco: false, reclamacao: true, idioma: "pt" } } as const;
+    const HORA = 3_600_000;
+    const depois = (ms: number) => new Date(AGORA.getTime() + ms);
+
+    const passagem = async (mensagemId: string) =>
+      (await banco.db.query<{
+        passada_em: Date | null;
+        resumo: string | null;
+        sugestao: string | null;
+        ponte: string | null;
+        ponte_excecao: string | null;
+        acao_id: string | null;
+      }>("select passada_em, resumo, sugestao, ponte, ponte_excecao, acao_id from public.rascunhos where mensagem_id = $1::uuid", [mensagemId]))[0]!;
+    const alertasCom = (prefixo: string) =>
+      banco.db.query<{ chave: string; destinatarios: string[]; texto: string }>(
+        "select chave, destinatarios, texto from public.alertas where chave like $1 order by criado_em",
+        [`${prefixo}%`],
+      );
+    const passarPorPreco = async (modo = "automatico") => {
+      const r = await pessoaResponde("E quanto custa?", { modo });
+      modelo.classificacoes.push(PRECO);
+      expect(await rodar(r.mensagemId!)).toBe("escalado");
+      return r;
+    };
+
+    it("preço gera ponte e passagem: a ponte sai pelo despachante com a conversa já com você", async () => {
+      const { leadId, mensagemId } = await passarPorPreco();
+      expect(await lead(leadId)).toBe("escalado_humano");
+      const [acao] = await acoesDaIa(leadId);
+      expect(acao).toMatchObject({ status: "pendente", texto_final: modelo.passagemPadrao.ponte, motivo_revisao: null });
+      expect(modelo.chamadas.find((c) => c.etapa === "passar")!.entrada).toContain("Ponte: escreva.");
+
+      const [alerta] = await alertasCom("escalado/");
+      expect(alerta!.texto).toContain(`O SDR avisou a pessoa: "${modelo.passagemPadrao.ponte}"`);
+
+      const unipile = new UnipileFalso();
+      await despachar({ db: banco.db, unipile, agora: depois(HORA / 6), aleatorio: () => 0.5 });
+      expect(unipile.chamadasDe("enviarMensagem")[0]).toMatchObject({ texto: modelo.passagemPadrao.ponte });
+      expect(await lead(leadId)).toBe("escalado_humano");
+      expect((await passagem(mensagemId!)).acao_id).not.toBeNull();
+
+      // A ponte não conta como resposta: a conversa segue precisando de você.
+      const chat = await abrirChat(banco.db, leadId);
+      expect(chat!.situacao).toBe("precisa");
+    });
+
+    it("reclamação gera passagem sem ponte, mesmo que a IA escreva uma", async () => {
+      const { leadId, mensagemId } = await pessoaResponde("Que chato isso.", { modo: "automatico" });
+      modelo.classificacoes.push(RECLAMACAO);
+      expect(await rodar(mensagemId!)).toBe("escalado");
+      expect(await lead(leadId)).toBe("escalado_humano");
+      expect(await acoesDaIa(leadId)).toEqual([]);
+      expect(modelo.chamadas.find((c) => c.etapa === "passar")!.entrada).toContain("Ponte: não escreva (null).");
+      expect(await passagem(mensagemId!)).toMatchObject({ ponte: null, ponte_excecao: null, resumo: expect.any(String), sugestao: expect.any(String) });
+    });
+
+    it("ponte barrada não sai e a passagem acontece mesmo assim", async () => {
+      modelo.passagens.push({ ...modelo.passagemPadrao, ponte: "Boa pergunta, te respondo ainda hoje." });
+      const { leadId, mensagemId } = await passarPorPreco();
+      expect(await lead(leadId)).toBe("escalado_humano");
+      expect(await acoesDaIa(leadId)).toEqual([]);
+      expect(await passagem(mensagemId!)).toMatchObject({
+        passada_em: expect.any(Date),
+        ponte: "Boa pergunta, te respondo ainda hoje.",
+        ponte_excecao: expect.stringContaining("prazo menor que 1 dia útil"),
+      });
+      const [alerta] = await alertasCom("escalado/");
+      expect(alerta!.texto).toContain("O SDR não avisou a pessoa");
+    });
+
+    it("falha na chamada da passagem não impede a passagem", async () => {
+      modelo.falhasDaPassagem.push(new ErroDoModelo("fora do formato"));
+      const { leadId, mensagemId } = await passarPorPreco();
+      expect(await lead(leadId)).toBe("escalado_humano");
+      expect(await acoesDaIa(leadId)).toEqual([]);
+      expect(await passagem(mensagemId!)).toMatchObject({ resumo: null, sugestao: null, ponte_excecao: "o SDR não conseguiu escrever a ponte" });
+    });
+
+    it('no modo "Aprovo cada resposta", a ponte vira resposta para aprovar', async () => {
+      const { leadId } = await passarPorPreco("aprovacao");
+      const [acao] = await acoesDaIa(leadId);
+      expect(acao).toMatchObject({ status: "aguardando_aprovacao", texto_gerado: modelo.passagemPadrao.ponte, texto_final: null });
+      expect(acao!.motivo_revisao).toContain("O SDR passou a conversa para você");
+      const chat = await abrirChat(banco.db, leadId);
+      expect(chat!.pendentes.map((p) => p.texto)).toEqual([modelo.passagemPadrao.ponte]);
+    });
+
+    it("a passagem grava resumo e sugestão e mostra no e-mail, no Chats e no Dashboard", async () => {
+      const { leadId, mensagemId } = await passarPorPreco();
+      const { resumo, sugestao } = modelo.passagemPadrao;
+      expect(await passagem(mensagemId!)).toMatchObject({ passada_em: expect.any(Date), resumo, sugestao, ponte: modelo.passagemPadrao.ponte });
+
+      const [alerta] = await alertasCom("escalado/");
+      expect(alerta!.texto).toContain(resumo);
+      expect(alerta!.texto).toContain(sugestao);
+      expect(alerta!.texto).toContain("Motivo: pergunta de preço");
+
+      const chat = await abrirChat(banco.db, leadId);
+      expect(chat!.passagem).toMatchObject({ motivo: "pergunta de preço", resumo, sugestao });
+      const itens = await precisaDeVoce(banco.db);
+      expect(itens).toContainEqual(expect.objectContaining({ href: `/chats/${leadId}`, passagem: { resumo, sugestao } }));
+    });
+
+    it("o lembrete sai uma vez depois de 4 horas úteis, no lugar do aviso de SLA", async () => {
+      const { leadId } = await passarPorPreco();
+      expect(await cobrarPassagens(banco.db, depois(4 * HORA - 60_000))).toEqual({ lembretes: 0, admins: 0 });
+      expect(await cobrarPassagens(banco.db, depois(4 * HORA))).toEqual({ lembretes: 1, admins: 0 });
+      expect(await cobrarPassagens(banco.db, depois(5 * HORA))).toEqual({ lembretes: 0, admins: 0 });
+      const lembretes = await alertasCom("passagem-lembrete/");
+      expect(lembretes).toHaveLength(1);
+      expect(lembretes[0]!.texto).toContain(`/chats/${leadId}`);
+
+      await alertarSlasEstourados(banco.db, depois(5 * HORA));
+      expect(await alertasCom(`sla/${leadId}`)).toEqual([]);
+    });
+
+    it("o lembrete não sai se você respondeu", async () => {
+      const { leadId } = await passarPorPreco();
+      const [{ chat_id: chat }] = await banco.db.query<{ chat_id: string }>("select chat_id from public.leads where id = $1::uuid", [leadId]);
+      await registrarMensagem(
+        banco.db,
+        {
+          accountId: "acc-arthur",
+          chatId: chat,
+          messageId: `msg-${randomUUID().slice(0, 8)}`,
+          texto: "Maria, fica em R$ 2 mil por mês.",
+          em: depois(HORA).toISOString(),
+          remetenteProviderId: "ACoArthur",
+          remetenteNome: "Arthur",
+          enviadaPelaConta: true,
+          participantes: [{ providerId: "ACoArthur", nome: "Arthur" }, { providerId: "ACoProspect", nome: "Maria" }],
+        },
+        depois(HORA),
+      );
+      expect(await cobrarPassagens(banco.db, depois(30 * HORA))).toEqual({ lembretes: 0, admins: 0 });
+      expect((await abrirChat(banco.db, leadId))!.passagem).toBeNull();
+    });
+
+    it("o lembrete não sai se você devolveu ao SDR", async () => {
+      const { leadId } = await passarPorPreco();
+      const operador = await criarOperador(banco.db, { perfis: ["arthur"] });
+      expect(await devolverAoSdr(banco.db, { leadId, operadorId: operador, agora: depois(HORA) })).toBe(true);
+      expect(await cobrarPassagens(banco.db, depois(30 * HORA))).toEqual({ lembretes: 0, admins: 0 });
+    });
+
+    it("o admin da organização é avisado uma vez, em 1 dia útil", async () => {
+      const admin = await criarOperador(banco.db, { papel: "admin", email: "admin@guessless.com.br" });
+      await criarOperador(banco.db, { papel: "operador", email: "operador@guessless.com.br" });
+      await banco.db.query("update public.operadores set papel = 'operador' where id <> $1::uuid and papel = 'admin'", [admin]);
+      await passarPorPreco();
+
+      expect(await cobrarPassagens(banco.db, depois(24 * HORA - 60_000))).toEqual({ lembretes: 1, admins: 0 });
+      expect(await cobrarPassagens(banco.db, depois(24 * HORA))).toEqual({ lembretes: 0, admins: 1 });
+      expect(await cobrarPassagens(banco.db, depois(48 * HORA))).toEqual({ lembretes: 0, admins: 0 });
+      const avisos = await alertasCom("passagem-admin/");
+      expect(avisos).toHaveLength(1);
+      expect(avisos[0]!.destinatarios).toEqual(["admin@guessless.com.br"]);
+    });
   });
 
   describe("com o SDR da organização (SDR-42)", () => {

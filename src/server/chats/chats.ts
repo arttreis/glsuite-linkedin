@@ -1,4 +1,5 @@
 import type { EstadoDoLead } from "@/domain/estados";
+import { passagemAberta } from "@/server/agente/passagem";
 import type { Db } from "@/server/db/tipos";
 import { transicionarLead } from "@/server/leads/transicoes";
 
@@ -49,9 +50,11 @@ export function situacaoDoLead(p: {
   estado: EstadoDoLead;
   ultimaDirecao: "entrada" | "saida" | null;
   aprovacoes: number;
+  /** O SDR passou a conversa e você ainda não respondeu: a ponte dele não conta (SDR-66). */
+  passagemAberta?: boolean;
 }): Exclude<Situacao, "fora"> {
   const comVoce = p.estado === "escalado_humano";
-  if ((comVoce && p.ultimaDirecao === "entrada") || p.aprovacoes > 0) return "precisa";
+  if ((comVoce && (p.ultimaDirecao === "entrada" || p.passagemAberta)) || p.aprovacoes > 0) return "precisa";
   return comVoce ? "voce" : "sdr";
 }
 
@@ -75,6 +78,7 @@ type LinhaDeLead = {
   autor: string;
   em: Date;
   aprovacoes: number;
+  passagem_aberta: boolean;
 };
 
 type LinhaExterna = {
@@ -96,7 +100,8 @@ export async function listarChats(db: Db, p: { filtro: FiltroDoChat }): Promise<
   const leads = await db.query<LinhaDeLead>(
     `select l.id, l.estado, pe.nome, pe.empresa, pf.nome as conta,
             u.texto, u.direcao, u.autor, u.em,
-            (select count(*)::int from public.acoes a where a.lead_id = l.id and a.status = 'aguardando_aprovacao') as aprovacoes
+            (select count(*)::int from public.acoes a where a.lead_id = l.id and a.status = 'aguardando_aprovacao') as aprovacoes,
+            exists (select 1 from public.rascunhos r where r.lead_id = l.id and ${passagemAberta("r", "l")}) as passagem_aberta
        from public.leads l
        join public.pessoas pe on pe.id = l.pessoa_id
        join public.perfis pf on pf.id = l.perfil_id
@@ -116,7 +121,7 @@ export async function listarChats(db: Db, p: { filtro: FiltroDoChat }): Promise<
     ultimoTexto: l.texto,
     ultimoAutor: quemEscreveu(l.direcao, l.autor),
     ultimaEm: l.em,
-    situacao: situacaoDoLead({ estado: l.estado, ultimaDirecao: l.direcao, aprovacoes: l.aprovacoes }),
+    situacao: situacaoDoLead({ estado: l.estado, ultimaDirecao: l.direcao, aprovacoes: l.aprovacoes, passagemAberta: l.passagem_aberta }),
     estado: l.estado,
   }));
 
@@ -185,6 +190,20 @@ export type ChatDoLead = {
   fio: ItemDoFio[];
   pendentes: RespostaPendente[];
   situacao: Exclude<Situacao, "fora">;
+  /** O SDR passou a conversa e ela ainda espera você (SDR-66). */
+  passagem: PassagemDoChat | null;
+};
+
+/** O que o SDR deixou para você ao passar a conversa: resumo, motivo, sugestão e a ponte. */
+export type PassagemDoChat = {
+  motivo: string | null;
+  resumo: string | null;
+  sugestao: string | null;
+  /** A ponte que o SDR escreveu (saiu, espera aprovação ou foi barrada). */
+  ponte: string | null;
+  /** Por que a ponte não saiu, num caso que pedia uma. */
+  ponteExcecao: string | null;
+  em: Date;
 };
 
 type Transicao = { id: string; em: Date; ator: string; de: string; para: string; motivo: string | null; operador: string | null };
@@ -271,6 +290,14 @@ export async function abrirChat(db: Db, leadId: string): Promise<ChatDoLead | nu
       order by agendada_para, criada_em`,
     [leadId],
   );
+  const [passagem] = await db.query<PassagemDoChat>(
+    `select r.excecao as motivo, r.resumo, r.sugestao, r.ponte, r.ponte_excecao as "ponteExcecao", r.passada_em as em
+       from public.rascunhos r join public.leads l on l.id = r.lead_id
+      where r.lead_id = $1::uuid and ${passagemAberta("r", "l")}
+      order by r.passada_em desc
+      limit 1`,
+    [leadId],
+  );
 
   const fio: ItemDoFio[] = [
     ...mensagens.map((m) => ({ tipo: "mensagem" as const, id: m.id, quem: quemEscreveu(m.direcao, m.autor), texto: m.texto, em: m.em })),
@@ -310,7 +337,9 @@ export async function abrirChat(db: Db, leadId: string): Promise<ChatDoLead | nu
       estado: lead.estado,
       ultimaDirecao: ultima?.direcao ?? null,
       aprovacoes: pendentes.length,
+      passagemAberta: passagem !== undefined,
     }),
+    passagem: passagem ?? null,
   };
 }
 

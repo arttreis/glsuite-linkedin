@@ -130,15 +130,34 @@ describe("chat de teste do SDR (SDR-43)", () => {
     expect(await obterTeste(banco.db, base())).toEqual(teste);
   });
 
-  it("o que não é resposta comum vira nota: chamar a pessoa (também por preço) e opt-out", async () => {
+  it("o que não é resposta comum vira nota: chamar a pessoa (com ponte em preço e pedido fora do comum) e opt-out", async () => {
     await comecar();
+    const ponte = modelo.passagemPadrao.ponte;
     modelo.decisoes.push({ acao: "escalar_humano", mensagem: null, motivo: "pediu tabela de atacado", estagio_sugerido: null, confianca: 0.9 });
     let teste = await responder("Me manda a tabela de atacado?");
-    expect(teste.mensagens.at(-1)).toMatchObject({ tipo: "nota", nota: "desfecho", texto: "Aqui o SDR pararia e chamaria Duda: pediu tabela de atacado." });
+    expect(teste.mensagens.slice(-2)).toEqual([
+      expect.objectContaining({ tipo: "sdr", texto: ponte, acao: "escalar_humano", aviso: null }),
+      expect.objectContaining({
+        tipo: "nota",
+        nota: "desfecho",
+        texto: "Aqui o SDR mandaria essa mensagem e passaria a conversa para Duda: pediu tabela de atacado.",
+      }),
+    ]);
 
     modelo.classificacoes.push({ categoria: "pergunta", confianca: 0.9, sinais: { preco: true, reclamacao: false, idioma: "pt" } });
     teste = await responder("Quanto custa?");
-    expect(teste.mensagens.at(-1)).toMatchObject({ tipo: "nota", nota: "desfecho", texto: "Aqui o SDR pararia e chamaria Duda: pergunta de preço." });
+    expect(teste.mensagens.slice(-2)).toEqual([
+      expect.objectContaining({ tipo: "sdr", texto: ponte }),
+      expect.objectContaining({ tipo: "nota", texto: "Aqui o SDR mandaria essa mensagem e passaria a conversa para Duda: pergunta de preço." }),
+    ]);
+
+    // Reclamação: sem ponte, só a nota.
+    modelo.classificacoes.push({ categoria: "objecao", confianca: 0.9, sinais: { preco: false, reclamacao: true, idioma: "pt" } });
+    teste = await responder("Que chato isso.");
+    expect(teste.mensagens.slice(-2)).toEqual([
+      expect.objectContaining({ tipo: "lead" }),
+      expect.objectContaining({ tipo: "nota", texto: "Aqui o SDR pararia e chamaria Duda: reclamação." }),
+    ]);
 
     const chamadasAntes = modelo.chamadas.length;
     teste = await responder("Pare de me mandar mensagem");

@@ -14,6 +14,7 @@ type Modo = "lead" | "ajuste";
 const ACAO: Partial<Record<Extract<ItemDoTeste, { tipo: "sdr" }>["acao"], string>> = {
   propor_reuniao: "propôs a conversa",
   encerrar: "encerrou",
+  escalar_humano: "avisou e passou a conversa",
 };
 
 function Digitando() {

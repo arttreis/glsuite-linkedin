@@ -14,15 +14,18 @@ export function FormularioDeResposta({
   contexto,
   bloqueio,
   aviso,
+  sugestao = null,
 }: {
   leadId: string;
   contexto: ContextoDoPerfil;
   bloqueio: string | null;
   /** O que acontece ao responder, quando o SDR ainda conduz a conversa. */
   aviso: string | null;
+  /** A resposta que o SDR sugeriu ao passar a conversa (SDR-66): vem preenchida e editável. */
+  sugestao?: string | null;
 }) {
   const [estado, acao, enviando] = useActionState(responder, INICIAL);
-  const [texto, setTexto] = useState("");
+  const [texto, setTexto] = useState(sugestao ?? "");
   const [chave, setChave] = useState(() => crypto.randomUUID());
   const [ultimoEnvio, setUltimoEnvio] = useState<number | null>(null);
 
@@ -50,7 +53,14 @@ export function FormularioDeResposta({
     <form action={acao} className="flex flex-col gap-2.5 border-t border-linha p-3 sm:p-4">
       <input type="hidden" name="leadId" value={leadId} />
       <input type="hidden" name="chave" value={chave} />
+      {sugestao && ultimoEnvio === null && (
+        <label htmlFor={`resposta-${leadId}`} className="text-[11px] font-medium uppercase tracking-wide text-destaque">
+          Sugestão do SDR
+          <span className="ml-1.5 normal-case tracking-normal text-tinta-fraca">revise e edite antes de enviar</span>
+        </label>
+      )}
       <textarea
+        id={`resposta-${leadId}`}
         name="texto"
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
