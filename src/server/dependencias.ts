@@ -4,6 +4,8 @@ import { lerEnv } from "@/lib/env";
 import { criarModeloClaude } from "@/server/agente/claude";
 import type { ModeloDeLinguagem } from "@/server/agente/modelo";
 import type { EnviadorDeEmail } from "@/server/alertas/alertas";
+import { criarResumidorDeObjetivoClaude } from "@/server/objetivo/claude";
+import type { ResumidorDeObjetivo } from "@/server/objetivo/objetivo";
 import { criarLeitorClaude } from "@/server/oferta/claude";
 import type { LeitorDeSite } from "@/server/oferta/leitor";
 import { criarAvaliadorClaude } from "@/server/nota/claude";
@@ -147,6 +149,19 @@ export function obterInterpretadorDeBusca(): InterpretadorDeBusca | null {
       : null;
   }
   return interpretadorDeBusca;
+}
+
+let resumidorDeObjetivo: ResumidorDeObjetivo | null | undefined;
+
+/** O resumo do objetivo para a pessoa validar (§4.2.1) no modelo de classificação, ou null sem ANTHROPIC_API_KEY. */
+export function obterResumidorDeObjetivo(): ResumidorDeObjetivo | null {
+  if (resumidorDeObjetivo === undefined) {
+    const env = envIa();
+    resumidorDeObjetivo = env.ANTHROPIC_API_KEY
+      ? criarResumidorDeObjetivoClaude({ apiKey: env.ANTHROPIC_API_KEY, modelo: env.IA_MODELO_CLASSIFICACAO })
+      : null;
+  }
+  return resumidorDeObjetivo;
 }
 
 let escritorDeFluxo: EscritorDeFluxo | null | undefined;

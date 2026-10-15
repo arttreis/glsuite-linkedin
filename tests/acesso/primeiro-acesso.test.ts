@@ -110,7 +110,7 @@ describe("primeiro acesso: organização nova por domínio (SDR-40)", () => {
     expect(estado.atual).toBe("site");
   });
 
-  it("o passo atual sai dos dados: site lido vai para a análise, análise confirmada vai para o SDR", async () => {
+  it("o passo atual sai dos dados: site lido vai para a análise, análise confirmada vai para o objetivo", async () => {
     const userId = await usuarioNoAuth("duda@guessless.com.br");
     await garantirOperadorDoPrimeiroAcesso(banco.db, pedido(userId, "duda@guessless.com.br"));
     const { organizacaoId } = (await buscarOperadorAtivo(banco.db, userId))!;
@@ -126,7 +126,7 @@ describe("primeiro acesso: organização nova por domínio (SDR-40)", () => {
       [organizacaoId],
     );
     const depois = await estado();
-    expect(depois.atual).toBe("sdr");
+    expect(depois.atual).toBe("objetivo");
     expect([...depois.feitos]).toEqual(["site", "analise"]);
   });
 
@@ -191,7 +191,7 @@ describe("confirmar a análise no primeiro acesso (SDR-41)", () => {
     expect(await confirmar(ANALISE)).toEqual({ ok: true });
     expect(await nomeDaOrganizacao()).toBe("Loja da Duda");
     const estado = await comOperador(banco.db, userId, (tx) => estadoDoPrimeiroAcesso(tx));
-    expect(estado.atual).toBe("sdr");
+    expect(estado.atual).toBe("objetivo");
   });
 
   it("depois do primeiro acesso, confirmar não muda o nome", async () => {

@@ -63,21 +63,27 @@ export type EstadoDoPrimeiroAcesso = { feitos: Set<IdDoPassoInicial>; atual: IdD
 
 /**
  * Onde a organização está no primeiro acesso, tirado dos próprios dados: quem
- * fecha a aba volta para o passo em que parou. Roda como o operador. O SDR está
- * feito quando a pessoa disse "ficou bom" no chat de teste (SDR-43); a
- * abordagem, quando ela disse "pode entrar em contato" (SDR-45), que também
- * fecha a prévia (SDR-56). O LinkedIn entra com o SDR-46.
+ * fecha a aba volta para o passo em que parou. Roda como o operador. O
+ * objetivo está feito quando a pessoa confirmou o resumo (SDR-67) ou quando a
+ * organização já tem SDR: ela chegou ao passo SDR antes de o Objetivo existir
+ * e não volta para trás (o SDR é montado ao abrir o passo). O SDR está feito
+ * quando a pessoa disse "ficou bom" no chat de teste (SDR-43); a abordagem,
+ * quando ela disse "pode entrar em contato" (SDR-45), que também fecha a
+ * prévia (SDR-56). O LinkedIn entra com o SDR-46.
  */
 export async function estadoDoPrimeiroAcesso(db: Db): Promise<EstadoDoPrimeiroAcesso> {
-  const [linha] = await db.query<{ site: boolean; analise: boolean; sdr: boolean; abordagem: boolean }>(
+  const [linha] = await db.query<{ site: boolean; analise: boolean; objetivo: boolean; sdr: boolean; abordagem: boolean }>(
     `select exists (select 1 from public.ofertas) as site,
             exists (select 1 from public.ofertas where dossie_confirmado is not null) as analise,
+            exists (select 1 from public.objetivos where confirmado_em is not null)
+              or exists (select 1 from public.sdrs) as objetivo,
             exists (select 1 from public.sdrs where aprovado_em is not null) as sdr,
             exists (select 1 from public.abordagens where permitida_em is not null) as abordagem`,
   );
   const feitos = new Set<IdDoPassoInicial>();
   if (linha?.site) feitos.add("site");
   if (linha?.analise) feitos.add("analise");
+  if (linha?.objetivo) feitos.add("objetivo");
   if (linha?.sdr) feitos.add("sdr");
   if (linha?.abordagem) feitos.add("abordagem");
   return { feitos, atual: passoAtual(feitos) };
