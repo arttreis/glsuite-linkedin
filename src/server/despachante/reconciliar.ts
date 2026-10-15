@@ -23,7 +23,8 @@ export async function reconciliarAcoesEmVoo(
 ): Promise<number> {
   const { db, unipile, agora } = deps;
   const presas = await db.query<EmVoo>(
-    `select a.id, a.lead_id, a.tipo, a.toque, a.origem, a.tentativas, a.texto_final as texto, a.perfil_id,
+    `select a.id, a.lead_id, a.tipo, a.toque, a.origem, a.aprovada_por is not null as aprovada, a.tentativas,
+            a.texto_final as texto, a.perfil_id,
             pe.provider_id, l.chat_id, l.convite_id, pf.praca
        from public.acoes a
        join public.leads l on l.id = a.lead_id

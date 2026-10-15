@@ -24,8 +24,11 @@ const CONECTADOS: readonly EstadoDoLead[] = [
   "escalado_humano",
 ];
 
-/** Estados em que o SDR ainda conduz: quem responde tira ele da conversa (§4.7). */
-const COM_O_SDR: readonly EstadoDoLead[] = ["aceito", "em_sequencia", "em_conversa", "qualificado"];
+/**
+ * Estados em que o SDR ainda conduz, ou volta a conduzir quando a pessoa
+ * responder: quem responde tira ele da conversa (§4.7).
+ */
+const COM_O_SDR: readonly EstadoDoLead[] = ["aceito", "em_sequencia", "sem_resposta", "convite_retirado", "em_conversa", "qualificado"];
 
 /**
  * Resposta escrita pela pessoa no Chats (§4.8). Passa pelo validador como

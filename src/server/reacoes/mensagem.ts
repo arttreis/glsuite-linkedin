@@ -20,10 +20,20 @@ export type ResultadoDaMensagem =
     };
 
 /**
- * Estados em que a régua ou o SDR ainda conduzem sozinhos. O dono que escreve
+ * Estados em que a régua ou o SDR ainda conduzem sozinhos, ou voltam a conduzir
+ * quando a pessoa responder (sem resposta, convite retirado). O dono que escreve
  * direto no LinkedIn assume a conversa, como quem responde pelo Chats (§4.7).
  */
-const ESTADOS_AUTOMATICOS: readonly EstadoDoLead[] = ["na_fila", "convite_enviado", "aceito", "em_sequencia", "em_conversa", "qualificado"];
+const ESTADOS_AUTOMATICOS: readonly EstadoDoLead[] = [
+  "na_fila",
+  "convite_enviado",
+  "aceito",
+  "em_sequencia",
+  "sem_resposta",
+  "convite_retirado",
+  "em_conversa",
+  "qualificado",
+];
 
 type Lead = { id: string; estado: EstadoDoLead; perfil_id: string; pessoa_id: string };
 
@@ -111,16 +121,18 @@ export async function registrarMensagem(db: Db, m: MensagemRecebida, agora: Date
       );
       if (eco) return { tipo: "nossa" };
 
-      if (lead.estado === "convite_enviado" || lead.estado === "convite_retirado") {
-        const [nota] = await tx.query<{ texto_final: string | null }>(
-          "select texto_final from public.acoes where lead_id = $1::uuid and tipo = 'convite' and status = 'enviada' limit 1",
-          [lead.id],
-        );
-        if (nota?.texto_final && nota.texto_final.trim() === m.texto.trim()) {
-          await gravar("saida", "sistema");
-          await registrarAceite(tx, { accountId: m.accountId, providerId: contraparte ?? "", agora, origem: "nota_do_convite", chatId: m.chatId });
-          return { tipo: "aceite_pela_nota", leadId: lead.id, perfilId: perfil.id };
-        }
+      // A nota do convite aparece como mensagem da conta. Com o convite pendente é
+      // o aceite; depois (o `new_relation` chegou antes, ou a checagem na Unipile
+      // a achou) é só a nota, e não o dono escrevendo.
+      const [nota] = await tx.query<{ texto_final: string | null }>(
+        "select texto_final from public.acoes where lead_id = $1::uuid and tipo = 'convite' and status = 'enviada' limit 1",
+        [lead.id],
+      );
+      if (nota?.texto_final && nota.texto_final.trim() === m.texto.trim()) {
+        await gravar("saida", "sistema");
+        if (lead.estado !== "convite_enviado" && lead.estado !== "convite_retirado") return { tipo: "nossa" };
+        await registrarAceite(tx, { accountId: m.accountId, providerId: contraparte ?? "", agora, origem: "nota_do_convite", chatId: m.chatId });
+        return { tipo: "aceite_pela_nota", leadId: lead.id, perfilId: perfil.id };
       }
 
       // Espanha: o JP escreve à mão no LinkedIn e o eco conclui a tarefa do toque.

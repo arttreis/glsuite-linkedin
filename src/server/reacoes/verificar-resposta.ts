@@ -5,10 +5,13 @@ import type { ClienteUnipile } from "@/server/unipile/cliente";
 import { registrarMensagem } from "./mensagem";
 
 /**
- * Rede de segurança do "erro mais caro do sistema" (§4.1): antes de cada DM da
- * régua, olha a conversa na Unipile. Se a pessoa respondeu e o webhook não
- * chegou (atraso, conta que oscilou), a resposta é registrada agora e a DM não
- * sai. Se a Unipile falhar, o erro sobe e o envio fica para depois.
+ * Rede de segurança do "erro mais caro do sistema" (§4.1): antes de cada DM que
+ * o SDR manda sozinho, olha a conversa na Unipile. Se o webhook não chegou
+ * (atraso, conta que oscilou), o que faltou é registrado agora e a DM não sai
+ * quando:
+ * - a pessoa respondeu, numa DM da régua;
+ * - o dono escreveu direto no LinkedIn, em qualquer DM do SDR (§4.7).
+ * Se a Unipile falhar, o erro sobe e o envio fica para depois.
  */
 export function criarVerificadorDeResposta(deps: { db: Db; unipile: ClienteUnipile; agora: Date }) {
   return async (perfil: PerfilDoDespachante, reserva: Reserva): Promise<boolean> => {
@@ -23,13 +26,14 @@ export function criarVerificadorDeResposta(deps: { db: Db; unipile: ClienteUnipi
       ? [reserva.chat_id]
       : (await deps.unipile.listarConversasComPessoa(perfil.unipile_account_id, reserva.provider_id)).map((c) => c.id);
 
-    let respondeu = false;
+    let parar = false;
     for (const chatId of chats) {
-      const mensagens = await deps.unipile.listarMensagens(chatId, 10);
+      // A Unipile devolve as mais recentes primeiro; registra na ordem em que aconteceram.
+      const mensagens = (await deps.unipile.listarMensagens(chatId, 10))
+        .filter((m) => new Date(m.em).getTime() > desde)
+        .sort((a, b) => new Date(a.em).getTime() - new Date(b.em).getTime());
       for (const m of mensagens) {
-        if (m.enviadaPelaConta || new Date(m.em).getTime() <= desde) continue;
-        respondeu = true;
-        await registrarMensagem(
+        const resultado = await registrarMensagem(
           deps.db,
           {
             accountId: perfil.unipile_account_id,
@@ -37,15 +41,16 @@ export function criarVerificadorDeResposta(deps: { db: Db; unipile: ClienteUnipi
             messageId: m.id,
             texto: m.texto,
             em: m.em,
-            remetenteProviderId: reserva.provider_id,
+            remetenteProviderId: m.enviadaPelaConta ? m.remetenteProviderId : reserva.provider_id,
             remetenteNome: null,
-            enviadaPelaConta: false,
+            enviadaPelaConta: m.enviadaPelaConta,
             participantes: [{ providerId: reserva.provider_id, nome: null }],
           },
           deps.agora,
         );
+        if (m.enviadaPelaConta ? resultado.tipo === "humano_no_linkedin" : reserva.toque !== null) parar = true;
       }
     }
-    return respondeu;
+    return parar;
   };
 }

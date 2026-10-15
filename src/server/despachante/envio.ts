@@ -250,8 +250,9 @@ export async function executarReserva(
 
   let resultado: ResultadoUnipile;
   try {
-    if (reserva.tipo === "dm" && reserva.toque && deps.verificarResposta && (await deps.verificarResposta(perfil, reserva))) {
-      return cancelar("a pessoa respondeu antes do envio");
+    const doSdrSozinho = reserva.tipo === "dm" && (reserva.toque !== null || !reserva.aprovada);
+    if (doSdrSozinho && deps.verificarResposta && (await deps.verificarResposta(perfil, reserva))) {
+      return cancelar("a conversa mudou antes do envio: a pessoa respondeu ou o dono escreveu direto no LinkedIn");
     }
     resultado = await chamarUnipile(deps.unipile, perfil, reserva);
   } catch (erro) {
