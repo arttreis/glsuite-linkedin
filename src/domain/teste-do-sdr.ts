@@ -40,6 +40,7 @@ export const REGRAS_DA_CASA = [
   "no máximo uma pergunta por mensagem e duas na conversa inteira",
   "sem travessão nem meia-risca",
   "sem palavras vazias (impressionado, inspirador, admiro, adoro, fascinante, notei)",
+  "sem frase de efeito: a primeira mensagem termina com uma pergunta fácil de responder",
   "sem prometer resultado nem número",
   "sem levar a conversa para WhatsApp, e-mail ou telefone, a não ser que a pessoa peça",
   "nunca dizer que escreveu à mão ou que não é um robô",
