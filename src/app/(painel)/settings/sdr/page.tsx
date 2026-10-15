@@ -1,12 +1,14 @@
-import { History, MessagesSquare, Sparkles } from "lucide-react";
+import { Hand, History, MessagesSquare, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Aviso } from "@/components/aviso";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
+import { passagensRecentes, type PassagensRecentes } from "@/server/sdr/passagens";
 import { historicoDoSdr, obterSdr, type Origem } from "@/server/sdr/sdr";
 import { exigirOperadorNoApp } from "@/server/supabase/servidor";
 import { montarSdrDoPainel, trocarModoDaConta, voltarParaVersaoDoPainel } from "../acoes";
 import { EditorDoSdr } from "./editor-do-sdr";
+import { PassagemParaVoce } from "./passagem-para-voce";
 
 const ORIGEM: Record<Origem, string> = {
   ia: "Montado da análise do site",
@@ -18,13 +20,68 @@ const ORIGEM: Record<Origem, string> = {
 const quando = (valor: Date) =>
   new Date(valor).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" });
 
-/** SDR (§4.12): os campos, o teste no chat, o histórico com voltar e o modo de resposta de cada conta. */
+const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
+
+/** As conversas que o SDR passou para você no último mês e o que acontece depois (§4.7). */
+function UltimasPassagens({ recentes }: { recentes: PassagensRecentes }) {
+  const { dias, passagens, passadas, tratadas } = recentes;
+  return (
+    <section className="cartao p-5" aria-labelledby="titulo-passagens">
+      <h2 id="titulo-passagens" className="flex items-center gap-2 text-[15px] font-semibold">
+        <Hand className="size-4 text-tinta-suave" aria-hidden />
+        Conversas que o SDR passou para você
+      </h2>
+      <p className="mt-1 text-[13px] text-tinta-suave">
+        {tratadas === 0
+          ? `Nos últimos ${dias} dias nenhum lead respondeu ainda. Enquanto isso, teste no chat.`
+          : `Nos últimos ${dias} dias, de ${plural(tratadas, "mensagem de lead", "mensagens de leads")}, o SDR passou ${passadas} para você (${Math.round((passadas / tratadas) * 100)}%). Se parecer demais ou de menos, ajuste os casos e o nível de dúvida acima.`}
+      </p>
+
+      {passagens.length > 0 && (
+        <ul className="mt-4 flex flex-col divide-y divide-linha">
+          {passagens.map((p) => (
+            <li key={`${p.leadId}-${new Date(p.em).toISOString()}`} className="flex flex-wrap items-start justify-between gap-3 py-3">
+              <div className="min-w-0 flex-1 basis-72">
+                <p className="text-sm">
+                  {p.empresa ? `${p.nome}, ${p.empresa}` : p.nome}
+                  {p.comVoce && <span className="etiqueta etiqueta-atencao ml-2">com você</span>}
+                </p>
+                <p className="mt-0.5 text-[13px] text-tinta-suave">{p.motivo ? `Motivo: ${p.motivo}` : "Sem motivo registrado."}</p>
+                <p className="mt-0.5 text-xs text-tinta-fraca">
+                  {p.conta} · {quando(p.em)}
+                </p>
+              </div>
+              <Link href={`/chats/${p.leadId}`} className="botao botao-pequeno">
+                Abrir conversa
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h3 className="mt-5 text-xs uppercase tracking-[0.12em] text-tinta-fraca">O que acontece quando ele passa</h3>
+      <ol className="mt-2 flex list-decimal flex-col gap-1.5 pl-5 text-sm text-tinta-suave">
+        <li>Ele para de responder aquela conversa. Nada sai em nome dele.</li>
+        <li>Quem opera a conta recebe um e-mail com o motivo, e a conversa aparece em Precisa de você, no Dashboard.</li>
+        <li>Você responde pelo Chats ou direto no LinkedIn. Quando quiser, &quot;Devolver ao SDR&quot;, na conversa, põe ele de volta.</li>
+      </ol>
+      <p className="mt-2 text-[13px] text-tinta-fraca">Se você responder antes de ele chamar, a conversa também passa a ser sua.</p>
+    </section>
+  );
+}
+
+/**
+ * SDR (§4.12): os campos, o teste no chat, quando ele passa a conversa para
+ * você (com as últimas passagens), o modo de resposta de cada conta e o
+ * histórico com voltar.
+ */
 export default async function SdrPage({ searchParams }: PageProps<"/settings/sdr">) {
   const operador = await exigirOperadorNoApp();
   const { msg } = await searchParams;
-  const { sdr, historico, contas } = await comOperador(obterDb(), operador.id, async (tx) => ({
+  const { sdr, historico, contas, passagens } = await comOperador(obterDb(), operador.id, async (tx) => ({
     sdr: await obterSdr(tx, operador.organizacaoId),
     historico: await historicoDoSdr(tx, operador.organizacaoId),
+    passagens: await passagensRecentes(tx, { agora: new Date() }),
     contas: await tx.query<{ id: string; nome: string; modo_resposta: "aprovacao" | "automatico" }>(
       "select id, nome, modo_resposta from public.perfis where not casa and public.pode_ver_perfil(id) order by nome",
     ),
@@ -62,6 +119,12 @@ export default async function SdrPage({ searchParams }: PageProps<"/settings/sdr
             </Link>
           </section>
           <EditorDoSdr key={sdr.versao} inicial={sdr.sdr} />
+          <PassagemParaVoce
+            key={`passagem-${sdr.versao}`}
+            inicial={{ quando_chamar_voce: sdr.sdr.quando_chamar_voce, cautela: sdr.sdr.cautela }}
+            temLinkDeAgenda={sdr.sdr.link_agenda !== null}
+          />
+          <UltimasPassagens recentes={passagens} />
         </>
       )}
 

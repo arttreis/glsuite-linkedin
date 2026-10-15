@@ -11,6 +11,7 @@ import { reservarProximaAcao } from "@/server/despachante/reserva";
 import { registrarMensagem } from "@/server/reacoes/mensagem";
 import { criarVerificadorDeResposta } from "@/server/reacoes/verificar-resposta";
 import { trocarModo } from "@/server/perfis/modo";
+import { passagensRecentes } from "@/server/sdr/passagens";
 import { gravarVersaoDoSdr } from "@/server/sdr/sdr";
 import { criarBancoDeTeste, type BancoDeTeste } from "../support/banco";
 import { leadsComAcao, SP } from "../support/despacho";
@@ -171,6 +172,20 @@ describe("agente de conversa (SDR-10)", () => {
     expect(alerta!.assunto).toContain("O SDR chamou você");
     expect(alerta!.texto).toContain(motivo);
     expect(alerta!.texto).toContain(`/chats/${leadId}`);
+  });
+
+  it("as conversas que o SDR passou aparecem com o motivo e a proporção sobre o que ele tratou (SDR-60)", async () => {
+    const preco = await pessoaResponde("E quanto custa?", { modo: "automatico" });
+    modelo.classificacoes.push({ categoria: "pergunta", confianca: 0.9, sinais: { preco: true, reclamacao: false, idioma: "pt" } });
+    await rodar(preco.mensagemId!);
+    const comum = await pessoaResponde("Tenho interesse, pode falar.", { modo: "automatico" });
+    await rodar(comum.mensagemId!);
+
+    const recentes = await passagensRecentes(banco.db, { agora: new Date() });
+    expect(recentes).toMatchObject({ dias: 30, passadas: 1, tratadas: 2 });
+    expect(recentes.passagens).toEqual([
+      expect.objectContaining({ leadId: preco.leadId, motivo: "pergunta de preço", conta: expect.any(String), comVoce: true }),
+    ]);
   });
 
   it("trocar o modo em Configurações vale para a próxima resposta (SDR-51)", async () => {
