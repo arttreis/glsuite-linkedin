@@ -48,6 +48,18 @@ const TIPOS_CONTA = new Set([
 ]);
 
 /**
+ * A Unipile não reconhece a chave da API (`missing_credentials`): vale para
+ * todas as contas e reconectar não resolve. Com a chave morta, endpoint com
+ * `account_id` pode devolver `invalid_credentials`, igual a conta desconectada.
+ */
+export function chaveRecusada(erro: unknown): boolean {
+  return erro instanceof ErroUnipile && erro.tipo === "missing_credentials";
+}
+
+/** Para quem vê a recusa da chave na tela. */
+export const PECA_A_CHAVE = "Não é a conta do LinkedIn: peça ao admin para trocar a chave da API da Unipile.";
+
+/**
  * Como o despachante reage (§5.1 e §4.4):
  * - limite: conta para a parada automática e reagenda;
  * - conta: desconexão, checkpoint ou restrição, pausa o perfil na hora;

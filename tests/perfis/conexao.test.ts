@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { garantirWebhooks, gerarLinkDeConexao, registrarContaConectada } from "@/server/perfis/conexao";
+import { garantirWebhooks, gerarLinkDeConexao, mensagemDaFalhaDoLink, registrarContaConectada } from "@/server/perfis/conexao";
 import { sincronizarStatusDasContas } from "@/server/perfis/status-conta";
 import { ErroUnipile } from "@/server/unipile/erros";
 import { criarBancoDeTeste, type BancoDeTeste } from "../support/banco";
@@ -39,6 +39,16 @@ describe("conexão do perfil pela Unipile (hosted auth)", () => {
       { perfilId: await idDoPerfil(banco.db, "arthur"), agora: AGORA },
     );
     expect(unipile.chamadasDe("gerarLinkDeConexao")[0]).toMatchObject({ tipo: "reconnect", contaParaReconectar: "acc-arthur" });
+  });
+
+  it("link recusado vira mensagem: 401 é a chave da API, não a conta; o resto pede para tentar de novo", () => {
+    expect(mensagemDaFalhaDoLink(new ErroUnipile({ status: 401, tipo: "missing_credentials", titulo: "Missing credentials" }))).toBe(
+      "A Unipile recusou a chave da API (Unipile 401 missing_credentials: Missing credentials). Não é a conta do LinkedIn: peça ao admin para trocar a chave da API da Unipile.",
+    );
+    expect(mensagemDaFalhaDoLink(new ErroUnipile({ status: 503, tipo: "service_unavailable", titulo: "Please try again later." }))).toBe(
+      "A Unipile não gerou o link de conexão (Unipile 503 service_unavailable: Please try again later.). Tente de novo em instantes.",
+    );
+    expect(() => mensagemDaFalhaDoLink(new Error("Perfil não encontrado"))).toThrow("Perfil não encontrado");
   });
 
   it("liga a conta ao perfil no callback, mantendo o perfil pausado", async () => {

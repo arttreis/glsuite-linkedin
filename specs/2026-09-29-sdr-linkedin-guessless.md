@@ -1729,16 +1729,28 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
 - **Conta recusada na procura** (bug de 16/10/2026): a Unipile devolveu
   `401 invalid_credentials` em `GET /linkedin/search/parameters` para a conta
   do Juliano (Votto) com o status da conta ainda `OK` no webhook, e a leva
-  parava com "O LinkedIn não respondeu", sem dizer que era a conta. Nesse
-  endpoint, todo 401 é "conta desconectada do provedor" pela referência da
-  Unipile; chave da API desconhecida dá `missing_credentials`, não
-  `invalid_credentials` (testado contra a API). Agora erro da classe `conta`
-  (`classificarErro`) tira a conta da leva e a próxima saudável refaz a
-  consulta da mesma empresa, sem pausa extra; o resultado traz um `aviso` com
-  quem reconectar, que a tela da lista e a da conversa mostram. Todas recusadas:
-  a leva para e a mensagem nomeia as contas. A procura não pausa o perfil nem
-  muda `unipile_status` (é consulta de lista; o tick sincroniza o status e o
-  despachante pausa no envio, §4.4).
+  parava com "O LinkedIn não respondeu". O primeiro diagnóstico culpou a conta
+  (a referência do endpoint diz que todo 401 é "conta desconectada"). Errado:
+  a conta da casa foi recusada igual, e o link do hosted auth, que não usa
+  conta, deu `401 missing_credentials`. Era a chave da API de produção. Ou
+  seja, com a chave morta, endpoint com `account_id` pode devolver
+  `invalid_credentials`, igual a conta desconectada.
+  - Erro da classe `conta` (`classificarErro`) tira a conta da leva e a
+    próxima saudável refaz a mesma empresa, sem pausa extra; o resultado traz
+    um `aviso` com quem reconectar, que a tela da lista e a da conversa
+    mostram. A conta da casa aparece como "da casa", porque Configurações não
+    a mostra.
+  - `missing_credentials` (`chaveRecusada`) para a leva na hora e diz que é a
+    chave, não a conta. Todas as contas recusadas de uma vez: a mensagem
+    aponta a chave. Uma conta só, recusada: reconectar e, se continuar,
+    conferir a chave.
+  - A procura não pausa o perfil nem muda `unipile_status` (é consulta de
+    lista; o tick sincroniza o status e o despachante pausa no envio, §4.4).
+  - Configurações > LinkedIn mostra "Reconectar o LinkedIn" em toda conta
+    vinculada (destacado só quando o status não é saudável), porque a Unipile
+    pode recusar a conta com o status OK. Falha da Unipile ao gerar o link
+    (`mensagemDaFalhaDoLink`) volta para a tela com a mensagem, em vez da
+    página de erro: 401 ali é a chave.
 - **Classificação:** nenhuma página = `sem_pagina`. Se, entre as páginas
   devolvidas, exatamente uma tem a mesma chave do nome, ela é a `achada`
   (interpretação: "uma opção com a mesma chave", não "uma opção só"; o

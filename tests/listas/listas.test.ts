@@ -156,25 +156,47 @@ describe("listas de empresas (SDR-59)", () => {
       procuradas: 2,
       faltam: 0,
       aviso:
-        "A Unipile recusou a conta do LinkedIn de Juliano (Unipile 401 invalid_credentials: Invalid credentials): ela parece desconectada. Reconecte em Configurações, na aba LinkedIn. A procura seguiu pela conta de Arthur.",
+        "A Unipile recusou a conta do LinkedIn de Juliano (Unipile 401 invalid_credentials: Invalid credentials): ela parece desconectada. Reconecte em Configurações, na aba LinkedIn. A procura seguiu pela conta da casa.",
     });
     expect(unipile.chamadasDe("listarParametrosDeBusca").map((c) => c.accountId)).toEqual(["acc-juliano", "acc-arthur", "acc-arthur"]);
     expect(esperas).toEqual([2000]);
     expect((await lista(id))!.contagem.a_procurar).toBe(0);
   });
 
-  it("todas as contas recusadas pela Unipile: para a leva e diz quais reconectar", async () => {
+  it("todas as contas recusadas de uma vez: para a leva e aponta a chave da Unipile, não as contas", async () => {
     const { id } = (await criar(["Acme", "Zeta"])) as { id: string };
     await ativarPerfil(banco.db, "juliano", { accountId: "acc-juliano" });
-    const recusa = () => new ErroUnipile({ status: 401, tipo: "disconnected_account", titulo: "Disconnected" });
+    const recusa = () => new ErroUnipile({ status: 401, tipo: "invalid_credentials", titulo: "Invalid credentials" });
     unipile.falharProxima("listarParametrosDeBusca", recusa()).falharProxima("listarParametrosDeBusca", recusa());
 
     expect(await procurar(id)).toEqual({
       ok: false,
-      erro: "A Unipile recusou as contas do LinkedIn de Arthur e Juliano (Unipile 401 disconnected_account: Disconnected): elas parecem desconectadas. Reconecte em Configurações, na aba LinkedIn. 0 empresas foram procuradas; faltam 2.",
+      erro: "A Unipile recusou as 2 contas do LinkedIn desta organização de uma vez (Unipile 401 invalid_credentials: Invalid credentials). Quando todas caem juntas, o problema costuma ser a chave da API da Unipile, não as contas: peça ao admin para conferir. 0 empresas foram procuradas; faltam 2.",
     });
     expect(unipile.chamadasDe("listarParametrosDeBusca")).toHaveLength(2);
     expect((await lista(id))!.contagem.a_procurar).toBe(2);
+  });
+
+  it("a única conta recusada: manda reconectar e, se continuar, conferir a chave", async () => {
+    const { id } = (await criar(["Acme"])) as { id: string };
+    unipile.falharProxima("listarParametrosDeBusca", new ErroUnipile({ status: 401, tipo: "disconnected_account", titulo: "Disconnected" }));
+
+    expect(await procurar(id)).toEqual({
+      ok: false,
+      erro: "A Unipile recusou a conta do LinkedIn de Arthur (Unipile 401 disconnected_account: Disconnected): ela parece desconectada. Reconecte em Configurações, na aba LinkedIn. Se a recusa continuar, peça ao admin para conferir a chave da API da Unipile. 0 empresas foram procuradas; faltam 1.",
+    });
+  });
+
+  it("chave da API recusada: para na hora, sem tentar as outras contas", async () => {
+    const { id } = (await criar(["Acme", "Zeta"])) as { id: string };
+    await ativarPerfil(banco.db, "juliano", { accountId: "acc-juliano" });
+    unipile.falharProxima("listarParametrosDeBusca", new ErroUnipile({ status: 401, tipo: "missing_credentials", titulo: "Missing credentials" }));
+
+    expect(await procurar(id)).toEqual({
+      ok: false,
+      erro: "A Unipile recusou a chave da API (Unipile 401 missing_credentials: Missing credentials). Não é a conta do LinkedIn: peça ao admin para trocar a chave da API da Unipile. 0 empresas foram procuradas; faltam 2.",
+    });
+    expect(unipile.chamadasDe("listarParametrosDeBusca")).toHaveLength(1);
   });
 
   it("o humano escolhe a página, ou nenhuma destas, e pode trocar depois", async () => {

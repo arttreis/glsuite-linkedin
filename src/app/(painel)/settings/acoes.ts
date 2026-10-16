@@ -11,7 +11,7 @@ import { obterGeradorDeSdr, obterLeitorDeSite, obterUnipile, segredoDaUnipile } 
 import { concluirLeitura, iniciarLeitura, salvarDossie, type ResultadoDaEdicao } from "@/server/oferta/oferta";
 import { definirContasDoMembro, mudarPapelDoMembro } from "@/server/organizacao/equipe";
 import { renomearOrganizacao } from "@/server/organizacao/organizacao";
-import { garantirWebhooks, gerarLinkDeConexao } from "@/server/perfis/conexao";
+import { garantirWebhooks, gerarLinkDeConexao, mensagemDaFalhaDoLink } from "@/server/perfis/conexao";
 import { editarConta } from "@/server/perfis/edicao";
 import { ErroDeModo, registrarEval, trocarModo } from "@/server/perfis/modo";
 import { contaNovaDoLinkedin } from "@/server/perfis/nova-conta";
@@ -169,11 +169,19 @@ export async function editarContaDoPainel(formData: FormData) {
 export async function reconectarConta(formData: FormData) {
   const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const perfilId = await exigirAcessoAConta(operador.id, formData.get("perfilId"));
-  const url = await gerarLinkDeConexao(
-    { db: obterDb(), unipile: obterUnipile(), urlApp: urlPublicaDoApp(), segredo: segredoDaUnipile() },
-    { perfilId, agora: new Date(), voltarPara: "/settings/linkedin" },
-  );
-  redirect(url);
+  redirect(await linkDeConexao(perfilId));
+}
+
+/** O link do hosted auth; se a Unipile recusar, volta para a aba com a mensagem em vez da página de erro. */
+async function linkDeConexao(perfilId: string): Promise<string> {
+  try {
+    return await gerarLinkDeConexao(
+      { db: obterDb(), unipile: obterUnipile(), urlApp: urlPublicaDoApp(), segredo: segredoDaUnipile() },
+      { perfilId, agora: new Date(), voltarPara: "/settings/linkedin" },
+    );
+  } catch (erro) {
+    voltar("linkedin", mensagemDaFalhaDoLink(erro));
+  }
 }
 
 /** Vincular outra conta: nasce pausada; ativa no Dashboard depois de conectar. */
@@ -185,11 +193,7 @@ export async function vincularOutraConta() {
     nome: operador.nome,
     agora: new Date(),
   });
-  const url = await gerarLinkDeConexao(
-    { db: obterDb(), unipile: obterUnipile(), urlApp: urlPublicaDoApp(), segredo: segredoDaUnipile() },
-    { perfilId, agora: new Date(), voltarPara: "/settings/linkedin" },
-  );
-  redirect(url);
+  redirect(await linkDeConexao(perfilId));
 }
 
 export async function atualizarStatusDasContasDoPainel() {

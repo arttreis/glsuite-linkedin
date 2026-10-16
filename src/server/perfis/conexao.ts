@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
+import { ErroUnipile, PECA_A_CHAVE } from "@/server/unipile/erros";
 import { statusMaisGrave } from "./status-conta";
 
 type Dependencias = { db: Db; unipile: ClienteUnipile };
@@ -33,6 +34,16 @@ export async function gerarLinkDeConexao(
     falhaUrl: new URL(`${p.voltarPara ?? "/settings/linkedin"}?conexao=falhou`, deps.urlApp).toString(),
     expiraEm: new Date(p.agora.getTime() + 30 * 60_000),
   });
+}
+
+/**
+ * O que a tela diz quando a Unipile não gera o link. O link só usa a chave da
+ * API, então 401 aqui é a chave, não a conta. Erro que não é da Unipile sobe.
+ */
+export function mensagemDaFalhaDoLink(erro: unknown): string {
+  if (!(erro instanceof ErroUnipile)) throw erro;
+  if (erro.status === 401) return `A Unipile recusou a chave da API (${erro.message}). ${PECA_A_CHAVE}`;
+  return `A Unipile não gerou o link de conexão (${erro.message}). Tente de novo em instantes.`;
 }
 
 const esquemaNotificacao = z.object({
