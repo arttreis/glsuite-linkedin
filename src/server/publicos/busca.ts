@@ -1,7 +1,15 @@
-import { buscaDoPublico, buscaInicial, cargoDaBusca, mesmosFiltros, saldoDeBusca, type BuscaDoPublico } from "@/domain/busca";
+import { buscaDoPublico, buscaInicial, cargoDaBusca, faltaCargo, mesmosFiltros, saldoDeBusca, type BuscaDoPublico } from "@/domain/busca";
 import { aberturaDoProximoDiaUtil, limitesDoDia, type Janela } from "@/domain/calendario";
 import { STATUS_SAUDAVEIS } from "@/domain/conta";
-import { assinaturaDasPartes, empresasPendentes, partesDaBusca, type ParteDaBusca } from "@/domain/lista-de-empresas";
+import {
+  assinaturaDasPartes,
+  EMPRESAS_POR_PARTE,
+  EMPRESAS_POR_PARTE_SEM_CARGO,
+  empresasPendentes,
+  partesDaBusca,
+  type EmpresaDaBusca,
+  type ParteDaBusca,
+} from "@/domain/lista-de-empresas";
 import type { Praca } from "@/domain/validador";
 import { enfileirarAlerta } from "@/server/alertas/alertas";
 import { lerConfiguracao } from "@/server/configuracoes";
@@ -65,6 +73,11 @@ export type SituacaoDaBusca = {
   listas: ListaParaBusca[];
 };
 
+/** As partes da lista para esta busca: sem cargo, uma página por parte, para nenhuma parte bater no teto do LinkedIn. */
+function partesDaLista(empresas: readonly EmpresaDaBusca[], busca: BuscaDoPublico): ParteDaBusca[] {
+  return partesDaBusca(empresas, busca.cargos.length === 0 ? EMPRESAS_POR_PARTE_SEM_CARGO : EMPRESAS_POR_PARTE);
+}
+
 /**
  * Onde a busca com lista começa, com a lista como ela está agora (§4.11): se
  * a lista mudou desde a última busca, do início da lista.
@@ -91,7 +104,7 @@ export async function situacaoDaBusca(db: Db, campanhaId: string, agora: Date): 
   let busca = salva.success ? salva.data : buscaInicial(publico!);
   if (busca.lista) {
     const empresas = await empresasParaBusca(db, { listaId: busca.lista.id, organizacaoId: conta.organizacao_id });
-    if (empresas) busca = posicaoNaLista(busca, partesDaBusca(empresas));
+    if (empresas) busca = posicaoNaLista(busca, partesDaLista(empresas, busca));
   }
   return {
     busca,
@@ -108,6 +121,7 @@ export async function situacaoDaBusca(db: Db, campanhaId: string, agora: Date): 
   };
 }
 
+const SEM_CARGO = "Sem lista de empresas, a busca precisa de pelo menos um cargo. Com uma lista, dá para buscar todo mundo das empresas.";
 const LISTA_APAGADA = 'A lista de empresas desta busca foi apagada. Escolha outra lista em "Só nestas empresas" ou tire o filtro.';
 
 /**
@@ -120,7 +134,8 @@ export async function salvarBusca(
   p: { campanhaId: string; busca: unknown; operadorId: string; agora: Date },
 ): Promise<Resultado> {
   const validada = buscaDoPublico.safeParse({ ...(p.busca as object), parte: 0, cursor: null, assinatura: null, esgotada: false });
-  if (!validada.success) return { ok: false, erro: "A busca precisa de pelo menos um cargo, e de no máximo 10 regiões e 10 setores." };
+  if (!validada.success) return { ok: false, erro: "A busca aceita no máximo 10 cargos, 10 regiões e 10 setores, sem cargo em branco." };
+  if (faltaCargo(validada.data)) return { ok: false, erro: SEM_CARGO };
   const conta = await contaDaCampanha(db, p.campanhaId);
   if (!conta?.publico_id) return { ok: false, erro: "Só campanha de público tem busca." };
   let lista = validada.data.lista;
@@ -210,6 +225,7 @@ export async function rodarBusca(
   const salva = buscaDoPublico.safeParse(conta.busca);
   if (!salva.success) return { ok: false, erro: "Salve a busca antes de rodar." };
   let busca = salva.data;
+  if (faltaCargo(busca)) return { ok: false, erro: SEM_CARGO };
   // A lista de empresas já delimita a busca; sem ela, a região é obrigatória.
   if (!busca.lista && busca.regioes.length === 0) {
     return { ok: false, erro: "Escolha pelo menos uma região ou uma lista de empresas: sem isso, a busca pega o mundo todo." };
@@ -218,7 +234,7 @@ export async function rodarBusca(
   if (busca.lista) {
     const empresas = await empresasParaBusca(db, { listaId: busca.lista.id, organizacaoId: conta.organizacao_id });
     if (!empresas) return { ok: false, erro: LISTA_APAGADA };
-    const daLista = partesDaBusca(empresas);
+    const daLista = partesDaLista(empresas, busca);
     if (daLista.length === 0) {
       return {
         ok: false,

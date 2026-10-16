@@ -1026,7 +1026,8 @@ migrations das duas linhas já estão no banco (conferido em 09/10).
 - Filtros: os cargos vão em `advanced_keywords.title` como `"A" OR "B"`;
   palavras em `keywords`; região e setor em `location` e `industry`. Porte de
   empresa não tem filtro (§3). Região é obrigatória para rodar (desde o
-  SDR-59, só quando a busca não tem lista de empresas).
+  SDR-59, só quando a busca não tem lista de empresas). Cargo também (desde o
+  SDR-121, só sem lista).
 - Ids de região e setor: o humano procura na lista do LinkedIn
   (`/linkedin/search/parameters`) pela conta da campanha, com atalhos que
   usam o texto do público. A consulta não conta no teto.
@@ -1788,6 +1789,36 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   `/campaigns/company-lists/[id]` (procurar, escolher, achadas, sem página,
   não procuradas, adicionar, renomear, apagar com confirmação, e as campanhas
   que usam a lista). Botão "Listas de empresas" em Campanhas.
+
+### SDR-121 · Todo mundo das empresas da lista (16/10/2026)
+
+- Pedido do Arthur: buscar quem trabalha nas empresas da lista "sem adicionar
+  nenhum outro filtro". Até aqui a busca exigia pelo menos um cargo mesmo com
+  lista, e a busca montada já vinha com os cargos do público.
+- `buscaDoPublico.cargos` perdeu o `min(1)`. A regra virou `faltaCargo`
+  (sem lista e sem cargo), checada em `salvarBusca` e em `rodarBusca`, e não
+  um `refine` no schema: o `rascunhoDaBusca` da conversa estende o schema, e o
+  zod não estende objeto com refinamento. Busca salva antes continua válida
+  (todas têm cargo).
+- Sem cargo, `cargoDaBusca([])` é vazio e o cliente da Unipile não manda
+  `advanced_keywords.title`: a parte vai só com `company` (ou
+  `advanced_keywords.company`, para empresa sem página).
+- **Uma página por parte sem cargo** (`EMPRESAS_POR_PARTE_SEM_CARGO`): a
+  busca clássica do LinkedIn para em mil resultados [verificar com conta
+  real], e dez empresas grandes juntas, sem cargo, passam disso; a parte
+  "esgotaria" sem trazer todo mundo. Com cargo seguem os grupos de 10. Mudar
+  o cargo muda as partes, mas não precisa de cuidado extra: mudar cargo já é
+  mudar o filtro (`mesmosFiltros`), e a busca recomeça do início. Empresa com
+  mais de mil pessoas, sozinha, ainda bate no teto: aí só cargo ou região
+  estreitam.
+- Tela: com lista, o rótulo diz "Cargos (opcional com lista de empresas)" e,
+  se houver qualquer outro filtro, o botão "Todo mundo destas empresas" zera
+  cargos, palavras, regiões e setores (só no formulário; salvar ou buscar
+  grava). Sem lista e sem cargo, o botão de buscar fica desligado com o aviso.
+- Conversa: o prompt (`busca-conversada-2`) diz que, com lista, cargos podem
+  ficar vazios, e que "todo mundo dessas empresas" deixa os filtros vazios.
+  O servidor só mantém os cargos antigos quando o pedido vem sem cargo e a
+  busca fica sem lista.
 
 ### SDR-60 · Quando o SDR passa a conversa para você (14/10/2026)
 

@@ -119,6 +119,14 @@ describe("partes da busca com lista", () => {
     ]);
   });
 
+  it("sem cargo, uma página por parte, para nenhuma parte passar do teto do LinkedIn", () => {
+    expect(partesDaBusca([empresa("Beta", "achada", "2"), empresa("Acme", "achada", "1"), empresa("Zeta", "sem_pagina")], 1)).toEqual([
+      { empresas: ["1"] },
+      { empresas: ["2"] },
+      { empresa: "Zeta" },
+    ]);
+  });
+
   it("duas empresas na mesma página do LinkedIn contam uma vez", () => {
     expect(partesDaBusca([empresa("Acme", "achada", "1"), empresa("Acme SP", "achada", "1")])).toEqual([{ empresas: ["1"] }]);
   });

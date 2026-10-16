@@ -414,11 +414,17 @@ LinkedIn e, desde o Marco E, no Instagram, no Messenger e no Telegram (§4.26).
   procura não conta no teto de busca do dia (é consulta de lista, como região
   e setor).
 - A busca da campanha tem o filtro opcional **"Só nestas empresas"**: uma
-  lista salva. Com lista, a região deixa de ser obrigatória (a lista já
-  delimita); cargos, palavras-chave, setor e região continuam valendo juntos.
+  lista salva. Com lista, a região e o cargo deixam de ser obrigatórios (a
+  lista já delimita); cargos, palavras-chave, setor e região continuam
+  valendo juntos quando a pessoa põe. Com lista e nenhum outro filtro, a
+  busca traz **todo mundo que trabalha nas empresas da lista**; um botão
+  "Todo mundo destas empresas" tira os outros filtros de uma vez. Sem lista,
+  a busca precisa de pelo menos um cargo e uma região.
   Empresa ainda não procurada ou esperando escolha fica fora da busca até ser
   resolvida, e a tela diz quantas são. A busca roda por partes: as achadas em
-  grupos de 10 páginas e uma parte para cada empresa sem página. Teto do dia,
+  grupos de 10 páginas (uma página por parte quando não há cargo, para
+  nenhuma parte passar do teto de resultados do LinkedIn) e uma parte para
+  cada empresa sem página. Teto do dia,
   suspensão por limite, opt-out, um alvo um dono, cooldown e nota seguem
   iguais. Trocar a lista é mudar o filtro: a busca recomeça do início. Se a
   lista mudar (empresa entra, sai ou é escolhida), a busca também recomeça do
@@ -1724,6 +1730,19 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   conta quantas de até quantas e mostra cada uma; quando a IA passa ao
   Mercado, Negócio e Produto ficam feitos; leitura de mais de 2 minutos mostra
   o aviso; leitura antiga, sem o teto gravado, conta só as lidas.
+
+**SDR-121 · Todo mundo das empresas da lista**
+- Pedido: buscar os leads que trabalham nas empresas da lista selecionada sem
+  pôr nenhum outro filtro, para achar todo mundo desses lugares.
+- Com lista de empresas (§4.11), o cargo fica opcional, como a região. Sem
+  cargo, cada empresa achada é uma parte da busca. Na aba Leads, "Todo mundo
+  destas empresas" tira cargos, palavras-chave, regiões e setores. A busca
+  pela conversa aceita "todo mundo dessas empresas" e deixa os cargos vazios.
+- Aceite: com lista e sem nenhum outro filtro, a busca roda e traz todo mundo
+  das empresas, uma página por parte, até esgotar; pôr um cargo de volta
+  recomeça do início, em grupos de 10; sem lista, busca sem cargo não salva
+  nem roda; teto do dia, opt-out, um alvo um dono, cooldown e nota seguem
+  iguais.
 
 ### Marco D · Módulos, contatos e disparos
 
