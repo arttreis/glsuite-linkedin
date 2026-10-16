@@ -11,6 +11,7 @@ describe("menu e abas por módulo (SDR-69, §4.14)", () => {
       "Chats",
       "Pipeline",
       "Campanhas",
+      "Contatos",
       "Configurações",
     ]);
   });
@@ -18,19 +19,21 @@ describe("menu e abas por módulo (SDR-69, §4.14)", () => {
   it("sem o módulo, as telas do LinkedIn somem do menu", () => {
     expect(rotulos(itensDoMenu({ modulos: ["whatsapp"], linkedinNoPrimeiroAcesso: false, plataforma: false }))).toEqual([
       "Dashboard",
+      "Contatos",
       "Configurações",
     ]);
   });
 
   it("com o primeiro acesso por fazer, as telas do LinkedIn viram um item só, que leva a ele", () => {
     const itens = itensDoMenu({ modulos: ["linkedin", "telegram"], linkedinNoPrimeiroAcesso: true, plataforma: false });
-    expect(rotulos(itens)).toEqual(["Dashboard", "Configurar o SDR", "Configurações"]);
+    expect(rotulos(itens)).toEqual(["Dashboard", "Configurar o SDR", "Contatos", "Configurações"]);
     expect(itens[1]!.href).toBe("/onboarding");
   });
 
   it("a Plataforma aparece só para quem é da plataforma", () => {
     expect(rotulos(itensDoMenu({ modulos: [], linkedinNoPrimeiroAcesso: false, plataforma: true }))).toEqual([
       "Dashboard",
+      "Contatos",
       "Configurações",
       "Plataforma",
     ]);

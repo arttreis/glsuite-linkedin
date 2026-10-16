@@ -52,6 +52,9 @@ export default async function PlanoPage({ searchParams }: PageProps<"/settings/p
             </li>
           ))}
         </ul>
+        <p className="mt-3 text-[13px] text-tinta-suave">
+          A organização tem <span className="tabular-nums text-tinta">{numero(uso.contatos)}</span> contatos.
+        </p>
       </section>
 
       <ul className="flex flex-col gap-3" aria-label="Módulos">

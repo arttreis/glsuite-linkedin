@@ -2,10 +2,19 @@ import { CalendarCheck, ExternalLink, Hand, RotateCcw, Star, Undo2, UserRound, X
 import { ROTULO_DO_ESTADO } from "@/domain/estados";
 import { colunaDoEstado } from "@/domain/pipeline";
 import type { ChatDoLead } from "@/server/chats/chats";
+import type { CorDaTag } from "@/domain/contatos";
+import { TagsDoContato } from "../contacts/tags-do-contato";
 import { assumirParadoDoChat, devolverAoSdrDoChat, marcarConversa, registrarOptoutDaConversa, tentarDeNovoDoChat } from "./acoes";
 
 /** Os dados do lead ao lado da conversa (§4.8) e o que a pessoa pode fazer com ela. */
-export function PainelDoLead({ chat }: { chat: ChatDoLead }) {
+export type TagsNoPainel = {
+  contatoId: string;
+  tags: { id: string; nome: string; cor: CorDaTag }[];
+  todas: { id: string; nome: string }[];
+  voltar: string;
+};
+
+export function PainelDoLead({ chat, tags }: { chat: ChatDoLead; tags: TagsNoPainel | null }) {
   const { lead } = chat;
   const coluna = colunaDoEstado(lead.estado);
   const encerrado = lead.optout || lead.estado === "encerrado_nao";
@@ -35,6 +44,13 @@ export function PainelDoLead({ chat }: { chat: ChatDoLead }) {
         <ExternalLink aria-hidden />
         Perfil no LinkedIn
       </a>
+
+      {tags && (
+        <div className="flex flex-col gap-2 border-t border-linha pt-4">
+          <p className="text-[13px] font-medium text-tinta-suave">Tags</p>
+          <TagsDoContato contatoId={tags.contatoId} tags={tags.tags} todas={tags.todas} voltar={tags.voltar} />
+        </div>
+      )}
 
       {lead.parado && (
         <div className="flex flex-col gap-2 rounded-xl border border-atencao/40 bg-atencao/[0.06] p-3">
