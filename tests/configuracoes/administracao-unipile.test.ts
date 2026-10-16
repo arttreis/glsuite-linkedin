@@ -8,7 +8,7 @@ class Redirecionou extends Error {
   }
 }
 
-const falhas = vi.hoisted(() => ({ webhooks: null as unknown, status: null as unknown }));
+const falhas = vi.hoisted(() => ({ webhooks: null as unknown, status: null as unknown, banco: null as unknown }));
 
 vi.mock("next/navigation", () => ({
   redirect: (destino: string) => {
@@ -21,7 +21,16 @@ vi.mock("@/server/supabase/servidor", () => ({
   exigirOperadorComModuloNaAcao: async () => ({ id: "op", organizacaoId: "org", nome: "Ana", papel: "admin", modulos: ["linkedin"] }),
 }));
 vi.mock("@/lib/env", () => ({ urlPublicaDoApp: () => "https://app.test" }));
-vi.mock("@/server/db", () => ({ obterDb: () => ({}) }));
+// Banco mínimo para a sincronização real: uma conta ligada, sem perfil para atualizar.
+vi.mock("@/server/db", () => ({
+  obterDb: () => ({
+    query: async () => {
+      if (falhas.banco) throw falhas.banco;
+      return [{ unipile_account_id: "acc-1" }];
+    },
+    transacao: async <T>(fn: (tx: unknown) => Promise<T>) => fn({ query: async () => [] }),
+  }),
+}));
 vi.mock("@/server/dependencias", () => ({
   obterUnipile: () => ({
     listarWebhooks: async () => {
@@ -29,15 +38,14 @@ vi.mock("@/server/dependencias", () => ({
       return [];
     },
     criarWebhook: async () => "wh",
+    obterConta: async (id: string) => {
+      if (falhas.status) throw falhas.status;
+      return { id, tipo: "LINKEDIN", nome: null, status: ["OK"] };
+    },
   }),
   segredoDaUnipile: () => "segredo",
   obterGeradorDeSdr: () => null,
   obterLeitorDeSite: () => null,
-}));
-vi.mock("@/server/perfis/status-conta", () => ({
-  sincronizarStatusDasContas: async () => {
-    if (falhas.status) throw falhas.status;
-  },
 }));
 
 const { atualizarStatusDasContasDoPainel, registrarWebhooksDoPainel } = await import("@/app/(painel)/settings/acoes");
@@ -54,6 +62,7 @@ describe("botões da Administração com a Unipile recusando (SDR-122)", () => {
   beforeEach(() => {
     falhas.webhooks = null;
     falhas.status = null;
+    falhas.banco = null;
   });
 
   it("registrar webhooks com a chave recusada volta para a aba com o texto da chave", async () => {
@@ -78,8 +87,15 @@ describe("botões da Administração com a Unipile recusando (SDR-122)", () => {
     expect(mensagem(await destino(atualizarStatusDasContasDoPainel))).toBe("Status das contas atualizado pela Unipile.");
   });
 
+  it("atualizar status com a chave recusada volta com o texto da chave", async () => {
+    falhas.status = new ErroUnipile({ status: 401, tipo: "missing_credentials", titulo: "Missing credentials" });
+    expect(mensagem(await destino(atualizarStatusDasContasDoPainel))).toBe(
+      `A Unipile recusou a chave da API (Unipile 401 missing_credentials: Missing credentials). ${PECA_A_CHAVE}`,
+    );
+  });
+
   it("erro que não é da Unipile continua subindo", async () => {
-    falhas.status = new Error("banco fora");
+    falhas.banco = new Error("banco fora");
     await expect(atualizarStatusDasContasDoPainel()).rejects.toThrow("banco fora");
   });
 });
