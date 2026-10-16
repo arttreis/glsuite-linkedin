@@ -14,7 +14,7 @@ import { comOperador } from "@/server/db/operador";
 import type { Db } from "@/server/db/tipos";
 import type { Resultado } from "@/server/publicos/publicos";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
-import { classificarErro } from "@/server/unipile/erros";
+import { chaveRecusada, classificarErro, PECA_A_CHAVE } from "@/server/unipile/erros";
 
 export type ResumoDaLista = {
   id: string;
@@ -217,17 +217,34 @@ export async function escolherEmpresa(db: Db, p: { empresaId: string; opcaoId: s
   return { ok: true };
 }
 
-type ContaDaProcura = { account_id: string; perfil: string };
+type ContaDaProcura = { account_id: string; perfil: string; casa: boolean };
 
 const SEM_CONTA =
   "Nenhuma conta do LinkedIn conectada e funcionando nesta organização. Vincule uma conta em Configurações, na aba LinkedIn, para procurar as empresas.";
 
 const emLista = (nomes: string[]) => new Intl.ListFormat("pt-BR", { type: "conjunction" }).format(nomes);
 
-const contasRecusadas = (perfis: string[], erro: unknown) =>
-  perfis.length > 1
-    ? `A Unipile recusou as contas do LinkedIn de ${emLista(perfis)} (${(erro as Error).message}): elas parecem desconectadas. Reconecte em Configurações, na aba LinkedIn.`
-    : `A Unipile recusou a conta do LinkedIn de ${perfis[0]} (${(erro as Error).message}): ela parece desconectada. Reconecte em Configurações, na aba LinkedIn.`;
+/**
+ * Contas que a Unipile recusou. Uma, com outra respondendo, é a conta; todas
+ * de uma vez quase sempre é a chave da API. A da casa não aparece em
+ * Configurações, então vai pelo papel, não pelo nome.
+ */
+function contasRecusadas(recusadas: ContaDaProcura[], erro: unknown, seguiuPor: ContaDaProcura | undefined): string {
+  const motivo = (erro as Error).message;
+  if (!seguiuPor && recusadas.length > 1) {
+    return `A Unipile recusou as ${recusadas.length} contas do LinkedIn desta organização de uma vez (${motivo}). Quando todas caem juntas, o problema costuma ser a chave da API da Unipile, não as contas: peça ao admin para conferir.`;
+  }
+  const [conta] = recusadas;
+  if (conta!.casa) return `A Unipile recusou a conta da casa (${motivo}). Peça ao admin para reconectá-la ou conferir a chave da API da Unipile.`;
+  const quem =
+    recusadas.length > 1
+      ? `as contas do LinkedIn de ${emLista(recusadas.map((c) => c.perfil))} (${motivo}): elas parecem desconectadas`
+      : `a conta do LinkedIn de ${conta!.perfil} (${motivo}): ela parece desconectada`;
+  const texto = `A Unipile recusou ${quem}. Reconecte em Configurações, na aba LinkedIn.`;
+  return seguiuPor
+    ? `${texto} A procura seguiu pela conta ${seguiuPor.casa ? "da casa" : `de ${seguiuPor.perfil}`}.`
+    : `${texto} Se a recusa continuar, peça ao admin para conferir a chave da API da Unipile.`;
+}
 
 const esperarDeVerdade = (ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms));
 
@@ -237,7 +254,8 @@ const esperarDeVerdade = (ms: number) => new Promise<void>((resolver) => setTime
  * consulta e outra. Usa a conta conectada e saudável da organização; a conta
  * da casa só se não houver outra. Conta que a Unipile recusa (desconectada,
  * checkpoint, restrita), mesmo com status OK, sai da leva e a próxima saudável
- * assume; o `aviso` diz qual precisa reconectar. Não conta no teto de busca: é
+ * assume; o `aviso` diz qual precisa reconectar. Chave da API recusada para a
+ * leva na hora, sem tentar as outras. Não conta no teto de busca: é
  * consulta de lista, como região e setor. Erro de limite do LinkedIn para a leva.
  *
  * Lê e grava como o operador, cada resultado na hora; as consultas ficam fora
@@ -255,7 +273,7 @@ export async function procurarEmpresas(
     ]);
     if (!lista) return null;
     const contas = await tx.query<ContaDaProcura & { unipile_status: string | null }>(
-      `select unipile_account_id as account_id, nome as perfil, unipile_status from public.perfis
+      `select unipile_account_id as account_id, nome as perfil, casa, unipile_status from public.perfis
         where organizacao_id = $1::uuid and unipile_account_id is not null
         order by casa, criado_em`,
       [lista.organizacao_id],
@@ -280,7 +298,7 @@ export async function procurarEmpresas(
   if (entrada.contas.length === 0) return { ok: false, erro: SEM_CONTA };
 
   const contas = [...entrada.contas];
-  const recusadas: string[] = [];
+  const recusadas: ContaDaProcura[] = [];
   let ultimaRecusa: unknown = null;
   /** Consulta pela primeira conta que a Unipile aceita; a recusada sai da leva. */
   const consultar = async (nome: string): Promise<OpcaoDeEmpresa[]> => {
@@ -289,8 +307,8 @@ export async function procurarEmpresas(
       try {
         return await deps.unipile.listarParametrosDeBusca(conta.account_id, "COMPANY", nome.slice(0, 80));
       } catch (erro) {
-        if (classificarErro(erro) !== "conta") throw erro;
-        recusadas.push(conta.perfil);
+        if (chaveRecusada(erro) || classificarErro(erro) !== "conta") throw erro;
+        recusadas.push(conta);
         ultimaRecusa = erro;
         contas.shift();
         if (contas.length === 0) throw erro;
@@ -310,8 +328,11 @@ export async function procurarEmpresas(
       if (classe === "limite") {
         return { ok: false, erro: `O LinkedIn limitou as consultas desta conta. ${procuradas} empresas foram procuradas; faltam ${falta}. Tente de novo mais tarde.` };
       }
+      if (chaveRecusada(erro)) {
+        return { ok: false, erro: `A Unipile recusou a chave da API (${(erro as Error).message}). ${PECA_A_CHAVE} ${procuradas} empresas foram procuradas; faltam ${falta}.` };
+      }
       if (classe === "conta") {
-        return { ok: false, erro: `${contasRecusadas(recusadas, erro)} ${procuradas} empresas foram procuradas; faltam ${falta}.` };
+        return { ok: false, erro: `${contasRecusadas(recusadas, erro, undefined)} ${procuradas} empresas foram procuradas; faltam ${falta}.` };
       }
       return { ok: false, erro: `O LinkedIn não respondeu à consulta de "${empresa.nome}": ${(erro as Error).message}. Faltam ${falta}.` };
     }
@@ -329,6 +350,6 @@ export async function procurarEmpresas(
     });
     procuradas += 1;
   }
-  const aviso = recusadas.length > 0 ? `${contasRecusadas(recusadas, ultimaRecusa)} A procura seguiu pela conta de ${contas[0]!.perfil}.` : null;
+  const aviso = recusadas.length > 0 ? contasRecusadas(recusadas, ultimaRecusa, contas[0]) : null;
   return { ok: true, procuradas, faltam: await faltam(), ...(aviso ? { aviso } : {}) };
 }

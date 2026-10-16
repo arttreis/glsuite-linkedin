@@ -350,8 +350,9 @@ confirmada e guardada em versões. Ele tem:
 - Cada empresa é procurada no LinkedIn pela conta conectada e saudável da
   organização (a conta da casa só se não houver outra; sem conta, a tela
   avisa). Conta que a Unipile recusa na consulta (desconectada, mesmo com
-  status OK) dá lugar à próxima saudável, e a tela diz qual reconectar; todas
-  recusadas, a procura para e diz quais. Sem nenhuma página, a empresa fica **sem página** e a busca procura
+  status OK) dá lugar à próxima saudável, e a tela diz qual reconectar. Todas
+  recusadas de uma vez, a procura para e aponta a chave da API da Unipile, não
+  as contas; a chave recusada (`missing_credentials`) para a procura na hora. Sem nenhuma página, a empresa fica **sem página** e a busca procura
   o nome dela no texto da empresa atual da pessoa. Se, entre as páginas
   achadas, exatamente uma tem a mesma chave do nome, ela é a **achada**. Senão
   a pessoa **escolhe** entre até 5 páginas, ou "nenhuma destas" (vira sem

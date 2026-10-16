@@ -145,15 +145,14 @@ export default async function LinkedinPage({ searchParams }: PageProps<"/setting
               {conta.status === "pausado" && !nuncaAtivada && conta.motivo_pausa && <p className="recuo mt-4">{conta.motivo_pausa}</p>}
 
               <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-linha pt-4">
-                {(!conta.conectada || !saudavel) && (
-                  <form action={reconectarConta}>
-                    <input type="hidden" name="perfilId" value={conta.id} />
-                    <button type="submit" className="botao botao-pequeno botao-primario">
-                      <Link2 aria-hidden />
-                      {conta.conectada ? "Reconectar o LinkedIn" : "Vincular o LinkedIn"}
-                    </button>
-                  </form>
-                )}
+                {/* Reconectar fica sempre à mão: a Unipile pode recusar a conta com o status ainda OK. */}
+                <form action={reconectarConta}>
+                  <input type="hidden" name="perfilId" value={conta.id} />
+                  <button type="submit" className={`botao botao-pequeno ${saudavel ? "" : "botao-primario"}`}>
+                    <Link2 aria-hidden />
+                    {conta.conectada ? "Reconectar o LinkedIn" : "Vincular o LinkedIn"}
+                  </button>
+                </form>
                 {conta.status === "ativo" && (
                   <form action={pausarContaDoPainel} className="flex min-w-0 flex-1 flex-wrap gap-2">
                     <input type="hidden" name="perfilId" value={conta.id} />
