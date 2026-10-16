@@ -1726,6 +1726,19 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   por último (`order by casa, criado_em`). Sem nenhuma, a tela manda vincular
   em Configurações. A consulta roda como o operador (perfis são visíveis para
   toda a organização); a chamada à Unipile fica fora da transação.
+- **Conta recusada na procura** (bug de 16/10/2026): a Unipile devolveu
+  `401 invalid_credentials` em `GET /linkedin/search/parameters` para a conta
+  do Juliano (Votto) com o status da conta ainda `OK` no webhook, e a leva
+  parava com "O LinkedIn não respondeu", sem dizer que era a conta. Nesse
+  endpoint, todo 401 é "conta desconectada do provedor" pela referência da
+  Unipile; chave da API desconhecida dá `missing_credentials`, não
+  `invalid_credentials` (testado contra a API). Agora erro da classe `conta`
+  (`classificarErro`) tira a conta da leva e a próxima saudável refaz a
+  consulta da mesma empresa, sem pausa extra; o resultado traz um `aviso` com
+  quem reconectar, que a tela da lista e a da conversa mostram. Todas recusadas:
+  a leva para e a mensagem nomeia as contas. A procura não pausa o perfil nem
+  muda `unipile_status` (é consulta de lista; o tick sincroniza o status e o
+  despachante pausa no envio, §4.4).
 - **Classificação:** nenhuma página = `sem_pagina`. Se, entre as páginas
   devolvidas, exatamente uma tem a mesma chave do nome, ela é a `achada`
   (interpretação: "uma opção com a mesma chave", não "uma opção só"; o

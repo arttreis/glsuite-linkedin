@@ -51,7 +51,7 @@ export async function adicionarEmpresasDoPainel(entrada: { listaId: string; nome
 }
 
 /** Procura no LinkedIn a próxima leva de empresas (até 20). A tela chama de novo até não faltar nenhuma. */
-export async function procurarEmpresasDoPainel(entrada: { listaId: string }): Promise<Resultado<{ procuradas: number; faltam: number }>> {
+export async function procurarEmpresasDoPainel(entrada: { listaId: string }): Promise<Resultado<{ procuradas: number; faltam: number; aviso?: string }>> {
   const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const listaId = z.uuid().parse(entrada.listaId);
   const unipile = obterUnipileSeConfigurada();
