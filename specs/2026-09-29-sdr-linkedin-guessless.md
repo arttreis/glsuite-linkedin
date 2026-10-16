@@ -1925,3 +1925,134 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   fica como próxima etapa, com o que ela faz, em vez de fingir que começou.
 - O checklist é um componente só (`onboarding/etapas.tsx`), usado nas duas
   telas.
+
+## Módulos, contatos e disparos (16/10/2026)
+
+Pedido do Arthur em 15/10/2026, à noite, para adiantar enquanto ele dormia:
+"disparador de meta", "disparador de telegram", "sistema de tagmento",
+"segmentação de leads", "separar em módulos pra faturamento / precificação
+(usuário não precisa contratar todas as ferramentas)" e "naming". Viraram o
+Marco D do épico (§4.14 a §4.20, SDR-69 a SDR-73) e o `docs/naming.md`. As
+interpretações abaixo são minhas e estão para o Arthur confirmar.
+
+- **"Disparador de Meta" é o WhatsApp pela API oficial da Meta** (Cloud API),
+  com template aprovado. Descartados: Instagram Direct e Messenger, que não
+  deixam a empresa iniciar conversa em massa; e o WhatsApp da Unipile, que
+  conecta pelo WhatsApp Web (sem template, sem status oficial e com risco de
+  bloqueio do número em disparo). O Votto já tem um adaptador "WhatsApp
+  oficial" que ainda não envia; o Kakou é o primeiro a ligar a Cloud API.
+- **"Disparador de Telegram" é pela Bot API**, com o bot da organização. Bot só
+  fala com quem falou com ele primeiro, então a lista nasce do link do bot.
+  Descartado: conta de usuário pela Unipile, que faria disparo em massa por
+  uma pessoa (contra os termos do Telegram e com risco de banimento).
+- **"Segmentação de leads" vale para todos os contatos**, não só os do
+  LinkedIn: o segmento é o público do disparo. Os leads do LinkedIn entram como
+  contatos e são segmentáveis pela etapa do Pipeline, pela campanha e pela
+  nota.
+- **"Tags" e não "etiquetas"** na tela e no código: é a palavra que o Arthur
+  usou e a que o mercado usa, e `etiqueta` já é a classe dos selos de status do
+  painel.
+- **Módulos sem cobrança automática.** A organização tem módulos ligados ou
+  desligados; quem liga é a GuessLess, numa tela própria (`/platform`) aberta
+  só para `PLATAFORMA_ADMINS`, como o `/admin` do GL Suite com o
+  `ADMIN_EMAILS`. O GL Suite já vende ferramentas avulsas pelo Stripe
+  (`subscriptions.kind = 'tool'`); o caminho natural é cada módulo virar uma
+  ferramenta desse catálogo e o webhook do Stripe ligar o módulo no Kakou
+  (D16). Não fiz essa ponte: o `sdr_servidor` não lê as tabelas do GL Suite
+  por desenho, e a decisão de cruzar os dois produtos é do Arthur.
+- **Contato separado de pessoa.** `pessoas` é a identidade do LinkedIn: o
+  `provider_id` é único, há um perfil dono, e URL, fonte e data da coleta são
+  obrigatórias (base do legítimo interesse). O motor inteiro depende disso.
+  Contato do WhatsApp ou do Telegram não tem nada disso. Por isso `contatos` é
+  uma tabela nova, da organização, e cada pessoa do LinkedIn ganha o contato
+  dela por trigger (as antigas na migration). As tags e os segmentos ficam no
+  contato.
+- **Sair por canal** (D14): quem manda "SAIR" no WhatsApp sai do WhatsApp; o
+  opt-out do LinkedIn e o "Não contatar mais" valem para tudo. A regra de
+  opt-out global da §4.13 continua como estava para o LinkedIn.
+- **A fila dos disparos copia o desenho do Votto** (migration
+  `0085_disparos_em_massa`, que já roda em produção lá): a fila é a tabela de
+  destinatários, congelada na confirmação; a reserva é por prazo; envio
+  interrompido sem confirmação vira falha com "pode ter chegado" e nunca é
+  repetido sozinho; pg_cron a cada minuto mais a chamada logo depois da
+  confirmação.
+- **Banco dividido com o GL Suite.** Cada tabela nova declara o próprio grant
+  (`authenticated` e `sdr_servidor`) e cada migration começa conferindo que
+  nenhuma tabela de mesmo nome já existe sem ser do Kakou: `create table if
+  not exists` pularia a criação em silêncio e os `alter` seguintes mexeriam
+  na tabela de outro produto. Os nomes foram conferidos contra os 587 arquivos
+  SQL dos repositórios da GuessLess nesta máquina.
+- **Tokens cifrados no banco** (AES-256-GCM, chave `SEGREDOS_CHAVE`): o token
+  do WhatsApp dá acesso à conta de WhatsApp Business do cliente. O segredo do
+  webhook do Telegram não é guardado: é derivado da mesma chave e do id do
+  canal (HMAC), e o Kakou recalcula para conferir.
+- Os tickets vão empilhados, um branch cada, a partir de
+  `docs/epico-modulos-e-canais`, sem push. A ordem segue a dependência, não a
+  da lista do pedido: módulos e contatos primeiro, porque os disparos usam os
+  dois.
+
+### SDR-69 · Módulos e plano (16/10/2026)
+
+- Tabela `modulos_da_organizacao` (migration `20261016100000_modulos`), uma
+  linha por organização e módulo, com `ativo`, `desde` (a última vez que
+  ligou), o motivo e quem mudou (`alterado_por` é texto: o e-mail de quem é da
+  plataforma, ou `sistema`). Desligar não apaga a linha: religar mantém o
+  histórico e os dados de cada módulo ficam onde estão.
+- O catálogo fica em `domain/modulos.ts`, sem `server-only`, porque o menu e
+  as abas são client components. `NOME_DO_MODULO` é o único lugar dos nomes
+  (D13).
+- Organização nova ganha o `linkedin` por trigger (`ligar_modulo_padrao`), não
+  no código do primeiro acesso: assim qualquer caminho que crie organização
+  (o callback, o SQL do README, as fixtures dos testes) segue a regra. A
+  migration liga o `linkedin` em todas as que existem e os três na
+  `guessless`.
+- **Escrita só pela conexão do sistema.** O RLS dá leitura à organização e
+  nenhuma escrita ao `authenticated`: um admin da organização não liga módulo
+  para si. A Plataforma confere `PLATAFORMA_ADMINS` (env, como o
+  `ADMIN_EMAILS` do `/admin` do GL Suite) e quem não está recebe 404. A lista
+  vem de variável de ambiente, e não de uma coluna, para que nenhum acesso ao
+  banco da organização consiga se promover. Pelo mesmo motivo, o e-mail
+  conferido é o do login (o JWT verificado do Supabase Auth, `ehDaPlataforma`),
+  nunca o `operadores.email`: o RLS deixa o admin da organização editar as
+  linhas de operadores dela, e ele poderia escrever ali o e-mail de alguém da
+  GuessLess.
+- `Operador` ganhou `modulos` (na ordem do catálogo), lidos na mesma consulta
+  do operador. Os portões:
+  - `exigirOperadorNoApp`: só manda para `/onboarding` quando o `linkedin` é
+    o único módulo e o primeiro acesso não acabou (`soOPrimeiroAcesso`).
+    Para as organizações que já existem, nada muda;
+  - `exigirOperadorComModulo(modulo)`, nas páginas do LinkedIn (Chats,
+    Pipeline, Campanhas, Empresa, SDR, LinkedIn): sem o módulo, redireciona
+    para `/settings/plan?module=<id>`, que diz qual falta; com o primeiro
+    acesso por fazer, para `/onboarding`;
+  - `exigirOperadorComModuloNaAcao(modulo)`, em todas as ações do servidor do
+    LinkedIn (painel, campanhas, listas, importação, chats, pipeline,
+    configurações e primeiro acesso): sem o módulo, lança
+    `ModuloNaoContratado`. As de Equipe (nome da organização, papel) seguem
+    com `exigirOperador`. A exportação da planilha devolve 403;
+  - o primeiro acesso abre só com o `linkedin` pendente
+    (`linkedinNoPrimeiroAcesso`); sem o módulo, vai para o app.
+- Menu (`itensDoMenu`): Chats, Pipeline e Campanhas exigem o `linkedin`; com
+  ele pendente e outro módulo, os três viram um item "Configurar o SDR", que
+  leva ao primeiro acesso, em vez de três itens que levariam ao mesmo lugar.
+  "Plataforma" aparece só para quem é da plataforma. As abas de
+  Configurações seguem a mesma regra (`lista-de-abas.ts`, fora do client
+  component para o `/settings` do servidor poder usar) e ganharam "Plano".
+- Dashboard: as partes do LinkedIn (contas, precisa de você, SDR, números)
+  só com o módulo e o primeiro acesso feito; sem elas, o cartão do plano. Com
+  o `linkedin` pendente, o cartão "Falta configurar o SDR no LinkedIn".
+  Equipe sem o `linkedin` não mostra as contas que cada um opera.
+- Desligar o `linkedin` pausa as contas ativas da organização com
+  `pausarPerfil` (motivo "O módulo SDR no LinkedIn foi desligado: <motivo>",
+  com o alerta de sempre), menos a conta da casa, que não é de nenhuma
+  campanha. Os webhooks da Unipile continuam chegando e sendo guardados:
+  nada sai porque o despachante ignora conta pausada. A pausa dos disparos ao
+  desligar `whatsapp` ou `telegram` entra no SDR-72, quando os disparos
+  existirem.
+- Plano (`/settings/plan`): a base, cada módulo com o que faz, o que inclui,
+  "Contratado desde" ou "Fora do plano", e o uso do mês só para o `linkedin`
+  por enquanto (contas vinculadas, convites e mensagens enviadas, do dia 1 no
+  horário de Brasília até agora, a organização inteira, pela conexão do
+  sistema). Os contatos e os disparos entram no uso com os tickets deles.
+  "Quero contratar" abre o `COMERCIAL_URL`; sem ele, a tela diz para falar
+  com a GuessLess.

@@ -1,6 +1,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { cache } from "react";
+import { linkedinNoPrimeiroAcesso } from "@/domain/modulos";
 import { podeAbrir, rotaDoPasso, type IdDoPassoInicial } from "@/domain/primeiro-acesso";
 import { estadoDoPrimeiroAcesso, type EstadoDoPrimeiroAcesso } from "@/server/acesso/primeiro-acesso";
 import { obterDb } from "@/server/db";
@@ -8,13 +9,14 @@ import { comOperador, type Operador } from "@/server/db/operador";
 import { exigirOperador } from "@/server/supabase/servidor";
 
 /**
- * Operador ainda no primeiro acesso. Quem já terminou vai para o app. Uma
- * consulta por requisição: o layout e a página pedem o mesmo estado.
+ * Operador ainda no primeiro acesso, que é do SDR no LinkedIn (§4.14). Quem já
+ * terminou, ou não tem o módulo, vai para o app. Uma consulta por requisição:
+ * o layout e a página pedem o mesmo estado.
  */
 export const exigirOperadorNoPrimeiroAcesso = cache(
   async (): Promise<{ operador: Operador; estado: EstadoDoPrimeiroAcesso }> => {
     const operador = await exigirOperador();
-    if (operador.primeiroAcessoConcluido) redirect("/");
+    if (!linkedinNoPrimeiroAcesso(operador.modulos, operador.primeiroAcessoConcluido)) redirect("/");
     const estado = await comOperador(obterDb(), operador.id, (tx) => estadoDoPrimeiroAcesso(tx));
     return { operador, estado };
   },

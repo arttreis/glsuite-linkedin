@@ -3,12 +3,12 @@ import { Cabecalho } from "@/components/cabecalho";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { listarListas } from "@/server/listas/listas";
-import { exigirOperadorNoApp } from "@/server/supabase/servidor";
+import { exigirOperadorComModulo } from "@/server/supabase/servidor";
 import { NovaLista } from "./nova-lista";
 
 /** Listas de empresas da organização (§4.11): limitam a busca de qualquer campanha a quem trabalha nelas. */
 export default async function ListasDeEmpresasPage() {
-  const operador = await exigirOperadorNoApp();
+  const operador = await exigirOperadorComModulo("linkedin");
   const listas = await comOperador(obterDb(), operador.id, (tx) => listarListas(tx, operador.organizacaoId));
 
   return (

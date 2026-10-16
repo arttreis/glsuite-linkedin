@@ -16,7 +16,7 @@ import { dossieConfirmado } from "@/server/oferta/oferta";
 import { situacaoDaBusca } from "@/server/publicos/busca";
 import { obterPublico } from "@/server/publicos/publicos";
 import { obterSdr } from "@/server/sdr/sdr";
-import { exigirOperadorNoApp } from "@/server/supabase/servidor";
+import { exigirOperadorComModulo } from "@/server/supabase/servidor";
 import { EditorDoPublico } from "../editor-do-publico";
 import { ResumoDoPublico } from "../resumo-do-publico";
 import { alterarStatusDaCampanha, escreverAbordagemDoPainel, salvarInstrucoesDoPainel } from "../acoes";
@@ -49,7 +49,7 @@ function BotaoDeStatus({ campanhaId, status, aba, children, estilo = "" }: { cam
 }
 
 export default async function CampanhaPage({ params, searchParams }: PageProps<"/campaigns/[id]">) {
-  const operador = await exigirOperadorNoApp();
+  const operador = await exigirOperadorComModulo("linkedin");
   const { id } = await params;
   const { tab, msg, salva } = await searchParams;
   const aba: Aba = ABAS.find((a) => a.id === tab)?.id ?? "leads";

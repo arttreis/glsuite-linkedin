@@ -3,12 +3,12 @@ import { Aviso } from "@/components/aviso";
 import { lerFiltro, listarChats } from "@/server/chats/chats";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { exigirOperadorNoApp } from "@/server/supabase/servidor";
+import { exigirOperadorComModulo } from "@/server/supabase/servidor";
 import { ListaDeChats } from "./lista";
 import { MolduraDoChat } from "./moldura";
 
 export default async function ChatsPage({ searchParams }: PageProps<"/chats">) {
-  const operador = await exigirOperadorNoApp();
+  const operador = await exigirOperadorComModulo("linkedin");
   const { filter, msg } = await searchParams;
   const filtro = lerFiltro(filter);
   const itens = await comOperador(obterDb(), operador.id, (tx) => listarChats(tx, { filtro }));

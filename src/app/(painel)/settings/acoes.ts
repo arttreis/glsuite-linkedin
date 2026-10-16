@@ -18,7 +18,7 @@ import { contaNovaDoLinkedin } from "@/server/perfis/nova-conta";
 import { despausarPerfil, ErroDeAtivacao, pausarPerfil } from "@/server/perfis/pausa";
 import { sincronizarStatusDasContas } from "@/server/perfis/status-conta";
 import { garantirSdr, salvarSdr, voltarParaVersao } from "@/server/sdr/sdr";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperador, exigirOperadorComModuloNaAcao } from "@/server/supabase/servidor";
 
 type Aba = "company" | "sdr" | "linkedin" | "team";
 
@@ -41,7 +41,7 @@ async function exigirAcessoAConta(operadorId: string, valor: FormDataEntryValue 
 
 /** Confirma a análise editada (§4.2): edição humana vale como fato, e a versão confirmada passa a valer. */
 export async function confirmarAnaliseNasConfiguracoes(entrada: { dossie: unknown }): Promise<ResultadoDaEdicao> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const resultado = await comOperador(obterDb(), operador.id, (tx) =>
     salvarDossie(tx, { organizacaoId: operador.organizacaoId, dossie: entrada.dossie, confirmar: true, operadorId: operador.id, agora: new Date() }),
   );
@@ -51,7 +51,7 @@ export async function confirmarAnaliseNasConfiguracoes(entrada: { dossie: unknow
 
 /** Ler o site de novo gera um rascunho que só vale depois de confirmado (§4.2). */
 export async function lerSiteDeNovo(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const leitor = obterLeitorDeSite();
   if (!leitor) voltar("company", "A leitura do site precisa da chave da Anthropic. Peça ao admin.");
   const resultado = await comOperador(obterDb(), operador.id, (tx) =>
@@ -66,7 +66,7 @@ export async function lerSiteDeNovo(formData: FormData) {
 // --- SDR ----------------------------------------------------------------------
 
 export async function salvarSdrDoPainel(entrada: { sdr: unknown }): Promise<{ ok: true; versao: number } | { ok: false; erro: string }> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const resultado = await comOperador(obterDb(), operador.id, (tx) =>
     salvarSdr(tx, { organizacaoId: operador.organizacaoId, sdr: entrada.sdr, operadorId: operador.id, agora: new Date() }),
   );
@@ -79,7 +79,7 @@ export async function salvarPassagemDoPainel(entrada: {
   quando_chamar_voce: unknown;
   cautela: unknown;
 }): Promise<{ ok: true; versao: number } | { ok: false; erro: string }> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const resultado = await comOperador(obterDb(), operador.id, (tx) =>
     salvarSdr(tx, {
       organizacaoId: operador.organizacaoId,
@@ -95,7 +95,7 @@ export async function salvarPassagemDoPainel(entrada: {
 
 /** Organização que já existia monta o SDR aqui, da análise confirmada (§4.1). */
 export async function montarSdrDoPainel() {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const resultado = await garantirSdr(
     { db: obterDb(), gerador: obterGeradorDeSdr() },
     { organizacaoId: operador.organizacaoId, nome: operador.nome, operadorId: operador.id, agora: new Date() },
@@ -104,7 +104,7 @@ export async function montarSdrDoPainel() {
 }
 
 export async function voltarParaVersaoDoPainel(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const versao = z.coerce.number().int().min(1).parse(formData.get("versao"));
   const resultado = await voltarParaVersao(obterDb(), { organizacaoId: operador.organizacaoId, versao, operadorId: operador.id, agora: new Date() });
   voltar("sdr", resultado.ok ? `O SDR voltou para a versão ${versao} (agora versão ${resultado.versao}).` : resultado.erro);
@@ -112,7 +112,7 @@ export async function voltarParaVersaoDoPainel(formData: FormData) {
 
 /** Sozinho ou "aprovo cada resposta", por conta (§4.7); vale para a próxima resposta. */
 export async function trocarModoDaConta(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const perfilId = await exigirAcessoAConta(operador.id, formData.get("perfilId"));
   const para = z.enum(["aprovacao", "automatico"]).parse(formData.get("modo"));
   let erro: string | null = null;
@@ -128,7 +128,7 @@ export async function trocarModoDaConta(formData: FormData) {
 // --- LinkedIn -------------------------------------------------------------------
 
 export async function pausarContaDoPainel(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const perfilId = await exigirAcessoAConta(operador.id, formData.get("perfilId"));
   const motivo = z.string().trim().min(3).max(300).safeParse(formData.get("motivo"));
   if (!motivo.success) voltar("linkedin", "Escreva o motivo da pausa.");
@@ -137,7 +137,7 @@ export async function pausarContaDoPainel(formData: FormData) {
 }
 
 export async function retomarContaDoPainel(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const perfilId = await exigirAcessoAConta(operador.id, formData.get("perfilId"));
   let erro: string | null = null;
   try {
@@ -151,7 +151,7 @@ export async function retomarContaDoPainel(formData: FormData) {
 
 /** Nome e horário de envio da conta; o RLS deixa só o admin ou quem vinculou. */
 export async function editarContaDoPainel(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const perfilId = await exigirAcessoAConta(operador.id, formData.get("perfilId"));
   const resultado = await comOperador(obterDb(), operador.id, (tx) =>
     editarConta(tx, {
@@ -167,7 +167,7 @@ export async function editarContaDoPainel(formData: FormData) {
 }
 
 export async function reconectarConta(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const perfilId = await exigirAcessoAConta(operador.id, formData.get("perfilId"));
   const url = await gerarLinkDeConexao(
     { db: obterDb(), unipile: obterUnipile(), urlApp: urlPublicaDoApp(), segredo: segredoDaUnipile() },
@@ -178,7 +178,7 @@ export async function reconectarConta(formData: FormData) {
 
 /** Vincular outra conta: nasce pausada; ativa no Dashboard depois de conectar. */
 export async function vincularOutraConta() {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const perfilId = await contaNovaDoLinkedin(obterDb(), {
     organizacaoId: operador.organizacaoId,
     operadorId: operador.id,
@@ -193,13 +193,13 @@ export async function vincularOutraConta() {
 }
 
 export async function atualizarStatusDasContasDoPainel() {
-  await exigirOperador();
+  await exigirOperadorComModuloNaAcao("linkedin");
   await sincronizarStatusDasContas(obterDb(), obterUnipile(), new Date());
   voltar("linkedin", "Status das contas atualizado pela Unipile.");
 }
 
 export async function registrarWebhooksDoPainel() {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   if (operador.papel !== "admin") throw new Error("Só o admin registra webhooks.");
   const { criados } = await garantirWebhooks(obterUnipile(), { urlApp: urlPublicaDoApp(), segredo: segredoDaUnipile() });
   voltar("linkedin", criados.length > 0 ? `${criados.length} webhooks registrados na Unipile.` : "Os webhooks já estavam registrados.");
@@ -207,7 +207,7 @@ export async function registrarWebhooksDoPainel() {
 
 /** O eval segue como ferramenta interna para comparar versões de prompt (§4.7). */
 export async function registrarEvalDoPainel(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   if (operador.papel !== "admin") throw new Error("Só o admin registra o eval.");
   const arquivo = formData.get("relatorio");
   if (!(arquivo instanceof File) || arquivo.size === 0) voltar("linkedin", "Escolha o relatorio.json da rodada.");
@@ -244,7 +244,7 @@ export async function mudarPapelDoPainel(formData: FormData) {
 }
 
 export async function definirContasDoPainel(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const membroId = z.uuid().parse(formData.get("membroId"));
   const perfilIds = z.array(z.uuid()).max(50).parse(formData.getAll("perfilIds"));
   const resultado = await definirContasDoMembro(obterDb(), { adminId: operador.id, membroId, perfilIds, agora: new Date() });

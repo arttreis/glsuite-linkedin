@@ -13,7 +13,7 @@ import {
   responderComoLead,
   type ResultadoDoTeste,
 } from "@/server/sdr/teste";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperadorComModuloNaAcao } from "@/server/supabase/servidor";
 
 const SEM_CHAVE: ResultadoDoTeste = {
   ok: false,
@@ -23,7 +23,7 @@ const SEM_CHAVE: ResultadoDoTeste = {
 // O chat roda com a conexão do sistema, sempre na organização do operador: as
 // chamadas da IA levam segundos e não devem segurar uma transação aberta.
 async function contexto() {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   return { operador, base: { organizacaoId: operador.organizacaoId, nome: operador.nome } };
 }
 

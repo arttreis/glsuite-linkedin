@@ -7,11 +7,11 @@ import { travasDaAtivacao } from "@/domain/ativacao";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { despausarPerfil, ErroDeAtivacao, pausarPerfil } from "@/server/perfis/pausa";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperadorComModuloNaAcao } from "@/server/supabase/servidor";
 
 /** Qualquer operador pausa qualquer perfil, sem precisar de reunião (§4.4). */
 export async function pausarPerfilDoPainel(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const perfilId = z.uuid().parse(formData.get("perfilId"));
   const motivo = z.string().trim().min(3).max(300).safeParse(formData.get("motivo"));
   if (!motivo.success) redirect("/?msg=Escreva o motivo da pausa.");
@@ -26,7 +26,7 @@ export async function pausarPerfilDoPainel(formData: FormData) {
 
 /** Despausar é sempre manual e fica em `eventos` com o operador (§4.4). */
 export async function despausarPerfilDoPainel(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const perfilId = z.uuid().parse(formData.get("perfilId"));
   const [perfil] = await comOperador(obterDb(), operador.id, (tx) =>
     tx.query<{ acessivel: boolean; primeira: boolean; slug: string; nome: string; praca: string; modo_resposta: string }>(

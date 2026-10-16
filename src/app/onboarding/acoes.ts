@@ -8,13 +8,13 @@ import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { obterLeitorDeSite } from "@/server/dependencias";
 import { concluirLeitura, iniciarLeitura, ofertaDaOrganizacao, salvarDossie, type ResultadoDaEdicao } from "@/server/oferta/oferta";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperadorComModuloNaAcao } from "@/server/supabase/servidor";
 
 const SEM_CHAVE = "A leitura do site precisa da chave da Anthropic. Peça ao admin para configurar.";
 
 /** Marca a leitura e roda a IA depois da resposta; a tela da análise acompanha sozinha. */
 async function lerSite(url: string, voltarPara: string) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const leitor = obterLeitorDeSite();
   if (!leitor) redirect(`${voltarPara}?msg=${encodeURIComponent(SEM_CHAVE)}`);
 
@@ -35,7 +35,7 @@ export async function analisarSiteNoPrimeiroAcesso(formData: FormData) {
 
 /** Lê de novo o mesmo endereço, depois de uma falha. */
 export async function lerDeNovo() {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const oferta = await comOperador(obterDb(), operador.id, (tx) =>
     ofertaDaOrganizacao(tx, operador.organizacaoId, new Date()),
   );
@@ -44,7 +44,7 @@ export async function lerDeNovo() {
 
 /** Grava a correção de um item da análise como rascunho. */
 export async function salvarAnalise(entrada: { dossie: unknown }): Promise<ResultadoDaEdicao> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   return comOperador(obterDb(), operador.id, (tx) =>
     salvarDossie(tx, {
       organizacaoId: operador.organizacaoId,
@@ -61,7 +61,7 @@ export async function salvarAnalise(entrada: { dossie: unknown }): Promise<Resul
  * quando o passo 3 abre. Com erro, devolve para a tela mostrar.
  */
 export async function confirmarAnaliseNoPrimeiroAcesso(entrada: { dossie: unknown }): Promise<ResultadoDaEdicao> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const resultado = await comOperador(obterDb(), operador.id, (tx) =>
     confirmarAnalise(tx, {
       organizacaoId: operador.organizacaoId,

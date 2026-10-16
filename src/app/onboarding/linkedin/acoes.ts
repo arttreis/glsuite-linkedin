@@ -7,11 +7,11 @@ import { obterDb } from "@/server/db";
 import { obterUnipileSeConfigurada, segredoDaUnipile } from "@/server/dependencias";
 import { dossieConfirmado } from "@/server/oferta/oferta";
 import { gerarLinkDeConexao } from "@/server/perfis/conexao";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperadorComModuloNaAcao } from "@/server/supabase/servidor";
 
 /** "Vincular meu LinkedIn": o perfil da pessoa e o hosted auth da Unipile, que volta para o passo 6. */
 export async function vincularLinkedin() {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const unipile = obterUnipileSeConfigurada();
   if (!unipile) redirect(`/onboarding/linkedin?msg=${encodeURIComponent("A conexão com o LinkedIn não está configurada. Peça ao admin.")}`);
 

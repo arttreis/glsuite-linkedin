@@ -3,19 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const ABAS = [
-  { href: "/settings/company", rotulo: "Empresa" },
-  { href: "/settings/sdr", rotulo: "SDR" },
-  { href: "/settings/linkedin", rotulo: "LinkedIn" },
-  { href: "/settings/team", rotulo: "Equipe" },
-] as const;
-
-/** As abas de Configurações (§4.12): tudo o que o primeiro acesso definiu. */
-export function AbasDasConfiguracoes() {
+/** As abas de Configurações (§4.12): só as dos módulos que a organização tem (§4.14). */
+export function AbasDasConfiguracoes({ abas }: { abas: { href: string; rotulo: string }[] }) {
   const caminho = usePathname();
   return (
     <nav aria-label="Configurações" className="segmentos mb-6">
-      {ABAS.map((aba) => (
+      {abas.map((aba) => (
         <Link key={aba.href} href={aba.href} className="segmento" aria-current={caminho.startsWith(aba.href) ? "page" : undefined}>
           {aba.rotulo}
         </Link>

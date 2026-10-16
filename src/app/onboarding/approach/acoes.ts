@@ -8,7 +8,7 @@ import { comOperador } from "@/server/db/operador";
 import { obterEscritorDeFluxo, obterSugeridorDePublicos } from "@/server/dependencias";
 import { marcarNaPrevia, trocarPublicoDaPrevia } from "@/server/previa/previa";
 import { listarPublicos, mudarStatusDoPublico, sugerirPublicos } from "@/server/publicos/publicos";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperadorComModuloNaAcao } from "@/server/supabase/servidor";
 
 const voltar = (msg: string) => redirect(`/onboarding/approach?msg=${encodeURIComponent(msg)}`);
 
@@ -17,7 +17,7 @@ const voltar = (msg: string) => redirect(`/onboarding/approach?msg=${encodeURICo
  * tela busca as pessoas e reescreve as mensagens para o novo.
  */
 export async function trocarParaPublico(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const novo = String(formData.get("publico") ?? "");
   const agora = new Date();
   const resultado = await comOperador(obterDb(), operador.id, async (tx) => {
@@ -32,7 +32,7 @@ export async function trocarParaPublico(formData: FormData) {
 
 /** Outras sugestões no lugar das que estão na lista. O público em uso fica. */
 export async function sugerirOutrosPublicos() {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const sugeridor = obterSugeridorDePublicos();
   if (!sugeridor) voltar("Sugerir públicos precisa da chave da Anthropic. Peça ao admin para configurar.");
   const resultado = await sugerirPublicos(
@@ -45,7 +45,7 @@ export async function sugerirOutrosPublicos() {
 
 /** Marca ou desmarca uma pessoa da prévia. */
 export async function marcarPessoaDaPrevia(entrada: { providerId: string; marcada: boolean }): Promise<{ ok: boolean }> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   return comOperador(obterDb(), operador.id, (tx) =>
     marcarNaPrevia(tx, { organizacaoId: operador.organizacaoId, ...entrada, agora: new Date() }),
   );
@@ -53,7 +53,7 @@ export async function marcarPessoaDaPrevia(entrada: { providerId: string; marcad
 
 /** Escreve a abordagem de novo, do zero. A tela troca os textos com o que volta. */
 export async function escreverDeNovo(): Promise<ResultadoDaAbordagem> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const escritor = obterEscritorDeFluxo();
   if (!escritor) return { ok: false, erro: "Escrever a abordagem precisa da chave da Anthropic. Peça ao admin para configurar." };
   return gerarAbordagem(
@@ -64,7 +64,7 @@ export async function escreverDeNovo(): Promise<ResultadoDaAbordagem> {
 
 /** Corrige o texto de um toque. */
 export async function editarToque(entrada: { toque: Toque; texto: string }): Promise<ResultadoDaAbordagem> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   return comOperador(obterDb(), operador.id, (tx) =>
     editarTextoDaAbordagem(tx, { organizacaoId: operador.organizacaoId, ...entrada, operadorId: operador.id, agora: new Date() }),
   );
@@ -72,7 +72,7 @@ export async function editarToque(entrada: { toque: Toque; texto: string }): Pro
 
 /** "Pode entrar em contato": fecha a prévia, grava a permissão e segue para o LinkedIn. */
 export async function podeEntrarEmContato(): Promise<{ ok: false; erro: string } | void> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const resultado = await comOperador(obterDb(), operador.id, (tx) =>
     permitirContato(tx, { organizacaoId: operador.organizacaoId, operadorId: operador.id, agora: new Date() }),
   );

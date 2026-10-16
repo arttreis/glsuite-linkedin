@@ -9,7 +9,7 @@ import { resumoDaRampa } from "@/domain/ativacao";
 import type { EtapaDaRampa } from "@/domain/rampa";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { exigirOperadorNoApp } from "@/server/supabase/servidor";
+import { exigirOperadorComModulo } from "@/server/supabase/servidor";
 import {
   atualizarStatusDasContasDoPainel,
   editarContaDoPainel,
@@ -47,7 +47,7 @@ const TIPO: Record<string, string> = { gratuita: "conta gratuita", premium: "Pre
 
 /** LinkedIn (§4.12): as contas, status, rampa, teto e janela; editar nome e janela; pausar, retomar, reconectar e vincular outra. */
 export default async function LinkedinPage({ searchParams }: PageProps<"/settings/linkedin">) {
-  const operador = await exigirOperadorNoApp();
+  const operador = await exigirOperadorComModulo("linkedin");
   const { msg, conexao } = await searchParams;
   const contas = await comOperador(obterDb(), operador.id, (tx) =>
     tx.query<Conta>(

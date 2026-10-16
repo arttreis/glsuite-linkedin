@@ -7,7 +7,7 @@ import { Avatar } from "@/components/avatar";
 import { lerFiltro, listarChats, quemEscreveu, type ItemDoFio } from "@/server/chats/chats";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { exigirOperadorNoApp } from "@/server/supabase/servidor";
+import { exigirOperadorComModulo } from "@/server/supabase/servidor";
 import { responderExterna } from "../../acoes";
 import { RolarParaOFim } from "../../ao-vivo";
 import { Fio } from "../../fio";
@@ -18,7 +18,7 @@ type Conversa = { id: string; nome: string | null; url: string | null; conta: st
 
 /** Conversa do LinkedIn fora de campanha (§4.8): só leitura e resposta sua; o SDR não entra. */
 export default async function ConversaForaDeCampanhaPage({ params, searchParams }: PageProps<"/chats/thread/[conversaId]">) {
-  const operador = await exigirOperadorNoApp();
+  const operador = await exigirOperadorComModulo("linkedin");
   const { conversaId } = await params;
   const { filter, msg } = await searchParams;
   const filtro = lerFiltro(filter);

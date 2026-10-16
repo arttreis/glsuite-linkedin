@@ -13,6 +13,8 @@ export default async function EquipePage({ searchParams }: PageProps<"/settings/
   const { msg } = await searchParams;
   const { membros, contas } = await comOperador(obterDb(), operador.id, (tx) => equipeDaOrganizacao(tx));
   const admin = operador.papel === "admin";
+  // As contas que cada um opera são do LinkedIn: sem o módulo, a equipe é só papel (§4.14).
+  const comLinkedin = operador.modulos.includes("linkedin");
   const nomeDaConta = new Map(contas.map((conta) => [conta.id, conta.nome]));
 
   return (
@@ -43,7 +45,9 @@ export default async function EquipePage({ searchParams }: PageProps<"/settings/
           Membros
         </h2>
         <p className="mt-1 text-[13px] text-tinta-suave">
-          Admin vê e opera todas as contas. Operador, só as marcadas. {admin ? "" : "Só um admin muda papel e contas."}
+          {comLinkedin
+            ? `Admin vê e opera todas as contas. Operador, só as marcadas. ${admin ? "" : "Só um admin muda papel e contas."}`
+            : `Admin muda papéis e conecta os canais. Operador usa o que o plano tem. ${admin ? "" : "Só um admin muda papel."}`}
         </p>
         <ul className="mt-3 flex flex-col gap-3">
           {membros.map((membro) => (
@@ -72,7 +76,8 @@ export default async function EquipePage({ searchParams }: PageProps<"/settings/
                   <span className="etiqueta">{PAPEIS[membro.papel]}</span>
                 )}
               </div>
-              {membro.papel === "operador" &&
+              {comLinkedin &&
+                membro.papel === "operador" &&
                 (admin && membro.ativo && contas.length > 0 ? (
                   <form action={definirContasDoPainel} className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-linha pt-4">
                     <input type="hidden" name="membroId" value={membro.id} />

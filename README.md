@@ -174,6 +174,26 @@ A negociação é da empresa: um segundo decisor da mesma empresa entra como
 anotação na mesma negociação, e a etapa nunca volta. Detalhes da API em
 [`docs/pesquisa/rd-station.md`](docs/pesquisa/rd-station.md).
 
+## Módulos e plano
+
+O Kakou é vendido em módulos (§4.14): `linkedin` (SDR no LinkedIn),
+`whatsapp` e `telegram` (disparos). Contatos, tags, segmentos, Equipe e Plano
+são da base. Organização nova nasce com o `linkedin`.
+
+- Quem liga e desliga é a GuessLess, em **Plataforma** (`/platform`), que só
+  abre para os e-mails de `PLATAFORMA_ADMINS`. Cada mudança pede o motivo e
+  fica em `eventos` (`modulo_ligado`, `modulo_desligado`).
+- Desligar o `linkedin` pausa as contas ativas da organização; religar não
+  despausa.
+- Sem a tela, pelo SQL Editor (a mesma regra, sem a pausa das contas):
+  ```sql
+  insert into public.modulos_da_organizacao (organizacao_id, modulo, motivo, alterado_por)
+  select id, 'whatsapp', 'contratou em 16/10', 'arthur@guessless.com.br' from public.organizacoes where slug = '...'
+  on conflict (organizacao_id, modulo) do update
+    set ativo = true, desde = now(), motivo = excluded.motivo, alterado_em = now(), alterado_por = excluded.alterado_por;
+  ```
+- `COMERCIAL_URL` é para onde leva o "Quero contratar" de Configurações > Plano.
+
 ## Deploy (Vercel)
 
 Importe o repositório na Vercel (framework Next.js, detectado sozinho) e

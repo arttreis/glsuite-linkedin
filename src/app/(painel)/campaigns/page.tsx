@@ -6,11 +6,11 @@ import { EtiquetaDaCampanha } from "@/components/etiquetas";
 import { listarCampanhas } from "@/server/campanhas/painel";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { exigirOperadorNoApp } from "@/server/supabase/servidor";
+import { exigirOperadorComModulo } from "@/server/supabase/servidor";
 
 /** Campanha = público × abordagem × conta (§4.11). */
 export default async function CampanhasPage({ searchParams }: PageProps<"/campaigns">) {
-  const operador = await exigirOperadorNoApp();
+  const operador = await exigirOperadorComModulo("linkedin");
   const { msg } = await searchParams;
   const campanhas = await comOperador(obterDb(), operador.id, (tx) => listarCampanhas(tx));
 
