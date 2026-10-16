@@ -126,6 +126,8 @@ export type UsoDoMes = {
   contasDoLinkedin: number;
   convites: number;
   mensagensDoLinkedin: number;
+  /** Contatos da organização, de todos os canais (base, §4.15). Não é do mês: é o total. */
+  contatos: number;
 };
 
 /**
@@ -147,7 +149,8 @@ export async function usoDoMes(db: Db, p: { organizacaoId: string; agora: Date }
            and a.enviada_em >= mes.inicio and a.enviada_em < $2::timestamptz) as convites,
        (select count(*)::int from public.mensagens m, mes
          where m.perfil_id in (select id from contas) and m.direcao = 'saida'
-           and m.em >= mes.inicio and m.em < $2::timestamptz) as "mensagensDoLinkedin"`,
+           and m.em >= mes.inicio and m.em < $2::timestamptz) as "mensagensDoLinkedin",
+       (select count(*)::int from public.contatos where organizacao_id = $1::uuid) as contatos`,
     [p.organizacaoId, p.agora],
   );
   return uso!;

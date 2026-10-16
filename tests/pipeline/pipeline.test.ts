@@ -57,6 +57,29 @@ describe("Pipeline (SDR-49)", () => {
     expect(colunas.find((coluna) => coluna.id === "conversando")!.total).toBe(1);
   });
 
+  it("o card mostra as tags do contato e o filtro por tag deixa só quem tem a tag (SDR-70)", async () => {
+    const ana = await lead(multimarcas, "em_conversa", "Ana");
+    await lead(multimarcas, "em_conversa", "Bia");
+    const [organizacao] = await banco.db.query<{ id: string }>("select organizacao_id as id from public.perfis where slug = 'juliano'");
+    const [tag] = await banco.db.query<{ id: string }>(
+      "insert into public.tags (organizacao_id, nome, chave, cor) values ($1::uuid, 'Quente', 'quente', 'laranja') returning id",
+      [organizacao!.id],
+    );
+    await banco.db.query(
+      `insert into public.contato_tags (contato_id, tag_id)
+       select c.id, $2::uuid from public.contatos c join public.leads l on l.pessoa_id = c.pessoa_id where l.id = $1::uuid`,
+      [ana, tag!.id],
+    );
+
+    const todos = await comoDuda((tx) => quadroDoPipeline(tx));
+    const conversando = todos.find((coluna) => coluna.id === "conversando")!;
+    expect(conversando.cartoes.find((c) => c.nome === "Ana")!.tags).toEqual([{ id: tag!.id, nome: "Quente", cor: "laranja" }]);
+    expect(conversando.cartoes.find((c) => c.nome === "Bia")!.tags).toEqual([]);
+
+    const comTag = await comoDuda((tx) => quadroDoPipeline(tx, { tagId: tag!.id }));
+    expect(nomesPorColuna(comTag).conversando).toEqual(["Ana"]);
+  });
+
   it("filtra por campanha e por conta", async () => {
     await lead(multimarcas, "na_fila", "Ana");
     await lead(boutiques, "na_fila", "Bia", "luiz");

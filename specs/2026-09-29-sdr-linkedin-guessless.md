@@ -2056,3 +2056,64 @@ interpretações abaixo são minhas e estão para o Arthur confirmar.
   sistema). Os contatos e os disparos entram no uso com os tickets deles.
   "Quero contratar" abre o `COMERCIAL_URL`; sem ele, a tela diz para falar
   com a GuessLess.
+
+### SDR-70 · Contatos e tags (16/10/2026)
+
+- Tabelas `contatos`, `tags`, `contato_tags` e `importacoes_de_contatos`
+  (migration `20261016110000_contatos_e_tags`), com RLS pela organização e o
+  grant para `sdr_servidor`. A migration começa pela conferência de nomes do
+  banco dividido.
+- **Contato do LinkedIn por trigger.** `pessoas_viram_contatos` cria o contato
+  da pessoa nova na organização do perfil dono; `pessoas_atualizam_contatos`
+  leva nome, empresa, cargo e o opt-out da pessoa para o contato (o LinkedIn é
+  a fonte desses campos). Pessoa sem nome vira "Sem nome": a trigger não pode
+  derrubar a importação do motor. As pessoas que já existem ganham o contato
+  na migration. Contato do LinkedIn e contato importado da mesma pessoa ficam
+  separados nesta versão: não há chave confiável para juntar (a pessoa do
+  LinkedIn não tem telefone nem e-mail).
+- **RLS do contato:** da organização e, se for lead do LinkedIn, só para quem
+  enxerga a pessoa (a subconsulta em `pessoas` passa pelo RLS dela). Assim o
+  operador não vê, pelos Contatos, os leads das contas que não opera.
+  `contato_tags` segue o contato. Uma trigger confere que a tag e o contato
+  são da mesma organização, venha a escrita de onde vier.
+- **Telefone** em E.164 (`normalizarTelefone`, em `domain/contatos.ts`): sem
+  DDI e com DDD vira +55; zero de interurbano na frente sai; celular antigo de
+  8 dígitos começando em 6 a 9 ganha o 9. Fora do Brasil, só com + ou 00. O
+  banco tem `check` do formato e índice único por organização e telefone.
+- **Importação:** o navegador lê a planilha (`lerPlanilhaDeContatos`, colunas
+  pelo nome, até 5.000 linhas, telefone ou e-mail obrigatório, repetidos
+  juntados) e manda em partes de 1.000. O servidor importa pela conexão do
+  sistema, preso à organização do operador, porque o contato de mesmo
+  telefone pode ser de uma conta que o operador não opera e ainda assim não
+  pode duplicar. Telefone igual faz upsert que completa só o vazio
+  (`coalesce`); sem telefone, o e-mail igual (sem caixa) completa o contato
+  mais antigo. As tags da planilha e as "para todos" são criadas se faltarem
+  (`garantirTags`, com trava por organização e o teto de 200).
+- **Autorização do WhatsApp** é da importação: a primeira parte grava a marca
+  em `importacoes_de_contatos.autorizacao_whatsapp`, e as outras partes usam
+  a gravada, não a que o navegador manda. O contato guarda
+  `whatsapp_autorizado_em` e `whatsapp_autorizacao` (quem, qual importação,
+  qual arquivo). Quem saiu do WhatsApp não ganha autorização de novo.
+- **Filtro de contatos** (`domain/filtro-de-contatos.ts`): texto (nome,
+  empresa, cargo, e-mail e, com 4 dígitos ou mais, telefone; `%` e `_` são
+  texto), tags (todas, alguma, nenhuma), canal (WhatsApp, LinkedIn), origem e
+  situação (podem ser contatados, padrão; não contatar; todos), em SQL
+  parametrizado. É o mesmo SQL para a lista e para a tag em massa: "todos do
+  filtro" manda o filtro, e o servidor roda de novo, então vale para todos,
+  não só os da página. O SDR-71 aumenta este filtro para os segmentos.
+- **Tag em massa** grava um evento por operação (`tag_posta`, `tag_tirada`,
+  com quantos e se foi por marcados ou por filtro), e não um por contato.
+- **"Não contatar mais"** marca o contato com o motivo e o nome de quem
+  marcou e, se for lead do LinkedIn, chama o `registrarOptout` de sempre
+  (fecha os leads e cancela as ações). Roda pela conexão do sistema, depois de
+  conferir pelo RLS que o operador enxerga o contato. Não se desfaz pela tela.
+- **Tags na tela:** só o ponto tem a cor (`.tag[data-cor]`), para não competir
+  com o destaque menta nem com as cores de status (regra do tema). Paleta de
+  8 cores fixas. O editor de tags do contato (`tags-do-contato.tsx`) serve à
+  página do contato e ao painel do lead no Chats: pôr pelo nome (com
+  sugestões) e tirar pelo ×. O Pipeline mostra até 3 tags no card e filtra por
+  tag (`?tag=`).
+- Telas: `/contacts` (filtros por URL, 50 por página, tag em massa),
+  `/contacts/[id]`, `/contacts/import` e `/contacts/tags`. "Contatos" entra
+  no menu como base, entre Campanhas e Configurações. O Plano mostra o total
+  de contatos, e o Dashboard sem o SDR no LinkedIn também.

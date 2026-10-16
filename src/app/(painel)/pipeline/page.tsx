@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Aviso } from "@/components/aviso";
 import { Cabecalho } from "@/components/cabecalho";
+import { Tags } from "@/components/tag";
 import { destinosPermitidos, ROTULO_DO_DESTINO } from "@/domain/pipeline";
 import { haQuantoTempo } from "@/lib/tempo";
 import { obterDb } from "@/server/db";
@@ -33,6 +34,11 @@ function Cartao({ cartao, agora, voltar, variasContas }: { cartao: CartaoDoPipel
           )}
         </span>
         <span className="mt-0.5 block truncate text-xs text-tinta-suave">{[cartao.cargo, cartao.empresa].filter(Boolean).join(" · ")}</span>
+        {cartao.tags.length > 0 && (
+          <span className="mt-2 block">
+            <Tags tags={cartao.tags} max={3} />
+          </span>
+        )}
         <span className="mt-2 flex items-center justify-between gap-2 text-[11px] text-tinta-fraca">
           <span>{haQuantoTempo(cartao.ultimaAtividade, agora)}</span>
           {variasContas && <span className="truncate">{cartao.conta}</span>}
@@ -79,17 +85,19 @@ function Coluna({ coluna, children }: { coluna: ColunaComCartoes; children: Reac
 
 export default async function PipelinePage({ searchParams }: PageProps<"/pipeline">) {
   const operador = await exigirOperadorComModulo("linkedin");
-  const { campaign, account, msg } = await searchParams;
+  const { campaign, account, tag, msg } = await searchParams;
   const campanhaId = uuid(campaign);
   const perfilId = uuid(account);
+  const tagId = uuid(tag);
   const { colunas, filtros } = await comOperador(obterDb(), operador.id, async (tx) => ({
-    colunas: await quadroDoPipeline(tx, { campanhaId, perfilId }),
+    colunas: await quadroDoPipeline(tx, { campanhaId, perfilId, tagId }),
     filtros: await filtrosDoPipeline(tx),
   }));
   const agora = new Date();
   const busca = new URLSearchParams();
   if (campanhaId) busca.set("campaign", campanhaId);
   if (perfilId) busca.set("account", perfilId);
+  if (tagId) busca.set("tag", tagId);
   const voltar = busca.size > 0 ? `/pipeline?${busca.toString()}` : "/pipeline";
   const variasContas = filtros.contas.length > 1;
   const abertas = colunas.filter((coluna) => coluna.id !== "encerrado");
@@ -115,7 +123,7 @@ export default async function PipelinePage({ searchParams }: PageProps<"/pipelin
         titulo="Pipeline"
         descricao="Do convite à reunião. O Kakou move os cards sozinho; à mão, você move para Qualificado, Reunião marcada ou Encerrado."
       >
-        <FiltrosDoPipeline campanhas={filtros.campanhas} contas={filtros.contas} campanha={campanhaId} conta={perfilId} />
+        <FiltrosDoPipeline campanhas={filtros.campanhas} contas={filtros.contas} tags={filtros.tags} campanha={campanhaId} conta={perfilId} tag={tagId} />
       </Cabecalho>
       {typeof msg === "string" && <Aviso className="mb-5 max-w-3xl">{msg}</Aviso>}
       <div className="-mx-[var(--respiro)] flex snap-x items-start gap-3 overflow-x-auto px-[var(--respiro)] pb-4">

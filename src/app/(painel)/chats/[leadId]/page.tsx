@@ -6,6 +6,7 @@ import { Avatar } from "@/components/avatar";
 import type { EstadoDoLead } from "@/domain/estados";
 import { abrirChat, lerFiltro, listarChats } from "@/server/chats/chats";
 import { contextoDoPerfil } from "@/server/campanhas/perfil";
+import { listarTags, tagsDoLead } from "@/server/contatos/tags";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { exigirOperadorComModulo } from "@/server/supabase/servidor";
@@ -35,10 +36,16 @@ export default async function ChatDoLeadPage({ params, searchParams }: PageProps
   const dados = await comOperador(obterDb(), operador.id, async (tx) => {
     const chat = await abrirChat(tx, leadId);
     if (!chat) return null;
-    return { chat, itens: await listarChats(tx, { filtro }), contexto: await contextoDoPerfil(tx, chat.lead.contaId) };
+    const contato = await tagsDoLead(tx, leadId);
+    return {
+      chat,
+      itens: await listarChats(tx, { filtro }),
+      contexto: await contextoDoPerfil(tx, chat.lead.contaId),
+      tags: contato ? { ...contato, todas: await listarTags(tx, operador.organizacaoId), voltar: `/chats/${leadId}` } : null,
+    };
   });
   if (!dados) notFound();
-  const { chat, itens, contexto } = dados;
+  const { chat, itens, contexto, tags } = dados;
   const { lead } = chat;
 
   const bloqueio = lead.optout
@@ -74,7 +81,7 @@ export default async function ChatDoLeadPage({ params, searchParams }: PageProps
           <details className="border-b border-linha px-4 py-3 xl:hidden">
             <summary className="cursor-pointer text-[13px] text-tinta-suave">Dados do lead</summary>
             <div className="mt-3">
-              <PainelDoLead chat={chat} />
+              <PainelDoLead chat={chat} tags={tags} />
             </div>
           </details>
 
@@ -95,7 +102,7 @@ export default async function ChatDoLeadPage({ params, searchParams }: PageProps
         </section>
 
         <aside className="cartao hidden overflow-y-auto p-5 xl:block">
-          <PainelDoLead chat={chat} />
+          <PainelDoLead chat={chat} tags={tags} />
         </aside>
       </div>
     </MolduraDoChat>

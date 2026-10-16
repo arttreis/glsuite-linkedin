@@ -1,7 +1,9 @@
 import { ArrowRight, Bot, Rocket } from "lucide-react";
 import Link from "next/link";
 import { Aviso } from "@/components/aviso";
+import { lerFiltro } from "@/domain/filtro-de-contatos";
 import { CATALOGO_DE_MODULOS, linkedinNoPrimeiroAcesso, type Modulo } from "@/domain/modulos";
+import { contarContatos } from "@/server/contatos/contatos";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { lerPeriodo, numerosDoPeriodo } from "@/server/painel/numeros";
@@ -139,7 +141,7 @@ function ConfigurarOSdr() {
 }
 
 /** Sem o SDR no LinkedIn, o Dashboard mostra o que o plano da organização tem. */
-function OQueOPlanoTem({ modulos }: { modulos: Modulo[] }) {
+function OQueOPlanoTem({ modulos, contatos }: { modulos: Modulo[]; contatos: number }) {
   const contratados = CATALOGO_DE_MODULOS.filter((modulo) => modulos.includes(modulo.id));
   return (
     <section className="cartao p-6" aria-labelledby="titulo-plano">
@@ -160,9 +162,15 @@ function OQueOPlanoTem({ modulos }: { modulos: Modulo[] }) {
           ))}
         </ul>
       )}
-      <Link href="/settings/plan" className="link mt-4 inline-block text-sm">
-        Ver o plano
-      </Link>
+      <p className="mt-4 text-sm text-tinta-suave">
+        <Link href="/contacts" className="link">
+          {contatos === 1 ? "1 contato" : `${contatos.toLocaleString("pt-BR")} contatos`}
+        </Link>{" "}
+        na base da organização ·{" "}
+        <Link href="/settings/plan" className="link">
+          Ver o plano
+        </Link>
+      </p>
     </section>
   );
 }
@@ -206,7 +214,12 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
             <Numeros numeros={linkedin.numeros} periodo={periodo} />
           </>
         ) : (
-          <OQueOPlanoTem modulos={operador.modulos} />
+          <OQueOPlanoTem
+            modulos={operador.modulos}
+            contatos={await comOperador(obterDb(), operador.id, (tx) =>
+              contarContatos(tx, { organizacaoId: operador.organizacaoId, filtro: lerFiltro({ situacao: "todos" }) }),
+            )}
+          />
         )}
       </div>
     </>
