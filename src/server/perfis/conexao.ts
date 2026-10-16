@@ -17,17 +17,20 @@ export async function gerarLinkDeConexao(
   deps: Dependencias & { urlApp: string; segredo: string },
   p: { perfilId: string; agora: Date; voltarPara?: string },
 ): Promise<string> {
-  const [perfil] = await deps.db.query<{ id: string; unipile_account_id: string | null }>(
-    "select id, unipile_account_id from public.perfis where id = $1::uuid",
+  const [perfil] = await deps.db.query<{ id: string; unipile_account_id: string | null; unipile_status: string | null }>(
+    "select id, unipile_account_id, unipile_status from public.perfis where id = $1::uuid",
     [p.perfilId],
   );
   if (!perfil) throw new Error("Perfil não encontrado");
 
+  // Conta removida da Unipile não se reconecta: o id não existe mais, então
+  // conecta de novo como conta nova e o callback troca o id no perfil.
+  const contaParaReconectar = perfil.unipile_status === "DELETED" ? null : perfil.unipile_account_id;
   const notify = new URL("/api/unipile/conta", deps.urlApp);
   notify.searchParams.set("segredo", deps.segredo);
   return deps.unipile.gerarLinkDeConexao({
-    tipo: perfil.unipile_account_id ? "reconnect" : "create",
-    contaParaReconectar: perfil.unipile_account_id ?? undefined,
+    tipo: contaParaReconectar ? "reconnect" : "create",
+    contaParaReconectar: contaParaReconectar ?? undefined,
     nome: perfil.id,
     notifyUrl: notify.toString(),
     sucessoUrl: new URL(`${p.voltarPara ?? "/settings/linkedin"}?conexao=ok`, deps.urlApp).toString(),

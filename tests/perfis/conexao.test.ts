@@ -41,6 +41,22 @@ describe("conexão do perfil pela Unipile (hosted auth)", () => {
     expect(unipile.chamadasDe("gerarLinkDeConexao")[0]).toMatchObject({ tipo: "reconnect", contaParaReconectar: "acc-arthur" });
   });
 
+  it("conta removida da Unipile conecta de novo como conta nova, não como reconexão", async () => {
+    await ativarPerfil(banco.db, "arthur", { accountId: "acc-arthur" });
+    await banco.db.query("update public.perfis set unipile_status = 'DELETED', status = 'pausado', motivo_pausa = 'A conta foi removida da Unipile.' where slug = 'arthur'");
+    const perfilId = await idDoPerfil(banco.db, "arthur");
+    await gerarLinkDeConexao({ db: banco.db, unipile, urlApp: URL_APP, segredo: SEGREDO }, { perfilId, agora: AGORA });
+    const [pedido] = unipile.chamadasDe("gerarLinkDeConexao");
+    expect(pedido).toMatchObject({ tipo: "create" });
+    expect(pedido!.contaParaReconectar).toBeUndefined();
+
+    // A conta nova chega pelo callback e toma o lugar da apagada; o perfil segue pausado.
+    unipile.donos.set("acc-nova", { providerId: "ACoArthur", nome: "Arthur Reis", publicIdentifier: "arthur", premium: false, salesNavigator: false });
+    await registrarContaConectada({ db: banco.db, unipile }, { status: "CREATION_SUCCESS", account_id: "acc-nova", name: perfilId }, AGORA);
+    const [perfil] = await banco.db.query("select unipile_account_id, unipile_status, status from public.perfis where id = $1::uuid", [perfilId]);
+    expect(perfil).toEqual({ unipile_account_id: "acc-nova", unipile_status: "OK", status: "pausado" });
+  });
+
   it("link recusado vira mensagem: 401 é a chave da API, não a conta; o resto pede para tentar de novo", () => {
     expect(mensagemDaFalhaDoLink(new ErroUnipile({ status: 401, tipo: "missing_credentials", titulo: "Missing credentials" }))).toBe(
       "A Unipile recusou a chave da API (Unipile 401 missing_credentials: Missing credentials). Não é a conta do LinkedIn: peça ao admin para trocar a chave da API da Unipile.",
