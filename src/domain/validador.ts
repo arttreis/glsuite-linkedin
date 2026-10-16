@@ -24,6 +24,12 @@ export type ContextoDeValidacao = {
   limiteNotaConvite?: number;
   /** Único link que a IA pode mandar numa conversa (link de agenda). */
   linkDeAgenda?: string | null;
+  /**
+   * Fora do LinkedIn (§4.3), os links que a IA pode mandar além do de agenda:
+   * todo link do texto tem de ser um deles ou o de agenda. Sem ele, a regra do
+   * LinkedIn: só o link de agenda.
+   */
+  linksPermitidos?: readonly string[];
 };
 
 export type RegraDoValidador =
@@ -51,6 +57,18 @@ const PADRAO_URL = new RegExp(
   `(?:https?:\\/\\/|www\\.)\\S+|\\b[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9-]+)*\\.(?:${TLDS})\\b(?:\\/\\S*)?`,
   "iu",
 );
+const PADRAO_URL_GLOBAL = new RegExp(PADRAO_URL.source, "giu");
+// Pontuação colada no fim do link que é da frase, não do link.
+const PONTUACAO_NO_FIM = /[.,;:!?)"']+$/u;
+
+/** O primeiro link do texto que não está entre os permitidos, ou null. */
+function linkForaDaLista(texto: string, permitidos: readonly string[]): string | null {
+  for (const [achado] of texto.matchAll(PADRAO_URL_GLOBAL)) {
+    const link = achado.replace(PONTUACAO_NO_FIM, "");
+    if (!permitidos.includes(link)) return link;
+  }
+  return null;
+}
 
 // Afirmações de autoria humana ("escrevi à mão", "não é mensagem automática").
 const ESCRITA_A_MAO = [
@@ -154,7 +172,16 @@ export function validarMensagem(texto: string, ctx: ContextoDeValidacao): Result
         mensagem: "A IA puxou para WhatsApp, e-mail ou telefone. Isso só com convite explícito da pessoa.",
       });
     }
-    if (!naRegua && url && (!ctx.linkDeAgenda || !conteudo.includes(ctx.linkDeAgenda))) {
+    if (ctx.linksPermitidos !== undefined) {
+      const permitidos = ctx.linkDeAgenda ? [...ctx.linksPermitidos, ctx.linkDeAgenda] : ctx.linksPermitidos;
+      const fora = naRegua ? null : linkForaDaLista(conteudo, permitidos);
+      if (fora) {
+        violacoes.push({
+          regra: "link_nao_permitido",
+          mensagem: `A IA só pode mandar os links do lançamento e o de agenda (achei ${fora}).`,
+        });
+      }
+    } else if (!naRegua && url && (!ctx.linkDeAgenda || !conteudo.includes(ctx.linkDeAgenda))) {
       violacoes.push({ regra: "link_nao_permitido", mensagem: `A IA só pode mandar o link de agenda configurado (achei ${url}).` });
     }
   }

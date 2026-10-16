@@ -1,4 +1,4 @@
-import { textoDoSdr, type Sdr } from "@/domain/sdr";
+import { textoDoSdr, type CanalDoSdr, type Sdr } from "@/domain/sdr";
 import { nomeDeEmpresa } from "@/domain/texto";
 import type { Praca } from "@/domain/validador";
 import type { Classificacao } from "./modelo";
@@ -9,11 +9,23 @@ import type { Classificacao } from "./modelo";
  * regras de estilo vêm da casa e do prompt de referência
  * (`docs/pesquisa/prompt-de-referencia.md`).
  *
- * O prompt de sistema do rascunho depende só do perfil, do SDR e da análise,
- * nunca do lead: é estável e vai para o cache. Lead, instruções da campanha e
- * conversa vão na mensagem do usuário.
+ * O prompt de sistema do rascunho depende só do perfil, do SDR, da análise e
+ * do canal, nunca do lead: é estável e vai para o cache. Lead, instruções da
+ * campanha, links e lançamento e conversa vão na mensagem do usuário.
+ *
+ * No LinkedIn (sem canal ou `linkedin`), o texto é o de antes do canal, byte a
+ * byte (`prompts-do-linkedin.test.ts`).
  */
-export const VERSAO_DOS_PROMPTS = "2026-10-15.1";
+export const VERSAO_DOS_PROMPTS = "2026-10-16.1";
+
+/** Onde a conversa acontece fora do LinkedIn, como o prompt diz (§4.26). */
+const ONDE: Record<Exclude<CanalDoSdr, "linkedin">, string> = {
+  instagram: "pelo direct do Instagram",
+  facebook: "pelo Messenger da Página no Facebook",
+  telegram: "pelo privado do bot no Telegram",
+};
+
+export const SEM_SDR_FORA_DO_LINKEDIN = "Fora do LinkedIn, o SDR precisa do SDR da organização (§4.26).";
 
 export type PerfilDoAgente = {
   nome: string;
@@ -44,8 +56,12 @@ export const VOZ_PADRAO: Record<Praca, string> = {
   espanha: "Español de España. Cercano y profesional, tuteando. Frases cortas.",
 };
 
-export function promptDeClassificacao(): string {
-  return `Você classifica a ÚLTIMA mensagem de um prospect numa conversa de prospecção B2B pelo LinkedIn.
+export function promptDeClassificacao(canal: CanalDoSdr = "linkedin"): string {
+  const enquadramento =
+    canal === "linkedin"
+      ? "Você classifica a ÚLTIMA mensagem de um prospect numa conversa de prospecção B2B pelo LinkedIn."
+      : `Você classifica a ÚLTIMA mensagem de uma pessoa numa conversa ${ONDE[canal]} com uma empresa.`;
+  return `${enquadramento}
 
 Categorias:
 - interesse: quer saber mais, topa conversar, pede detalhes ou horário.
@@ -64,19 +80,55 @@ Sinais:
 Confiança: de 0 a 1, o quanto a categoria está clara. Na dúvida entre optout e nao, use a confiança para mostrar a dúvida.`;
 }
 
+/**
+ * O que muda nas regras da casa conforme o canal (§4.3, "Onde o canal pede, a
+ * regra da casa muda"). O resto das regras é igual em todo canal.
+ */
+function regrasDoCanal(canal: CanalDoSdr) {
+  if (canal === "linkedin") {
+    return {
+      tamanho: "com no máximo 30 palavras",
+      conversa: "como numa conversa de LinkedIn",
+      links: "Nenhum link, exceto o link de agenda, e só depois que a pessoa aceitou conversar.",
+      origem: "Se perguntarem de onde veio o contato, diga a verdade: pelo perfil público no LinkedIn, como contato profissional.",
+      outroCanal: "Nunca puxe a conversa para WhatsApp, e-mail ou telefone. Só se a própria pessoa pedir.",
+    };
+  }
+  return {
+    // Texto do Instagram tem até 1.000 bytes (§4.27).
+    tamanho: canal === "instagram" ? "com no máximo 30 palavras e no máximo 1.000 bytes (acento conta 2)" : "com no máximo 30 palavras",
+    conversa: "como numa conversa de mensagem",
+    links:
+      'Nenhum link, exceto os da lista "Links que você pode mandar" que vem na mensagem e o link de agenda (este só depois que a pessoa aceitou conversar).',
+    origem:
+      "Se perguntarem como você tem o contato, diga a verdade: a pessoa escreveu para a conta (comentou num post, mandou mensagem ou entrou pelo bot ou pelo grupo).",
+    outroCanal: "Nunca puxe a conversa para WhatsApp, e-mail ou telefone. Se a pessoa pedir o grupo, mande o link da lista.",
+  };
+}
+
 export function promptDeRascunho(p: {
   perfil: PerfilDoAgente;
   linkDeAgenda: string | null;
   responsavelDiscovery: string;
   oferta: string;
-  /** O SDR da organização (§4.3). Sem ele, valem a voz e as regras do perfil. */
+  /** O SDR da organização (§4.3). Sem ele, valem a voz e as regras do perfil (só no LinkedIn). */
   sdr?: Sdr | null;
+  /** Onde a conversa acontece (§4.26). Sem ele, LinkedIn. */
+  canal?: CanalDoSdr;
 }): string {
   const { perfil, sdr } = p;
+  const canal = p.canal ?? "linkedin";
+  if (canal !== "linkedin" && !sdr) throw new Error(SEM_SDR_FORA_DO_LINKEDIN);
   const proibidas = perfil.palavrasProibidas.length > 0 ? perfil.palavrasProibidas.join(", ") : "(nenhuma)";
+  const regras = regrasDoCanal(canal);
 
+  // Fora do LinkedIn, quem escreveu primeiro foi a pessoa (§4.3).
+  const enquadramento =
+    canal === "linkedin"
+      ? `Você escreve, em nome de ${perfil.nome}, as respostas de uma conversa de prospecção B2B no LinkedIn.`
+      : `Você responde, em nome de ${perfil.nome}, as mensagens que chegam ${ONDE[canal]}. Quem começou a conversa foi a pessoa: você nunca abre conversa.`;
   const inicio = sdr
-    ? `Você escreve, em nome de ${perfil.nome}, as respostas de uma conversa de prospecção B2B no LinkedIn.
+    ? `${enquadramento}
 
 O que a empresa vende (análise do site, confirmada por ela):
 ${p.oferta}
@@ -105,8 +157,8 @@ Regras da casa (valem sempre):`;
     !sdr && perfil.regras?.trim() ? `\nRegras específicas de ${perfil.nome}:\n${perfil.regras.trim()}\n` : "";
 
   return `${inicio}
-- Devolva só a mensagem, com no máximo 30 palavras, numa linha só, sem linha em branco.
-- Frases curtas, tom oral e direto, como numa conversa de LinkedIn. Nada de lista, nada de formalidade de e-mail, nada que soe robótico.
+- Devolva só a mensagem, ${regras.tamanho}, numa linha só, sem linha em branco.
+- Frases curtas, tom oral e direto, ${regras.conversa}. Nada de lista, nada de formalidade de e-mail, nada que soe robótico.
 - Não cumprimente de novo: a conversa já começou.
 - Não comece a mensagem com verbo no imperativo (veja, confira, olha).
 - Não repita o nome da pessoa em toda mensagem.
@@ -116,12 +168,12 @@ Regras da casa (valem sempre):`;
 - No máximo uma pergunta por mensagem e no máximo 2 perguntas em toda a conversa (conte as que já foram feitas no histórico).
 - Nunca use travessão (—) nem meia-risca (–).
 - Nunca use estas palavras: ${proibidas}.
-- Nenhum link, exceto o link de agenda, e só depois que a pessoa aceitou conversar.
+- ${regras.links}
 - Nunca diga que escreveu à mão, que não é automático ou que não é um robô.
 - Não prometa resultado nem número.
 - Não peça reunião cedo demais: só proponha quando a pessoa mostrar interesse.
-- Se perguntarem de onde veio o contato, diga a verdade: pelo perfil público no LinkedIn, como contato profissional.
-- Nunca puxe a conversa para WhatsApp, e-mail ou telefone. Só se a própria pessoa pedir.
+- ${regras.origem}
+- ${regras.outroCanal}
 - Responda no idioma da última mensagem da pessoa.
 ${regrasDoPerfil}
 Como decidir (campo "acao"):
@@ -159,11 +211,23 @@ export function entradaDoRascunho(p: {
   classificacao: Classificacao;
   /** Instruções do SDR que valem só nesta campanha (§4.11). */
   instrucoesDaCampanha?: string | null;
+  /** Fora do LinkedIn, os únicos links que a IA pode mandar além do de agenda (§4.3). */
+  linksPermitidos?: readonly string[];
+  /** Fora do LinkedIn, o que o SDR sabe do lançamento da conversa (§4.26). */
+  contextoDoLancamento?: string | null;
 }): string {
   const { lead, classificacao: c } = p;
   const pesquisa = lead.pesquisa ? `\n- Pesquisa sobre a pessoa: ${JSON.stringify(lead.pesquisa)}` : "";
   const instrucoes = p.instrucoesDaCampanha?.trim()
     ? `\n\nInstruções desta campanha (valem abaixo das regras da casa):\n${p.instrucoesDaCampanha.trim()}`
+    : "";
+  // Links e lançamento mudam por conversa: vão aqui, nunca no prompt de sistema (cache).
+  const links =
+    p.linksPermitidos && p.linksPermitidos.length > 0
+      ? `\n\nLinks que você pode mandar (só estes, exatamente como estão):\n${p.linksPermitidos.map((link) => `- ${link}`).join("\n")}`
+      : "";
+  const lancamento = p.contextoDoLancamento?.trim()
+    ? `\n\nO lançamento (o que você sabe dele; vale abaixo das regras da casa):\n${p.contextoDoLancamento.trim()}`
     : "";
   return `Lead:
 - Nome: ${lead.nome}
@@ -171,7 +235,7 @@ export function entradaDoRascunho(p: {
 - Empresa: ${nomeDeEmpresa(lead.empresa) ?? "não informada"}
 - Localização: ${lead.localizacao ?? "não informada"}
 - Campanha: ${lead.campanha}${lead.nicho ? ` (nicho: ${lead.nicho})` : ""}
-- Ângulo de abertura: ${lead.angulo ?? "não registrado"}${pesquisa}${instrucoes}
+- Ângulo de abertura: ${lead.angulo ?? "não registrado"}${pesquisa}${instrucoes}${links}${lancamento}
 
 Classificação da última mensagem: ${c.categoria} (confiança ${c.confianca.toFixed(2)}; preço: ${c.sinais.preco ? "sim" : "não"}; reclamação: ${c.sinais.reclamacao ? "sim" : "não"}; idioma: ${c.sinais.idioma}).
 

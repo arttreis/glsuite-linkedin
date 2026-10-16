@@ -3,6 +3,21 @@ import { explicarErroDeEdicao } from "./edicao";
 import { CAUTELAS } from "./passagem";
 
 /**
+ * Onde o SDR conversa (§4.3, §4.26): no LinkedIn e, desde o Marco E, no
+ * direct do Instagram, no Messenger e no privado do bot do Telegram. Sem
+ * `server-only`: o chat de teste mostra o canal.
+ */
+export const CANAIS_DO_SDR = ["linkedin", "instagram", "facebook", "telegram"] as const;
+export type CanalDoSdr = (typeof CANAIS_DO_SDR)[number];
+
+export const NOME_DO_CANAL_DO_SDR: Record<CanalDoSdr, string> = {
+  linkedin: "LinkedIn",
+  instagram: "Instagram",
+  facebook: "Messenger",
+  telegram: "Telegram",
+};
+
+/**
  * O SDR da organização (§4.3): como ela conversa no LinkedIn. Nasce da análise
  * do site confirmada, ganha versão a cada ajuste e é ele que o agente usa no
  * lugar da voz e das regras do perfil. As regras da casa ficam por cima e não

@@ -137,4 +137,37 @@ describe("validador de copy (§4.2)", () => {
       expect(regras("Veja https://site-qualquer.com", conversa)).toContain("link_nao_permitido");
     });
   });
+
+  describe("fora do LinkedIn, os links do lançamento (SDR-75)", () => {
+    const foraDoLinkedIn: ContextoDeValidacao = {
+      ...BRASIL,
+      toque: null,
+      origem: "ia",
+      linkDeAgenda: null,
+      linksPermitidos: ["https://pay.hotmart.com/X1"],
+    };
+
+    it("link da lista passa, mesmo com a pontuação da frase colada", () => {
+      expect(validarMensagem("Aqui: https://pay.hotmart.com/X1.", foraDoLinkedIn)).toEqual({ ok: true, violacoes: [] });
+    });
+
+    it("link fora da lista é barrado, com o link na mensagem", () => {
+      expect(validarMensagem("Dá uma olhada em https://outro.com/oferta", foraDoLinkedIn).violacoes).toEqual([
+        {
+          regra: "link_nao_permitido",
+          mensagem: "A IA só pode mandar os links do lançamento e o de agenda (achei https://outro.com/oferta).",
+        },
+      ]);
+    });
+
+    it("o link de agenda passa; um da lista e um de fora, barra", () => {
+      const comAgenda = { ...foraDoLinkedIn, linkDeAgenda: "https://cal.com/duda/20min" };
+      expect(regras("Marca aqui: https://cal.com/duda/20min", comAgenda)).toEqual([]);
+      expect(regras("Pague em https://pay.hotmart.com/X1 ou em https://outro.com", comAgenda)).toEqual(["link_nao_permitido"]);
+    });
+
+    it("texto de humano não passa por esta regra, como hoje", () => {
+      expect(regras("Veja https://outro.com/oferta", { ...foraDoLinkedIn, origem: "humano" })).not.toContain("link_nao_permitido");
+    });
+  });
 });

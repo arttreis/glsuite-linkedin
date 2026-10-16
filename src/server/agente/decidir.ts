@@ -1,7 +1,7 @@
 import { contextoDeValidacao } from "@/domain/campanha";
 import { detectarOptout } from "@/domain/optout";
 import { limiarDaCautela } from "@/domain/passagem";
-import type { Sdr } from "@/domain/sdr";
+import type { CanalDoSdr, Sdr } from "@/domain/sdr";
 import { validarMensagem, type Praca, type ResultadoDaValidacao } from "@/domain/validador";
 import type { Configuracao } from "@/server/configuracoes";
 import type { Classificacao, Decisao, ModeloDeLinguagem, Uso } from "./modelo";
@@ -11,9 +11,12 @@ import {
   entradaDoRascunho,
   promptDeClassificacao,
   promptDeRascunho,
+  SEM_SDR_FORA_DO_LINKEDIN,
   type LeadDoAgente,
   type MensagemDoHistorico,
 } from "./prompts";
+
+export type { CanalDoSdr } from "@/domain/sdr";
 
 /** Tudo o que o agente lê para decidir, sem banco: é também a entrada do eval (SDR-16). */
 export type EntradaDoAgente = {
@@ -35,7 +38,18 @@ export type EntradaDoAgente = {
   instrucoesDaCampanha?: string | null;
   lead: LeadDoAgente;
   mensagens: MensagemDoHistorico[];
+  /** Onde a conversa acontece (§4.26). Sem ele, LinkedIn. */
+  canal?: CanalDoSdr;
+  /** Fora do LinkedIn, os únicos links que a IA pode mandar, além do de agenda (SDR-88 (#77) preenche). */
+  linksPermitidos?: string[];
+  /** O que o SDR sabe do lançamento da conversa, já em texto (SDR-88 (#77) monta). */
+  contextoDoLancamento?: string | null;
+  /** A conversa é num grupo (SDR-97 (#86)). Neste ticket, não muda nada. */
+  noGrupo?: boolean;
 };
+
+/** Fora do LinkedIn, o SDR nunca abre a conversa e não responde sem o SDR da organização (§4.3, §4.26). */
+const foraDoLinkedIn = (ctx: EntradaDoAgente) => (ctx.canal ?? "linkedin") !== "linkedin";
 
 /**
  * O que o agente decidiu, antes de qualquer efeito colateral:
@@ -75,30 +89,33 @@ function sistemaDoRascunho(ctx: EntradaDoAgente): string {
     responsavelDiscovery: ctx.responsavelDiscovery,
     oferta: ctx.oferta,
     sdr: ctx.sdr?.sdr ?? null,
+    canal: ctx.canal,
   });
 }
 
-/** O validador (§4.2) sobre um texto escrito pela IA, no contexto do perfil. */
+/**
+ * O validador (§4.2) sobre um texto escrito pela IA, no contexto do perfil.
+ * Fora do LinkedIn, os links do lançamento também passam (§4.3).
+ */
 function validarTextoDaIa(ctx: EntradaDoAgente, texto: string): ResultadoDaValidacao {
-  return validarMensagem(
-    texto,
-    contextoDeValidacao(
-      {
-        praca: ctx.perfil.praca,
-        palavrasProibidas: ctx.perfil.palavrasProibidas,
-        limiteNotaConvite: ctx.perfil.limiteNotaConvite,
-        linkDeAgenda: ctx.linkDeAgenda,
-      },
-      null,
-      "ia",
-    ),
+  const contexto = contextoDeValidacao(
+    {
+      praca: ctx.perfil.praca,
+      palavrasProibidas: ctx.perfil.palavrasProibidas,
+      limiteNotaConvite: ctx.perfil.limiteNotaConvite,
+      linkDeAgenda: ctx.linkDeAgenda,
+    },
+    null,
+    "ia",
   );
+  return validarMensagem(texto, foraDoLinkedIn(ctx) ? { ...contexto, linksPermitidos: ctx.linksPermitidos ?? [] } : contexto);
 }
 
 /**
  * A primeira mensagem depois do aceite, no jeito da abertura do SDR (§4.3).
  * Mesmo prompt de sistema e mesmo validador do rascunho; só a mensagem do
  * usuário muda. `mensagens` da entrada é ignorado: a conversa ainda não existe.
+ * Só no LinkedIn: nos outros canais, quem abre a conversa é a pessoa (§4.3).
  */
 export async function abrirConversa(p: {
   entrada: EntradaDoAgente;
@@ -106,6 +123,7 @@ export async function abrirConversa(p: {
   consumo: Consumo;
 }): Promise<{ decisao: Decisao; texto: string | null; validacao: ResultadoDaValidacao | null; excecao: string | null }> {
   const { entrada: ctx, modelo, consumo } = p;
+  if (foraDoLinkedIn(ctx)) throw new Error("Fora do LinkedIn, o SDR nunca abre a conversa (§4.3).");
   const rascunhada = await modelo.rascunhar({
     sistema: sistemaDoRascunho(ctx),
     entrada: entradaDaAbertura({ lead: ctx.lead, instrucoesDaCampanha: ctx.instrucoesDaCampanha ?? null }),
@@ -135,6 +153,9 @@ export async function abrirConversa(p: {
  * - todo texto passa pelo validador (§4.13); texto barrado vira resposta
  *   para aprovar, com o motivo, e nunca sai sozinho.
  *
+ * Fora do LinkedIn (§4.26), o prompt é o do canal, links e lançamento vão na
+ * mensagem do usuário, e sem o SDR da organização não há resposta.
+ *
  * Não toca no banco: `processarComAgente` aplica o desfecho, e o eval (SDR-16)
  * roda exatamente esta função contra o dataset.
  */
@@ -147,6 +168,8 @@ export async function decidirResposta(p: {
   aoClassificar?: (classificacao: Classificacao) => Promise<void>;
 }): Promise<Desfecho> {
   const { entrada: ctx, modelo, configuracao, consumo } = p;
+  const fora = foraDoLinkedIn(ctx);
+  if (fora && !ctx.sdr) throw new Error(SEM_SDR_FORA_DO_LINKEDIN);
   const ultima = ctx.mensagens.filter((m) => m.direcao === "entrada").at(-1);
 
   if (ultima && detectarOptout(ultima.texto).claro) {
@@ -155,7 +178,7 @@ export async function decidirResposta(p: {
 
   // Passo 1: classificação.
   const classificada = await modelo.classificar({
-    sistema: promptDeClassificacao(),
+    sistema: promptDeClassificacao(ctx.canal),
     entrada: entradaDaClassificacao(ctx.mensagens, ctx.perfil.nome),
   });
   const classificacao = classificada.saida;
@@ -179,6 +202,8 @@ export async function decidirResposta(p: {
       nomeDoPerfil: ctx.perfil.nome,
       classificacao,
       instrucoesDaCampanha: ctx.instrucoesDaCampanha ?? null,
+      // No LinkedIn, links e lançamento não existem: a mensagem fica a de sempre.
+      ...(fora ? { linksPermitidos: ctx.linksPermitidos ?? [], contextoDoLancamento: ctx.contextoDoLancamento ?? null } : {}),
     }),
   });
   const decisao = rascunhada.saida;
