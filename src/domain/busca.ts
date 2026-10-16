@@ -12,10 +12,11 @@ const parametro = z.object({ id: z.string().regex(/^\d+$/), nome: z.string().min
  * `cursor` são onde a última busca parou, para a próxima continuar dali;
  * `assinatura` é a da lista com que ela rodou; `esgotada` diz que o LinkedIn
  * já mostrou todo mundo que cabe nesses filtros. Os campos novos têm padrão:
- * busca salva antes deles continua valendo.
+ * busca salva antes deles continua valendo. Cargo só é obrigatório sem lista
+ * (`faltaCargo`): com lista e sem cargo, a busca traz todo mundo das empresas.
  */
 export const buscaDoPublico = z.object({
-  cargos: z.array(z.string().min(1).max(80)).min(1).max(10),
+  cargos: z.array(z.string().min(1).max(80)).max(10),
   palavras: z.string().max(200),
   regioes: z.array(parametro).max(10),
   setores: z.array(parametro).max(10),
@@ -32,7 +33,12 @@ export function buscaInicial(p: Publico): BuscaDoPublico {
   return { cargos: p.quem.cargos, palavras: "", regioes: [], setores: [], lista: null, parte: 0, cursor: null, assinatura: null, esgotada: false };
 }
 
-/** `"Head de E-commerce" OR "Diretor de E-commerce"`: qualquer um dos cargos. */
+/** Sem lista de empresas, a busca precisa de pelo menos um cargo; com lista, cargo é opcional (SDR-121). */
+export function faltaCargo(busca: Pick<BuscaDoPublico, "cargos" | "lista">): boolean {
+  return busca.lista === null && busca.cargos.length === 0;
+}
+
+/** `"Head de E-commerce" OR "Diretor de E-commerce"`: qualquer um dos cargos. Sem cargo, vazio. */
 export function cargoDaBusca(cargos: readonly string[]): string {
   return cargos.map((cargo) => `"${cargo.replaceAll('"', "")}"`).join(" OR ");
 }

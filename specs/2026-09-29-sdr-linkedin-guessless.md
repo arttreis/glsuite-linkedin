@@ -611,13 +611,13 @@ Anotadas durante a execução, por ticket.
   o projeto foi criado pela CLI sem detecção. Variáveis só no ambiente de
   produção.
 - Banco: sem cota para um projeto gratuito novo no Supabase, o SDR divide o
-  projeto **GL Suite** (`bfxytlaffkkcugqjsgtk`, us-west-2), por decisão do
+  projeto **GL Suite** (us-west-2), por decisão do
   Arthur. Nenhum nome de tabela ou função colide. As regras do
   compartilhamento:
   - grants e revoke só nas tabelas do SDR, nunca no schema inteiro (a
     migration de RLS foi corrigida para isso);
-  - o app conecta como `sdr_servidor`, pelo pooler
-    `aws-1-us-west-2.pooler.supabase.com:6543`. Esse papel tem BYPASSRLS e
+  - o app conecta como `sdr_servidor`, pelo pooler em modo transação
+    (host no painel do Supabase). Esse papel tem BYPASSRLS e
     direitos só nas 19 tabelas do SDR;
   - o `sdr_servidor` é membro de `authenticated` com `inherit false, set
     true`: troca para `authenticated` no painel, mas não herda o acesso desse
@@ -1026,7 +1026,8 @@ migrations das duas linhas já estão no banco (conferido em 09/10).
 - Filtros: os cargos vão em `advanced_keywords.title` como `"A" OR "B"`;
   palavras em `keywords`; região e setor em `location` e `industry`. Porte de
   empresa não tem filtro (§3). Região é obrigatória para rodar (desde o
-  SDR-59, só quando a busca não tem lista de empresas).
+  SDR-59, só quando a busca não tem lista de empresas). Cargo também (desde o
+  SDR-121, só sem lista).
 - Ids de região e setor: o humano procura na lista do LinkedIn
   (`/linkedin/search/parameters`) pela conta da campanha, com atalhos que
   usam o texto do público. A consulta não conta no teto.
@@ -1789,6 +1790,36 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   não procuradas, adicionar, renomear, apagar com confirmação, e as campanhas
   que usam a lista). Botão "Listas de empresas" em Campanhas.
 
+### SDR-121 · Todo mundo das empresas da lista (16/10/2026)
+
+- Pedido do Arthur: buscar quem trabalha nas empresas da lista "sem adicionar
+  nenhum outro filtro". Até aqui a busca exigia pelo menos um cargo mesmo com
+  lista, e a busca montada já vinha com os cargos do público.
+- `buscaDoPublico.cargos` perdeu o `min(1)`. A regra virou `faltaCargo`
+  (sem lista e sem cargo), checada em `salvarBusca` e em `rodarBusca`, e não
+  um `refine` no schema: o `rascunhoDaBusca` da conversa estende o schema, e o
+  zod não estende objeto com refinamento. Busca salva antes continua válida
+  (todas têm cargo).
+- Sem cargo, `cargoDaBusca([])` é vazio e o cliente da Unipile não manda
+  `advanced_keywords.title`: a parte vai só com `company` (ou
+  `advanced_keywords.company`, para empresa sem página).
+- **Uma página por parte sem cargo** (`EMPRESAS_POR_PARTE_SEM_CARGO`): a
+  busca clássica do LinkedIn para em mil resultados [verificar com conta
+  real], e dez empresas grandes juntas, sem cargo, passam disso; a parte
+  "esgotaria" sem trazer todo mundo. Com cargo seguem os grupos de 10. Mudar
+  o cargo muda as partes, mas não precisa de cuidado extra: mudar cargo já é
+  mudar o filtro (`mesmosFiltros`), e a busca recomeça do início. Empresa com
+  mais de mil pessoas, sozinha, ainda bate no teto: aí só cargo ou região
+  estreitam.
+- Tela: com lista, o rótulo diz "Cargos (opcional com lista de empresas)" e,
+  se houver qualquer outro filtro, o botão "Todo mundo destas empresas" zera
+  cargos, palavras, regiões e setores (só no formulário; salvar ou buscar
+  grava). Sem lista e sem cargo, o botão de buscar fica desligado com o aviso.
+- Conversa: o prompt (`busca-conversada-2`) diz que, com lista, cargos podem
+  ficar vazios, e que "todo mundo dessas empresas" deixa os filtros vazios.
+  O servidor só mantém os cargos antigos quando o pedido vem sem cargo e a
+  busca fica sem lista.
+
 ### SDR-60 · Quando o SDR passa a conversa para você (14/10/2026)
 
 - **Onde mora a cautela:** no JSON do SDR (`sdr.cautela`, opcional), e não
@@ -2481,3 +2512,73 @@ que elas decidiram:
   Telegram.
 - O resumo dos três módulos no Plano vem de `docs/naming.md` §6; o "inclui"
   de cada um saiu da tabela da §4.14.
+
+## Marcas (Marco F, 16/10/2026)
+
+Regras na §4.30 do épico, decisões D30 a D44. A marca é a fronteira dos dados
+dentro da organização; o SDR-105 é a fundação e os tickets seguintes põem
+`marca_id` nas tabelas deles.
+
+### SDR-105 (#95) · Marcas
+
+- **Migration `20261020100000_marcas`**, aditiva e idempotente, com a guarda de
+  nome do Marco D para `marcas` e `acessos_das_marcas`. Nenhuma policy que já
+  existe muda; `organizacao_do_operador()`, `eh_admin()` e `pode_ver_perfil()`
+  ficam como estão.
+- **Backfill que não devolve acesso tirado.** A marca 1 se cria só para
+  organização sem marca; o acesso e a `marca_atual_id` só se preenchem em
+  organização com uma marca. Rodar a migration de novo depois do SDR-115 não
+  dá a todo mundo acesso a uma marca de que o admin o tirou.
+- **A marca 1 e o operador novo por trigger** (`organizacoes_marca_1` e
+  `operadores_marca_atual`), como o módulo padrão do SDR-69: qualquer caminho
+  que crie organização ou operador segue a regra, e
+  `garantirOperadorDoPrimeiroAcesso` não muda. A marca 1 nasce com
+  `analise_e_sdr_em` igual ao `criado_em` da organização (o "now()" do
+  contrato, no instante em que ela nasce). O operador novo só entra sozinho
+  quando a organização tem uma marca; com mais, quem dá o acesso é o admin
+  (SDR-117).
+- **`preencher_marca()` é `security definer`**, diferente de
+  `preencher_organizacao_unica()`: contar as marcas da organização como o
+  operador contaria só as que ele vê, e uma organização com duas marcas
+  pareceria ter uma. A marca atual só vale quando é da organização da linha.
+- **O grant de update de `marcas` é só de `nome` e `cor`.** Criar (SDR-115),
+  pausar e arquivar (SDR-118) vão pela conexão do sistema.
+- **`marcasDoOperador` roda pela conexão do sistema**, com a mesma conta de
+  `pode_ver_marca`, porque é a base de `buscarOperadorAtivo`, que também roda
+  fora do RLS e corrige a `marca_atual_id` (nula ou sem acesso) para a
+  primeira marca ativa que o operador vê, ou a primeira da lista se não houver
+  ativa. A lista traz ativas e pausadas; arquivada sai do seletor (§4.30). A
+  ordem é por nome, sem diferença de caixa nem de acento (`porNome`).
+- **Operador sem marca.** O contrato pede `marcaId: string`; sem nenhuma marca,
+  `marcaId` e `marcaNome` vêm vazios e a cor `cinza`, e `exigirOperadorNoApp`
+  manda para `/no-brand` antes de alguém usá-los. A tela fica fora do grupo
+  `(painel)`, sem a moldura, com o "Sair".
+- **Guarda de janela.** O `next-action` não é API documentada do Next 16
+  (nada em `node_modules/next/dist/docs`), então a guarda é um
+  `exigirOperadorNaAcao()` novo. Ele entra em `exigirOperadorComModuloNaAcao`,
+  que já é só de ação, e cobre todas as ações que passam por ele. Recusa com
+  `MarcaTrocadaEmOutraJanela` (o mesmo desenho de `ModuloNaoContratado`).
+  Sem cookie (janela aberta antes do deploy), passa, e o seletor grava o
+  cookie ao montar. As ações que chamam `exigirOperador()` direto (Contatos,
+  Segmentos e duas de Configurações) ficam para os tickets que levam as
+  tabelas delas para a marca (SDR-106 em diante), que trocam a chamada por
+  `exigirOperadorNaAcao()`.
+- **A troca não passa pela guarda**: é ela que resolve a janela que ficou
+  para trás. `trocarDeMarcaDoPainel` grava o cookie, e o seletor avisa as
+  outras abas pelo `BroadcastChannel("kakou-marca")` e recarrega a página. A
+  mensagem leva o id da aba, para a própria aba não recarregar duas vezes, e
+  a aba que já mostra a marca nova não recarrega.
+- **O cookie `kakou_marca` não é `httpOnly`**: o seletor lê no navegador para
+  conferir contra a marca da página. Ele guarda só o id da marca, e o banco é
+  quem decide o acesso. `sincronizarMarcaDaJanela` só regrava quando a marca
+  da página ainda é a do banco.
+- **O seletor substitui o `<Marca organizacao>`** na barra lateral e na barra
+  de cima do celular. No celular, a lista é uma folha de baixo, num portal no
+  `body`, porque o `backdrop-blur` da barra prenderia o `fixed` dentro dela.
+  O Esc da lista não fecha o menu do celular que está por baixo.
+- **O selo** usa a paleta das tags; o mapa de cores fica no componente, com o
+  mesmo valor do `globals.css`, para não mexer no CSS global num ticket de
+  fundação.
+- **Evento `marca_trocada`** em `eventos`, com `entidade = 'operador'`, o id do
+  operador e `{ de, para }` (só ids). Trocar para a marca em que já está não
+  grava evento.

@@ -95,7 +95,7 @@ describe("busca pela conversa (SDR-62)", () => {
     const [campanha] = await banco.db.query<{ busca: unknown }>("select busca from public.campanhas where id = $1::uuid", [campanhaId]);
     expect(campanha!.busca).toBeNull();
     const [evento] = await banco.db.query<{ payload: Record<string, unknown> }>("select payload from public.eventos where tipo = 'busca_conversada'");
-    expect(evento!.payload).toMatchObject({ mudancas: 3, duvidas: 0, modelo: "claude-haiku-4-5", versao_prompt: "busca-conversada-1" });
+    expect(evento!.payload).toMatchObject({ mudancas: 3, duvidas: 0, modelo: "claude-haiku-4-5", versao_prompt: "busca-conversada-2" });
   });
 
   it("o que já está na busca fica sem consultar o LinkedIn; nome com várias opções vira pergunta; nome sem opção, aviso", async () => {
@@ -174,14 +174,25 @@ describe("busca pela conversa (SDR-62)", () => {
     expect(empresas.every((e) => e.situacao === "a_procurar")).toBe(true);
   });
 
-  it("sem cargo no pedido, os cargos ficam como estavam", async () => {
+  it("sem cargo no pedido e sem lista, os cargos ficam como estavam", async () => {
     interpretador.pedidos.push(pedido({ cargos: [] }));
     const resultado = await conversar("Tira todos os cargos");
     expect(resultado).toMatchObject({
       ok: true,
       busca: { cargos: ["Head de E-commerce", "Diretor de E-commerce"] },
-      avisos: ["A busca precisa de pelo menos um cargo: os cargos ficaram como estavam."],
+      avisos: ["Sem lista de empresas, a busca precisa de pelo menos um cargo: os cargos ficaram como estavam."],
     });
+  });
+
+  it("com lista, sem cargo é todo mundo das empresas (SDR-121)", async () => {
+    const [lista] = await comOperador(banco.db, operador, async (tx) =>
+      tx.query<{ id: string }>("insert into public.listas_de_empresas (organizacao_id, nome) values ($1::uuid, 'Administradoras judiciais') returning id", [
+        await idDaOrganizacaoGuessless(tx),
+      ]),
+    );
+    interpretador.pedidos.push(pedido({ cargos: [], lista: { acao: "usar", nome: "Administradoras judiciais", empresas: [] } }));
+    const resultado = await conversar("Todo mundo que trabalha nas administradoras");
+    expect(resultado).toMatchObject({ ok: true, busca: { cargos: [], lista: { id: lista!.id } }, avisos: [] });
   });
 
   it("modelo fora do ar ou mensagem vazia não mexem em nada", async () => {

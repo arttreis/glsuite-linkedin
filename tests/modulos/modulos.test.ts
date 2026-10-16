@@ -4,7 +4,15 @@ import { PGlite } from "@electric-sql/pglite";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Modulo } from "@/domain/modulos";
 import { buscarOperadorAtivo, comOperador } from "@/server/db/operador";
-import { alterarModulo, modulosDaOrganizacao, organizacoesNaPlataforma, situacaoDosModulos, usoDoMes } from "@/server/modulos/modulos";
+import {
+  alterarModulo,
+  exigirContaDaCasa,
+  modulosDaOrganizacao,
+  organizacoesNaPlataforma,
+  situacaoDosModulos,
+  usoDoMes,
+} from "@/server/modulos/modulos";
+import { gerarLinkDeConexao } from "@/server/perfis/conexao";
 import { aplicarMigrations, criarBancoDeTeste, type BancoDeTeste } from "../support/banco";
 import {
   ativarPerfil,
@@ -15,7 +23,9 @@ import {
   criarPerfilNaOrganizacao,
   criarPessoa,
   idDaOrganizacaoGuessless,
+  idDoPerfil,
 } from "../support/fixtures";
+import { UnipileFalso } from "../support/unipile-falso";
 
 const AGORA = new Date("2026-10-16T13:00:00Z");
 const ADMIN_DA_PLATAFORMA = "arthur@guessless.com.br";
@@ -216,6 +226,67 @@ describe("módulos por organização (SDR-69, §4.14)", () => {
       ["comunidades", false],
     ]);
     expect(Object.keys(acme.modulos[0]!).sort()).toEqual(["alteradoEm", "alteradoPor", "ativo", "desde", "modulo", "motivo"]);
+  });
+
+  describe("conta da casa na Plataforma (SDR-123)", () => {
+    const CAIU_EM = new Date("2026-10-16T18:58:00Z");
+
+    it("a leitura devolve a conta da casa com o status da Unipile e desde quando; sem conta da casa, null", async () => {
+      const luiz = await ativarPerfil(banco.db, "luiz", { accountId: "acc-luiz" });
+      await banco.db.query("update public.perfis set casa = true, unipile_status = 'CREDENTIALS', unipile_status_em = $2 where id = $1::uuid", [
+        luiz,
+        CAIU_EM,
+      ]);
+      const nova = await criarOrganizacao(banco.db, { nome: "Acme" });
+
+      const organizacoes = await organizacoesNaPlataforma(banco.db);
+      expect(organizacoes.find((o) => o.id === guessless)!.contaDaCasa).toEqual({
+        id: luiz,
+        nome: expect.any(String),
+        conectada: true,
+        unipileStatus: "CREDENTIALS",
+        unipileStatusEm: CAIU_EM,
+      });
+      expect(organizacoes.find((o) => o.id === nova)!.contaDaCasa).toBeNull();
+    });
+
+    it("conta da casa sem LinkedIn vem como não conectada, para o botão vincular", async () => {
+      const luiz = await idDoPerfil(banco.db, "luiz");
+      await banco.db.query("update public.perfis set casa = true, unipile_account_id = null where id = $1::uuid", [luiz]);
+
+      const daGuessless = (await organizacoesNaPlataforma(banco.db)).find((o) => o.id === guessless)!;
+      expect(daGuessless.contaDaCasa).toMatchObject({ id: luiz, conectada: false, unipileStatus: null, unipileStatusEm: null });
+    });
+
+    it("recusa reconectar pela Plataforma um perfil que não é a conta da casa", async () => {
+      const arthur = await ativarPerfil(banco.db, "arthur", { accountId: "acc-arthur" });
+      await expect(exigirContaDaCasa(banco.db, arthur)).rejects.toThrow("Este perfil não é a conta da casa.");
+
+      const luiz = await ativarPerfil(banco.db, "luiz", { accountId: "acc-luiz" });
+      await banco.db.query("update public.perfis set casa = true where id = $1::uuid", [luiz]);
+      expect(await exigirContaDaCasa(banco.db, luiz)).toBe(luiz);
+    });
+
+    it("o link da conta da casa é reconnect e volta para a Plataforma; sem conta, create", async () => {
+      const unipile = new UnipileFalso();
+      const deps = { db: banco.db, unipile, urlApp: "https://sdr.guessless.com.br", segredo: "segredo-dos-webhooks-123" };
+      // A conta da casa nunca ativa (§4.4): fica pausada, com a conta da Unipile.
+      const luiz = await idDoPerfil(banco.db, "luiz");
+      await banco.db.query("update public.perfis set casa = true, unipile_account_id = 'acc-luiz', unipile_status = 'CREDENTIALS' where id = $1::uuid", [luiz]);
+
+      await gerarLinkDeConexao(deps, { perfilId: await exigirContaDaCasa(banco.db, luiz), agora: AGORA, voltarPara: "/platform" });
+      expect(unipile.chamadasDe("gerarLinkDeConexao")[0]).toMatchObject({
+        tipo: "reconnect",
+        contaParaReconectar: "acc-luiz",
+        nome: luiz,
+        sucessoUrl: "https://sdr.guessless.com.br/platform?conexao=ok",
+        falhaUrl: "https://sdr.guessless.com.br/platform?conexao=falhou",
+      });
+
+      await banco.db.query("update public.perfis set unipile_account_id = null, unipile_status = null where id = $1::uuid", [luiz]);
+      await gerarLinkDeConexao(deps, { perfilId: luiz, agora: AGORA, voltarPara: "/platform" });
+      expect(unipile.chamadasDe("gerarLinkDeConexao")[1]).toMatchObject({ tipo: "create", sucessoUrl: "https://sdr.guessless.com.br/platform?conexao=ok" });
+    });
   });
 
   it("a migration para antes se já existe uma tabela de mesmo nome que não é do Kakou (banco dividido)", async () => {

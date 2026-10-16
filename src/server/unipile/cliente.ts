@@ -168,6 +168,49 @@ export function corpoDaBuscaClassica(filtros: FiltrosDaBusca): Record<string, un
   return corpo;
 }
 
+/** Segmentos fixos dos caminhos da Unipile; o resto é identificador. */
+const SEGMENTOS_FIXOS = new Set([
+  "accounts",
+  "attendees",
+  "chat_attendees",
+  "chats",
+  "hosted",
+  "invite",
+  "link",
+  "linkedin",
+  "me",
+  "messages",
+  "parameters",
+  "posts",
+  "search",
+  "sent",
+  "users",
+  "webhooks",
+]);
+
+/**
+ * Troca por `:id` todo segmento que não é fixo: `/users/joao-silva-123` vira
+ * `/users/:id`. O slug público do LinkedIn identifica a pessoa (LGPD), e
+ * chat, conta e convite também não têm o que fazer no log.
+ */
+export function caminhoSemIdentificador(caminho: string): string {
+  return caminho
+    .split("/")
+    .map((segmento) => (segmento === "" || SEGMENTOS_FIXOS.has(segmento) ? segmento : ":id"))
+    .join("/");
+}
+
+/**
+ * Uma linha nos logs por resposta recusada ou falha de rede, para achar a
+ * Unipile falhando com `vercel logs --query "Unipile 401"`. Sem corpo, header,
+ * chave, query string (a query leva `account_id` e termos de busca) nem
+ * identificador no caminho.
+ */
+function registrarFalha(metodo: string, caminho: string, erro: ErroUnipile): ErroUnipile {
+  console.warn(`Unipile ${erro.status} ${erro.tipo} ${metodo} ${caminhoSemIdentificador(caminho)}`);
+  return erro;
+}
+
 export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
   const host = config.dsn.replace(/^https?:\/\//, "").replace(/\/+$/, "");
   const base = `https://${host}/api/v1`;
@@ -196,7 +239,7 @@ export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
     try {
       resposta = await executar(url, { method: metodo, headers, body, signal: AbortSignal.timeout(timeoutMs) });
     } catch (erro) {
-      throw new ErroUnipile({ status: 0, tipo: "rede", titulo: (erro as Error).message });
+      throw registrarFalha(metodo, caminho, new ErroUnipile({ status: 0, tipo: "rede", titulo: (erro as Error).message }));
     }
 
     const corpoTexto = await resposta.text();
@@ -206,7 +249,7 @@ export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
     } catch {
       corpo = undefined;
     }
-    if (!resposta.ok) throw ErroUnipile.deResposta(resposta.status, corpo, corpoTexto);
+    if (!resposta.ok) throw registrarFalha(metodo, caminho, ErroUnipile.deResposta(resposta.status, corpo, corpoTexto));
     return (corpo ?? {}) as T;
   }
 

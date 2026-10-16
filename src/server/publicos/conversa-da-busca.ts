@@ -148,7 +148,6 @@ export async function conversarSobreABusca(
 
   const { cargos, cortados } = cargosDoPedido(pedido.cargos);
   if (cortados > 0) avisos.push("A busca aceita até 10 cargos: ficaram os 10 primeiros.");
-  if (cargos.length === 0 && atual.data.cargos.length > 0) avisos.push("A busca precisa de pelo menos um cargo: os cargos ficaram como estavam.");
 
   const resolver = { unipile: deps.unipile, accountId: conta.account_id };
   const regioes = await resolverParametros(resolver, { tipo: "LOCATION", nomes: pedido.regioes, atuais: atual.data.regioes, rotulo: REGIAO });
@@ -177,9 +176,14 @@ export async function conversarSobreABusca(
     } else avisos.push(`Não consegui criar a lista: ${criada.erro}`);
   }
 
+  // Com lista, sem cargo é "todo mundo das empresas" (SDR-121); sem lista, os cargos ficam como estavam.
+  const semCargoSemLista = cargos.length === 0 && lista === null;
+  if (semCargoSemLista && atual.data.cargos.length > 0) {
+    avisos.push("Sem lista de empresas, a busca precisa de pelo menos um cargo: os cargos ficaram como estavam.");
+  }
   const busca: RascunhoDaBusca = {
     ...atual.data,
-    cargos: cargos.length > 0 ? cargos : atual.data.cargos,
+    cargos: semCargoSemLista ? atual.data.cargos : cargos,
     palavras: pedido.palavras.trim().slice(0, 200),
     regioes: regioes.itens,
     setores: setores.itens,

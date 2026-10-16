@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buscaDoPublico, cargoDaBusca, mesmosFiltros, saldoDeBusca, tamanhoDoPublico, type BuscaDoPublico } from "./busca";
+import { buscaDoPublico, cargoDaBusca, faltaCargo, mesmosFiltros, saldoDeBusca, tamanhoDoPublico, type BuscaDoPublico } from "./busca";
 
 const BUSCA: BuscaDoPublico = {
   cargos: ["Head de E-commerce", "Diretor de E-commerce"],
@@ -33,6 +33,15 @@ describe("busca do público", () => {
   it("busca salva antes da lista de empresas continua valendo, sem lista e do começo", () => {
     const antiga = { cargos: ["CEO"], palavras: "", regioes: [], setores: [], cursor: null, esgotada: false };
     expect(buscaDoPublico.parse(antiga)).toEqual({ ...antiga, lista: null, parte: 0, assinatura: null });
+  });
+
+  it("cargo só é obrigatório sem lista de empresas (SDR-121)", () => {
+    const lista = { id: "6f1c1f0e-7a4b-4c3a-9d7e-1a2b3c4d5e6f", nome: "Administradoras judiciais" };
+    expect(faltaCargo({ cargos: [], lista: null })).toBe(true);
+    expect(faltaCargo({ cargos: [], lista })).toBe(false);
+    expect(faltaCargo({ cargos: ["CEO"], lista: null })).toBe(false);
+    expect(buscaDoPublico.safeParse({ ...BUSCA, cargos: [], lista }).success).toBe(true);
+    expect(cargoDaBusca([])).toBe("");
   });
 
   it("saldo do dia nunca fica negativo", () => {

@@ -2,7 +2,7 @@
 
 10/10/2026 · uso interno · dono: Arthur · módulos, contatos e disparos em
 16/10/2026 (Marco D) · lançamentos, Instagram, Facebook e comunidades em
-16/10/2026 (Marco E)
+16/10/2026 (Marco E) · multi-marca em 16/10/2026 (Marco F)
 
 Substitui o épico de 29/09/2026 (jornada do Kakou, SDR-01 a SDR-34), que está
 no histórico do git até o commit `604e192`. O motor construído naquele épico
@@ -31,6 +31,12 @@ o próximo, a agenda de mensagens para todos os grupos e quem comprou. E o SDR
 deixa de ser só do LinkedIn: responde no Instagram, no Messenger e no Telegram,
 e quem comenta a palavra-chave num post recebe uma DM (§4.26 a §4.28). Entram
 três módulos: Instagram, Facebook e Comunidades.
+
+Desde o Marco F, a organização tem **marcas** (§4.30). A GuessLess opera as
+marcas dos clientes dela numa organização só. Cada marca tem a própria análise,
+o próprio SDR, os próprios canais e bots, contatos, campanhas e lançamentos, e
+o dado de uma marca não aparece na outra. A conta do LinkedIn se conecta na
+marca e pode servir a mais de uma (D43).
 
 ## 2 · A experiência
 
@@ -133,7 +139,8 @@ verifica.
   `guessless.com.br`). Qualquer outro e-mail não recebe link.
 - No primeiro acesso de um e-mail liberado que ainda não é operador, nasce uma
   organização nova, e a pessoa é admin dela. Cada organização tem a própria
-  análise, SDR, contas e leads.
+  análise, SDR, contas e leads; desde o Marco F, cada **marca** da organização
+  (§4.30).
 - Organização sem o primeiro acesso concluído só vê o primeiro acesso (§2.1).
   Concluído = LinkedIn vinculado e a primeira campanha com permissão. Depois
   disso o primeiro acesso não volta.
@@ -407,11 +414,17 @@ LinkedIn e, desde o Marco E, no Instagram, no Messenger e no Telegram (§4.26).
   procura não conta no teto de busca do dia (é consulta de lista, como região
   e setor).
 - A busca da campanha tem o filtro opcional **"Só nestas empresas"**: uma
-  lista salva. Com lista, a região deixa de ser obrigatória (a lista já
-  delimita); cargos, palavras-chave, setor e região continuam valendo juntos.
+  lista salva. Com lista, a região e o cargo deixam de ser obrigatórios (a
+  lista já delimita); cargos, palavras-chave, setor e região continuam
+  valendo juntos quando a pessoa põe. Com lista e nenhum outro filtro, a
+  busca traz **todo mundo que trabalha nas empresas da lista**; um botão
+  "Todo mundo destas empresas" tira os outros filtros de uma vez. Sem lista,
+  a busca precisa de pelo menos um cargo e uma região.
   Empresa ainda não procurada ou esperando escolha fica fora da busca até ser
   resolvida, e a tela diz quantas são. A busca roda por partes: as achadas em
-  grupos de 10 páginas e uma parte para cada empresa sem página. Teto do dia,
+  grupos de 10 páginas (uma página por parte quando não há cargo, para
+  nenhuma parte passar do teto de resultados do LinkedIn) e uma parte para
+  cada empresa sem página. Teto do dia,
   suspensão por limite, opt-out, um alvo um dono, cooldown e nota seguem
   iguais. Trocar a lista é mudar o filtro: a busca recomeça do início. Se a
   lista mudar (empresa entra, sai ou é escolhida), a busca também recomeça do
@@ -451,6 +464,11 @@ LinkedIn e, desde o Marco E, no Instagram, no Messenger e no Telegram (§4.26).
 Empresa e SDR aparecem com o SDR no LinkedIn, Instagram, Facebook ou
 Comunidades (§4.26); LinkedIn, só com o SDR no LinkedIn. Conectar e
 desconectar canais é do admin.
+
+Desde o Marco F, as abas se dividem em **Marca** (Marca, Empresa, SDR,
+LinkedIn, Instagram e Facebook, WhatsApp, Telegram, Integrações), que valem
+para a marca atual, e **Organização** (Marcas, Equipe, Plano). A Equipe ganha
+as marcas de cada um (§4.30).
 
 ### 4.13 · Regras do motor que continuam
 
@@ -509,8 +527,12 @@ E três que são do próprio motor:
 - Toda organização tem a **base**, sem contratar nada: Dashboard, Contatos
   (com tags e segmentos), Equipe e Plano (D12).
 - Quem liga e desliga módulo é a GuessLess, na tela **Plataforma**, que só
-  abre para os e-mails em `PLATAFORMA_ADMINS`. Cada mudança grava quem, quando
-  e o motivo. Não há cobrança automática nesta versão (§3, D16).
+  abre para quem está em `PLATAFORMA_ADMINS`: e-mails inteiros ou domínios
+  começando com `@`. Em produção são `@guessless.com.br` e `@guessless.ca`,
+  ou seja, todo e-mail da GuessLess (SDR-126). O domínio casa exato: o e-mail
+  termina em `@<domínio>` e não tem outro `@`; subdomínio e sufixo parecido
+  não abrem. Variável vazia, ninguém abre. Cada mudança grava quem, quando e o
+  motivo. Não há cobrança automática nesta versão (§3, D16).
 - Organização nova (§4.1) nasce com o SDR no LinkedIn, como hoje; as que já
   existem também. A organização da GuessLess ganha todos.
 - **Módulo desligado:** as telas dele somem do menu; a rota abre o Plano
@@ -538,6 +560,11 @@ E três que são do próprio motor:
   mensagens; mensagens enviadas por WhatsApp e por Telegram; contatos). Módulo
   fora do plano tem o botão "Quero contratar", que leva ao comercial da
   GuessLess (`COMERCIAL_URL`).
+- A **Plataforma** mostra também a conta da casa de cada organização (§4.4),
+  com o status da Unipile e desde quando, e o botão "Reconectar a conta da
+  casa" ("Vincular", se ela ainda não tem LinkedIn). O hosted auth volta para
+  a Plataforma. A conta da casa não aparece em Configurações: quando ela cai,
+  é a GuessLess quem reconecta.
 
 ### 4.15 · Contatos
 
@@ -1009,6 +1036,75 @@ Só existe se o teste de conexão passar (T-11). O lançamento funciona sem ele.
   clique, e quem opera é avisado. "Pausar o número" para tudo. Kill switch:
   `comunidades.numero_ativo`.
 
+### 4.30 · Marcas
+
+O primeiro caso é a GuessLess operando as marcas dos clientes dela: donos de
+dados diferentes dentro de uma organização só (D42). Por isso a marca é a
+fronteira dos dados, e a organização só agrupa a equipe e o plano.
+
+- **O que é da marca:** a análise do site, o SDR (com versões e o chat de
+  teste), os públicos, a prévia, a abordagem, as listas de empresas, as
+  campanhas, os leads e as conversas, os contatos, as tags, os segmentos, os
+  canais (WhatsApp, bot do Telegram, Instagram e Página, número dos grupos),
+  os disparos, os lançamentos, o checkout e as palavras-chave. Os uniques de
+  hoje passam a valer por marca: um SDR, um WhatsApp e um bot por marca.
+- **O que é da organização:** a equipe e o papel (admin ou operador), os
+  módulos e o plano, a conta da casa. Os módulos contratados valem para todas
+  as marcas.
+- **Acesso por marca** (D30). O admin vê todas as marcas. O operador vê só as
+  que o admin deu a ele, na Equipe. Quem não tem acesso a uma marca não vê
+  nada dela, nem pelo link de um aviso.
+- **A marca atual.** O operador trabalha numa marca por vez, escolhida no
+  seletor no topo da barra lateral (no celular, na barra de cima). A troca vale
+  para o app inteiro e fica guardada. Com uma marca só, o seletor mostra o nome
+  e não abre: nada muda para quem tem uma marca. O link de um aviso abre na
+  marca do aviso.
+- **A conta do LinkedIn se conecta na marca** (Configurações › Marca ›
+  LinkedIn) e pode estar em mais de uma marca. Vincular de novo uma conta que
+  já está noutra marca da organização não cria outro perfil: liga o mesmo
+  perfil à marca ("Usar uma conta já conectada"). O mesmo LinkedIn nunca vira
+  dois perfis.
+  - A campanha é de uma marca e roda num perfil ligado a ela. O SDR que
+    responde é o da marca da campanha.
+  - O teto continua do perfil, somando as campanhas de todas as marcas
+    (§4.13).
+  - Conversa fora de campanha: num perfil de uma marca só, é dessa marca; num
+    perfil de várias, fica sem marca, aparece para quem opera o perfil e só
+    humano responde (D35).
+  - Desligar a conta de uma marca pausa as campanhas daquela marca naquele
+    perfil, com o motivo. Religar não retoma (D36).
+- **Entre marcas** (D31 a D34):
+  - o opt-out do LinkedIn continua valendo para o Kakou inteiro; a outra marca
+    só vê "fora da busca", sem motivo nem origem;
+  - o "Não contatar mais" é da marca, porque o contato é da marca;
+  - um alvo, um dono continua global: uma régua ativa por pessoa. A outra
+    marca vê "em contato por outra campanha", sem nome nem marca;
+  - o cooldown de empresa vale também entre marcas no mesmo perfil.
+- **Campanha sem SDR não ativa** (D37): numa conta compartilhada, a voz do
+  perfil não é de cliente nenhum.
+- **Criar marca** (só admin, D38): pelo seletor ("+ Nova marca") ou em
+  Configurações › Organização › Marcas. São três passos na moldura do primeiro
+  acesso: **Marca** (nome, cor da paleta das tags e site opcional), **Análise**
+  e **SDR**. A marca nasce no primeiro passo; quem fecha no meio vê a marca
+  como "Configurando" e volta de onde parou. A análise se pula ("Pular por
+  agora"). LinkedIn, canais e a primeira campanha vêm depois, em
+  Configurações › Marca. A prévia pela conta da casa não roda para a marca
+  nova. O primeiro acesso da organização (§2.1) continua igual e cria a marca
+  1. Limite: `marcas.max_por_organizacao` (padrão 20).
+- **Pausar e arquivar** (só admin). A marca pausada para tudo o que sai por
+  ela (convites, o SDR, disparos, a agenda dos lançamentos); retomar não religa
+  nada sozinho. Só se arquiva marca pausada: ela sai do seletor, fica só
+  leitura e se restaura. Não existe excluir.
+- **Configurações** se dividem em **Marca** (Marca, Empresa, SDR, LinkedIn,
+  Instagram e Facebook, WhatsApp, Telegram, Integrações) e **Organização**
+  (Marcas, Equipe, Plano).
+- **Identidade:** o selo é a inicial sobre a cor da marca, sempre com o nome
+  escrito ao lado.
+- **Organização que já existe** vira uma marca só, com o nome dela e tudo o
+  que tem. Todo operador ganha acesso a ela.
+- Kill switch: `marcas.criar` (criar marca nova; desligado até as tabelas
+  estarem todas por marca, SDR-115).
+
 ## 5 · Arquitetura
 
 O motor fica como está. Muda o que está por cima e entra a conta da casa:
@@ -1247,6 +1343,36 @@ oficial e de Telegram do Marco D ficam como estão; o grupo do Telegram usa o
 `telegram_id` do contato, porque o id da pessoa é o mesmo no privado e no
 grupo.
 
+Entra no Marco F (nomes conferidos contra o banco do GL Suite em 16/10: `marcas`,
+`acessos_das_marcas` e `marcas_dos_perfis` estão livres; a `brands` de lá é do
+GL Suite e não se mistura):
+
+```text
+marcas (                                                                          -- §4.30
+  id, organizacao_id, nome, cor,                   -- cor: uma da paleta das tags
+  status,                                          -- 'ativa' | 'pausada' | 'arquivada'
+  analise_e_sdr_em,                                -- concluiu os três passos de criar marca
+  criado_em, criado_por, pausada_em, pausada_por, arquivada_em, arquivada_por
+)
+acessos_das_marcas (operador_id, marca_id, criado_em, criado_por, primary key (operador_id, marca_id))
+operadores        + marca_atual_id                 -- a marca do seletor
+marcas_dos_perfis (perfil_id, marca_id, ligado_em, ligado_por, primary key (perfil_id, marca_id))
++ marca_id em ofertas, sdrs, sdr_testes, publicos, previas, abordagens, listas_de_empresas,
+  campanhas, leads e conversas (denormalizados para o RLS), contatos, tags, segmentos,
+  importacoes_de_contatos, canais, disparos, lancamentos e nas tabelas-raiz do Marco E
+  (grupos, checkouts, conversas_dos_canais, automacoes_de_comentario, mencoes_dos_grupos)
+public.pode_ver_marca(marca)   -- mesma organização e (admin ou acesso)
+public.marca_atual()           -- operadores.marca_atual_id, quando pode ver; senão null
+public.preencher_marca()       -- trigger: sem marca informada, usa a atual ou a única da
+                               -- organização; com mais de uma e sem contexto, recusa
+```
+
+A migração é aditiva até o SDR-115: `marca_id` nullable com backfill para a
+marca 1, unique novo ao lado do antigo, policy por `marca_id = marca_atual()`
+(com uma marca por organização, devolve as mesmas linhas de hoje). O SDR-115
+derruba os uniques por organização e põe `not null`, quando nenhum código no
+ar depende mais deles.
+
 ### 6.1 · Estados do lead
 
 Não mudam:
@@ -1293,7 +1419,7 @@ tirada é `rejeitado`. Toda transição grava um evento.
 | T-4 | Resend com domínio verificado | aviso de "o SDR chamou você"; desde o Marco E, também o aviso de hora de mandar e o de grupo quase cheio (SDR-82, SDR-93), que sem ela só aparecem no Dashboard | Arthur |
 | T-5 | `SUPABASE_SECRET_KEY` do projeto do GL Suite na Vercel | primeiro acesso de e-mail novo (SDR-40) | Arthur |
 | T-6 | Migrations do Marco D aplicadas por SQL no banco do GL Suite (nunca por `db push`) | tudo do Marco D | Arthur |
-| T-7 | `PLATAFORMA_ADMINS` e `COMERCIAL_URL` na Vercel | ligar módulos pela tela e o "Quero contratar" (SDR-69) | Arthur |
+| T-7 | `PLATAFORMA_ADMINS` e `COMERCIAL_URL` na Vercel. Em Production, `PLATAFORMA_ADMINS=@guessless.com.br,@guessless.ca` (SDR-126) e redeploy | ligar módulos pela tela e o "Quero contratar" (SDR-69); abrir a Plataforma (SDR-123, SDR-124) | Arthur |
 | T-8 | `SEGREDOS_CHAVE` (32 bytes aleatórios em base64) na Vercel. Trocar a chave invalida os tokens guardados | conectar WhatsApp e Telegram (SDR-72, SDR-73) | Arthur |
 | T-9 | Um número de WhatsApp Business de verdade, com o app da empresa na Meta, para o primeiro disparo real (o código foi testado só com a Meta de mentira) | aceite do SDR-72 com serviço real | Arthur |
 | T-10 | pg_cron dos disparos a cada minuto (`supabase/snippets/disparos-pg-cron.sql`) | disparo agendado e disparo que segue com a tela fechada (SDR-72) | Arthur |
@@ -1309,6 +1435,7 @@ tirada é `rejeitado`. Toda transição grava um evento.
 | T-20 | Id do Pixel da Meta da GuessLess | SDR-83 | Arthur |
 | T-21 | Bot da GuessLess conectado (SDR-73) com grupos liberados no @BotFather (`/setjoingroups`) e o modo privacidade ligado; os grupos do lançamento criados no app do Telegram | SDR-84 em produção | Arthur |
 | T-22 | Migrations do Marco E aplicadas por SQL no banco do GL Suite (como o T-6), incluindo o bucket de mídia com o nome conferido | tudo do Marco E | Arthur |
+| T-23 | Migrations do Marco F aplicadas por SQL no banco do GL Suite (como o T-6), uma por ticket, antes do merge dele; a do SDR-115 só depois do smoke de `marca_id` nulo dar 0 em todas as tabelas | tudo do Marco F | Arthur |
 
 ## 9 · Tickets
 
@@ -1603,6 +1730,19 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   conta quantas de até quantas e mostra cada uma; quando a IA passa ao
   Mercado, Negócio e Produto ficam feitos; leitura de mais de 2 minutos mostra
   o aviso; leitura antiga, sem o teto gravado, conta só as lidas.
+
+**SDR-121 · Todo mundo das empresas da lista**
+- Pedido: buscar os leads que trabalham nas empresas da lista selecionada sem
+  pôr nenhum outro filtro, para achar todo mundo desses lugares.
+- Com lista de empresas (§4.11), o cargo fica opcional, como a região. Sem
+  cargo, cada empresa achada é uma parte da busca. Na aba Leads, "Todo mundo
+  destas empresas" tira cargos, palavras-chave, regiões e setores. A busca
+  pela conversa aceita "todo mundo dessas empresas" e deixa os cargos vazios.
+- Aceite: com lista e sem nenhum outro filtro, a busca roda e traz todo mundo
+  das empresas, uma página por parte, até esgotar; pôr um cargo de volta
+  recomeça do início, em grupos de 10; sem lista, busca sem cargo não salva
+  nem roda; teto do dia, opt-out, um alvo um dono, cooldown e nota seguem
+  iguais.
 
 ### Marco D · Módulos, contatos e disparos
 
@@ -2250,6 +2390,54 @@ export function casaComAPalavra(texto: string, palavras: readonly string[], soAP
 tirarDosGruposDoTelegram(tx: Db, p: { contatoId: string; lancamentoId: string; agora: Date }): Promise<number>;
 ```
 
+### Marco F · Multi-marca
+
+Pedido do Arthur em 16/10/2026: "o usuário pode adicionar mais marcas dentro do
+Kakou (cada marca tem seu contexto, seus bots, etc)". Decidido com ele: o
+primeiro caso é a GuessLess operando os clientes dela; a marca fica dentro da
+organização e é a fronteira dos dados (D42); a conta do LinkedIn se conecta na
+marca e pode servir a mais de uma (D43); o Marco E segue em paralelo (D44).
+Regras na §4.30, modelo na §6, decisões D30 a D44. Os tickets são as
+sub-issues da #94; o corpo de cada uma é o prompt.
+
+**O corte.** O SDR-115 é o portão: a segunda marca só nasce quando todas as
+tabelas de dado são por marca. Até lá, cada ticket é aditivo e não muda nada
+para quem tem uma marca só. "Todas as marcas" (a visão consolidada) vem depois
+do MVP.
+
+| Onda | Ticket | Issue | Depende de |
+|---|---|---|---|
+| 16 | SDR-105 As marcas, a marca atual de cada operador e o seletor | #95 | — |
+| 17 | SDR-106 Análise, SDR e chat de teste por marca | #96 | 105 |
+| 17 | SDR-108 Contas do LinkedIn ligadas a marcas (N:N) | #98 | 105 |
+| 17 | SDR-109 Contatos, tags, segmentos e importação por marca | #99 | 105 |
+| 17 | SDR-114 Lançamentos por marca | #104 | 105, SDR-74 (#63) |
+| 18 | SDR-107 Campanha com marca e o agente pela marca da campanha | #97 | 106, 108, SDR-75 (#64) |
+| 18 | SDR-111 WhatsApp e bot do Telegram por marca | #101 | 105, 109 |
+| 18 | SDR-117 Acesso por marca na Equipe e avisos para quem tem acesso | #107 | 105, 107, SDR-78 (#67) |
+| 19 | SDR-110 O lead do LinkedIn vira contato da marca da campanha | #100 | 107, 109 |
+| 19 | SDR-112 Disparos por marca | #102 | 109, 111 |
+| 19 | SDR-113 Públicos, prévia, abordagem e listas por marca | #103 | 107, 108 |
+| 19 | SDR-116 Configurações divididas em Marca e Organização, com a aba Marcas | #106 | 106, 108, 111 |
+| 20 | SDR-115 Criar uma marca em três passos (o portão) | #105 | 106 a 114 e as issues do E que criam tabela de marca já fechadas |
+| 20 | SDR-118 Pausar, retomar e arquivar uma marca | #108 | 107, 111, 112, 114 |
+| 21 | SDR-119 Todas as marcas: Dashboard e Precisa de você (refinar) | #109 | 115, 117 |
+| 22 | SDR-120 Todas as marcas: Chats e Pipeline com selo e filtro (refinar) | #110 | 115, 119 |
+
+Caminho crítico: 105 → 106 → 107 → 113 → 115. As issues do Marco E que ainda
+não começaram ganham, no próprio corpo, a seção "Multi-marca (Marco F)" com o
+`marca_id` da tabela delas e esperam o SDR-105.
+
+### Contas do LinkedIn na Unipile
+
+O que travou em 16/10/2026 com as contas na Unipile e o que faltava para
+operá-las sem mexer no banco à mão. Os tickets são as sub-issues da #113.
+
+| Onda | Ticket | Issue | Depende de |
+|---|---|---|---|
+| 1 | SDR-126 Abrir a Plataforma para todo e-mail @guessless.com.br e @guessless.ca (§4.14) | #124 | — |
+| 2 | SDR-123 Reconectar a conta da casa pela Plataforma (§4.14) | #116 | — |
+
 ## 10 · Decisões abertas
 
 | # | Decisão | Sugestão | Dono |
@@ -2293,6 +2481,26 @@ Do Marco E:
 | D27 | O que guardar dos grupos | ✅ decidido em 16/10: entradas e saídas sempre; texto só do que chama o SDR, por 90 dias, nunca para treino (termos do Telegram e LGPD) | Arthur |
 | D28 | Login da Meta | ✅ decidido em 16/10: um app da GuessLess com Facebook Login for Business para Instagram e Messenger. Consequência: o Instagram do cliente precisa estar ligado a uma Página; quem não tem, não conecta nesta versão | Arthur |
 | D29 | Tags do lançamento | ✅ decidido em 16/10: tag do lançamento e tag da origem, nunca uma por grupo (o teto é de 200 tags por organização). Em qual grupo a pessoa está aparece no contato | Arthur |
+
+Do Marco F:
+
+| # | Decisão | Sugestão | Dono |
+|---|---|---|---|
+| D30 | Papel e acesso | ✅ decidido em 16/10: papel (admin ou operador) por organização, acesso por marca. O admin vê todas; login de cliente e papel por marca ficam para depois | Arthur |
+| D31 | Opt-out do LinkedIn entre marcas | ✅ decidido em 16/10: continua global; a outra marca só vê "fora da busca", sem motivo nem origem | Arthur |
+| D32 | "Não contatar mais" | ✅ decidido em 16/10: por marca, porque o contato é da marca (o controlador do dado é o cliente) | Arthur |
+| D33 | Um alvo, um dono | ✅ decidido em 16/10: continua global, uma régua ativa por pessoa; a outra marca vê "em contato por outra campanha" | Arthur |
+| D34 | Cooldown de empresa | ✅ decidido em 16/10: vale também entre marcas no mesmo perfil | Arthur |
+| D35 | Conversa fora de campanha num perfil de várias marcas | ✅ decidido em 16/10: fica sem marca e só humano responde; num perfil de uma marca, é dela | Arthur |
+| D36 | Desligar a conta de uma marca | ✅ decidido em 16/10: pausa as campanhas da marca naquele perfil, com motivo; religar não retoma | Arthur |
+| D37 | Marca sem SDR | ✅ decidido em 16/10: a campanha dela não ativa | Arthur |
+| D38 | Criar marca | ✅ decidido em 16/10: três passos (Marca, Análise, SDR); LinkedIn, canais e campanha depois; sem prévia da conta da casa | Arthur |
+| D39 | Módulos e limite | ✅ decidido em 16/10: módulos e plano por organização; até `marcas.max_por_organizacao` marcas (padrão 20, palpite) | Arthur |
+| D40 | Nome das tabelas | ✅ conferido em 16/10: `marcas`, `acessos_das_marcas` e `marcas_dos_perfis` livres no GL Suite. Ligar a marca à `brands` do GL Suite fica para depois | Arthur |
+| D41 | Hotmart | um checkout por marca; a mesma conta da Hotmart em duas marcas fica fora [verificar se a Hotmart aceita um postback por produto] | Arthur |
+| D42 | Marca é organização ou fica dentro dela | ✅ decidido em 16/10: dentro da organização, com `marca_id`, e a marca é a fronteira dos dados. O primeiro caso é a GuessLess operando clientes | Arthur |
+| D43 | Conta do LinkedIn e marca | ✅ decidido em 16/10: a conta se conecta na marca e pode servir a mais de uma (`marcas_dos_perfis`) | Arthur |
+| D44 | Marco F e Marco E em paralelo | ✅ decidido em 16/10: o SDR-105 entra já; as issues do E que ainda não começaram ganham `marca_id` no texto e esperam o 105; a #63 e a #64 terminam como estão | Arthur |
 
 ## 11 · Custos de operação
 

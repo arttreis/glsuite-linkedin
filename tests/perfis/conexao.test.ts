@@ -41,6 +41,22 @@ describe("conexão do perfil pela Unipile (hosted auth)", () => {
     expect(unipile.chamadasDe("gerarLinkDeConexao")[0]).toMatchObject({ tipo: "reconnect", contaParaReconectar: "acc-arthur" });
   });
 
+  it("conta removida da Unipile conecta de novo como conta nova, não como reconexão", async () => {
+    await ativarPerfil(banco.db, "arthur", { accountId: "acc-arthur" });
+    await banco.db.query("update public.perfis set unipile_status = 'DELETED', status = 'pausado', motivo_pausa = 'A conta foi removida da Unipile.' where slug = 'arthur'");
+    const perfilId = await idDoPerfil(banco.db, "arthur");
+    await gerarLinkDeConexao({ db: banco.db, unipile, urlApp: URL_APP, segredo: SEGREDO }, { perfilId, agora: AGORA });
+    const [pedido] = unipile.chamadasDe("gerarLinkDeConexao");
+    expect(pedido).toMatchObject({ tipo: "create" });
+    expect(pedido!.contaParaReconectar).toBeUndefined();
+
+    // A conta nova chega pelo callback e toma o lugar da apagada; o perfil segue pausado.
+    unipile.donos.set("acc-nova", { providerId: "ACoArthur", nome: "Arthur Reis", publicIdentifier: "arthur", premium: false, salesNavigator: false });
+    await registrarContaConectada({ db: banco.db, unipile }, { status: "CREATION_SUCCESS", account_id: "acc-nova", name: perfilId }, AGORA);
+    const [perfil] = await banco.db.query("select unipile_account_id, unipile_status, status from public.perfis where id = $1::uuid", [perfilId]);
+    expect(perfil).toEqual({ unipile_account_id: "acc-nova", unipile_status: "OK", status: "pausado" });
+  });
+
   it("link recusado vira mensagem: 401 é a chave da API, não a conta; o resto pede para tentar de novo", () => {
     expect(mensagemDaFalhaDoLink(new ErroUnipile({ status: 401, tipo: "missing_credentials", titulo: "Missing credentials" }))).toBe(
       "A Unipile recusou a chave da API (Unipile 401 missing_credentials: Missing credentials). Não é a conta do LinkedIn: peça ao admin para trocar a chave da API da Unipile.",
@@ -127,10 +143,7 @@ describe("conexão do perfil pela Unipile (hosted auth)", () => {
     await ativarPerfil(banco.db, "arthur", { accountId: "acc-arthur" });
     await ativarPerfil(banco.db, "juliano", { accountId: "acc-juliano" });
     unipile.contas.set("acc-arthur", { id: "acc-arthur", tipo: "LINKEDIN", nome: null, status: ["OK", "CREDENTIALS"] });
-    unipile.falharProxima("obterConta", new ErroUnipile({ status: 503, tipo: "http_503", titulo: "fora" }));
 
-    // A primeira chamada (arthur) falha com 503 e é ignorada nesta rodada.
-    expect(await sincronizarStatusDasContas(banco.db, unipile, AGORA)).toBe(0);
     expect(await sincronizarStatusDasContas(banco.db, unipile, AGORA)).toBe(1);
 
     const perfis = await banco.db.query<{ slug: string; status: string }>(
@@ -140,6 +153,47 @@ describe("conexão do perfil pela Unipile (hosted auth)", () => {
       { slug: "arthur", status: "pausado" },
       { slug: "juliano", status: "ativo" },
     ]);
+  });
+
+  it("sincronização com a chave recusada ou a Unipile fora sobe o erro em vez de dar sucesso", async () => {
+    await ativarPerfil(banco.db, "arthur", { accountId: "acc-arthur" });
+    await ativarPerfil(banco.db, "juliano", { accountId: "acc-juliano" });
+
+    unipile.falharProxima("obterConta", new ErroUnipile({ status: 401, tipo: "missing_credentials", titulo: "Missing credentials" }));
+    await expect(sincronizarStatusDasContas(banco.db, unipile, AGORA)).rejects.toThrow("missing_credentials");
+
+    unipile.falharProxima("obterConta", new ErroUnipile({ status: 503, tipo: "http_503", titulo: "Service Unavailable" }));
+    await expect(sincronizarStatusDasContas(banco.db, unipile, AGORA)).rejects.toThrow("503");
+
+    unipile.falharProxima("obterConta", new ErroUnipile({ status: 0, tipo: "rede", titulo: "fetch failed" }));
+    await expect(sincronizarStatusDasContas(banco.db, unipile, AGORA)).rejects.toThrow("rede");
+  });
+
+  it("recusa de uma conta só (401 invalid_credentials) pula a conta e as outras seguem", async () => {
+    await ativarPerfil(banco.db, "arthur", { accountId: "acc-arthur" });
+    await ativarPerfil(banco.db, "juliano", { accountId: "acc-juliano" });
+    for (const id of ["acc-arthur", "acc-juliano"]) {
+      unipile.contas.set(id, { id, tipo: "LINKEDIN", nome: null, status: ["CREDENTIALS"] });
+    }
+    unipile.falharProxima("obterConta", new ErroUnipile({ status: 401, tipo: "invalid_credentials", titulo: "Invalid credentials" }));
+
+    // A primeira conta consultada falha e é pulada; a outra cai e é pausada.
+    expect(await sincronizarStatusDasContas(banco.db, unipile, AGORA)).toBe(1);
+    expect(unipile.chamadasDe("obterConta")).toHaveLength(2);
+    const pausados = await banco.db.query(
+      "select slug from public.perfis where slug in ('arthur', 'juliano') and status = 'pausado'",
+    );
+    expect(pausados).toHaveLength(1);
+  });
+
+  it("conta que a Unipile não acha mais (404) vira DELETED e pausa o perfil", async () => {
+    await ativarPerfil(banco.db, "arthur", { accountId: "acc-arthur" });
+    unipile.falharProxima("obterConta", new ErroUnipile({ status: 404, tipo: "resource_not_found", titulo: "Not found" }));
+
+    // Só o arthur tem conta ligada nesta base, então a falha é dele.
+    await sincronizarStatusDasContas(banco.db, unipile, AGORA);
+    const [perfil] = await banco.db.query("select unipile_status, status from public.perfis where slug = 'arthur'");
+    expect(perfil).toEqual({ unipile_status: "DELETED", status: "pausado" });
   });
 
   it("registra os 3 webhooks uma vez só", async () => {
