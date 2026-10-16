@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Kanban, LayoutDashboard, Megaphone, MessagesSquare, Rocket, Settings, Users, type LucideIcon } from "lucide-react";
+import { Building2, Kanban, LayoutDashboard, Megaphone, MessagesSquare, Rocket, Send, Settings, Users, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { liberado, type ExigenciaDeModulo, type Modulo } from "@/domain/modulos";
@@ -18,6 +18,7 @@ const ITENS: Item[] = [
   { href: "/pipeline", rotulo: "Pipeline", icone: Kanban, modulo: "linkedin" },
   { href: "/campaigns", rotulo: "Campanhas", icone: Megaphone, modulo: "linkedin" },
   { href: "/contacts", rotulo: "Contatos", icone: Users },
+  { href: "/broadcasts", rotulo: "Disparos", icone: Send, modulo: ["whatsapp", "telegram"] },
   { href: "/settings", rotulo: "Configurações", icone: Settings },
 ];
 

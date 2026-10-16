@@ -4,9 +4,11 @@ import { notFound } from "next/navigation";
 import { Aviso } from "@/components/aviso";
 import { Cabecalho } from "@/components/cabecalho";
 import { ROTULO_DA_ORIGEM, telefoneLegivel } from "@/domain/contatos";
+import { NOME_DO_CANAL, type StatusDoEnvio } from "@/domain/disparos";
 import { ROTULO_DO_ESTADO } from "@/domain/estados";
 import { obterContato, type ContatoCompleto } from "@/server/contatos/contatos";
 import { listarTags } from "@/server/contatos/tags";
+import { disparosDoContato } from "@/server/disparos/disparos";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { exigirOperadorNoApp } from "@/server/supabase/servidor";
@@ -14,6 +16,17 @@ import { naoContatarMaisDoPainel } from "../acoes";
 import { TagsDoContato } from "../tags-do-contato";
 
 const FUSO = "America/Sao_Paulo";
+
+const SITUACAO_DO_ENVIO: Record<StatusDoEnvio, string> = {
+  pendente: "Na fila",
+  enviando: "Saindo",
+  enviado: "Enviada",
+  entregue: "Entregue",
+  lido: "Lida",
+  falhou: "Falhou",
+  pulado: "Ficou de fora",
+  cancelado: "Cancelada",
+};
 const data = (valor: Date | string) =>
   new Date(valor).toLocaleDateString("pt-BR", { timeZone: FUSO, day: "numeric", month: "short", year: "numeric" });
 
@@ -50,9 +63,10 @@ export default async function ContatoPage({ params, searchParams }: PageProps<"/
   const { id } = await params;
   const { msg } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const { contato, tags } = await comOperador(obterDb(), operador.id, async (tx) => ({
+  const { contato, tags, disparos } = await comOperador(obterDb(), operador.id, async (tx) => ({
     contato: await obterContato(tx, id),
     tags: await listarTags(tx, operador.organizacaoId),
+    disparos: await disparosDoContato(tx, id),
   }));
   if (!contato) notFound();
   const comLinkedin = operador.modulos.includes("linkedin");
@@ -119,6 +133,31 @@ export default async function ContatoPage({ params, searchParams }: PageProps<"/
               )}
             </div>
           </section>
+
+          {disparos.length > 0 && (
+            <section className="cartao flex flex-col gap-3 p-5" aria-labelledby="titulo-disparos-do-contato">
+              <h2 id="titulo-disparos-do-contato" className="text-[15px] font-semibold">
+                Disparos
+              </h2>
+              <ul className="flex flex-col gap-2">
+                {disparos.map((d) => (
+                  <li key={d.disparoId} className="rounded-xl bg-superficie-alta px-4 py-3 text-[13px]">
+                    <p className="flex flex-wrap items-baseline justify-between gap-2">
+                      <Link href={`/broadcasts/${d.disparoId}`} className="link font-medium">
+                        {d.nome}
+                      </Link>
+                      <span className="text-xs text-tinta-fraca">
+                        {NOME_DO_CANAL[d.canal]}
+                        {d.em ? ` · ${data(d.em)}` : ""}
+                      </span>
+                    </p>
+                    <p className="mt-0.5 text-tinta-suave">{SITUACAO_DO_ENVIO[d.status]}{d.motivo && (d.status === "falhou" || d.status === "pulado") ? `: ${d.motivo}` : ""}</p>
+                    {d.resposta && <p className="mt-1 whitespace-pre-line">Respondeu: “{d.resposta}”</p>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
 
         <div className="flex flex-col gap-5">

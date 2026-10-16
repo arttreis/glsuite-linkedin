@@ -2153,3 +2153,98 @@ interpretações abaixo são minhas e estão para o Arthur confirmar.
 - Telas: `/contacts/segments`, `/contacts/segments/new` e
   `/contacts/segments/[id]`. O botão "Segmentos" fica no cabeçalho de
   Contatos.
+
+### SDR-72 · Disparos no WhatsApp (16/10/2026)
+
+- Pesquisa em `docs/pesquisa/whatsapp-cloud-api.md` (fontes da Meta, lidas em
+  16/10/2026): Graph API v26.0, cobrança por mensagem entregue, limite por
+  portfólio em destinatários únicos por 24 h, 80 msg/s por número, sem chave de
+  idempotência, webhooks repetidos por até 7 dias e fora de ordem, e a tabela
+  de erros que a fila segue.
+- **Conexão pelo app do próprio cliente**, e não por um app da GuessLess: é o
+  único caminho que não pede App Review da GuessLess na Meta. Com isso, cada
+  canal guarda o app secret do cliente (cifrado), e o webhook é por canal
+  (`/api/webhooks/whatsapp/[canal]`), conferido com o segredo dele. A
+  inscrição usa `POST /{waba}/subscribed_apps` com `override_callback_uri` e o
+  verify token, para o cliente não ter de configurar o webhook à mão; se a
+  Meta recusar, o canal conecta e a tela mostra a URL e o token. O épico
+  (§4.19, T-9 e D15) foi corrigido neste PR: na primeira versão, ele previa o
+  app da GuessLess. O Embedded Signup entra quando a GuessLess for Tech
+  Provider, com a mesma tabela de canais.
+- **Segredos:** `server/segredos.ts`, AES-256-GCM com `SEGREDOS_CHAVE`
+  (formato `v1:iv:tag:corpo`). O verify token não é guardado: é um HMAC da
+  mesma chave com o id do canal. O painel não lê credencial: o grant de
+  `canais` para `authenticated` é por coluna, sem `credencial` e `segredo`
+  (grant na tabela valeria para todas as colunas). Conectar e desconectar vão
+  pela conexão do sistema, depois de conferir o admin e o módulo.
+- **Tabelas:** `canais`, `disparos`, `envios_do_disparo` (a fila),
+  `mensagens_dos_canais` (o que chega) e `webhooks_dos_canais` (o corpo cru,
+  com chave de idempotência = SHA-256 do corpo). Os webhooks dos canais não
+  usam `webhooks_recebidos`, porque o reprocessador do tick é da Unipile e
+  pegaria o que não é dele. `contatos` ganhou `whatsapp_wa_id` e
+  `whatsapp_usuario_id` (o BSUID, que pode vir sem telefone desde 04/2026).
+  Duas configurações novas: `disparos` (janela, intervalo, ritmo, lote,
+  tentativas, reserva) e `whatsapp` (preços do Brasil para a estimativa).
+- **Rascunho como o operador, confirmação pelo sistema.** O rascunho é do
+  RLS. A conferência e a lista da confirmação são montadas com o que o
+  operador vê no segmento (`contatosDoSegmento`, com o RLS dos contatos): o
+  disparo sai para quem a pessoa vê, e a tela mostra exatamente isso. A
+  confirmação grava os envios (os que recebem e os que ficam de fora, com o
+  motivo) numa transação do sistema, só se o disparo ainda é rascunho.
+- **O template vem do que o Kakou leu da Meta**, nunca do navegador: o
+  rascunho guarda o id e o servidor copia o template aprovado dos dados do
+  canal. As variáveis (corpo, cabeçalho de texto, mídia do cabeçalho e sufixo
+  de URL) vêm de um campo do contato ou de um texto fixo; o primeiro nome cai
+  no `primeiroNome` do nome completo quando o contato não tem.
+- **A fila** (`server/disparos/fila.ts`) segue o desenho do Votto: trava de
+  rodada (`pegarTrava`, 5 min), reserva por prazo (`reservado_ate`, 120 s) com
+  `for update skip locked`, e envio com a reserva vencida vira falha
+  "interrompido" ("pode ter chegado") sem nunca voltar sozinho. Erro de rede e
+  resposta sem o id também são "pode ter chegado". Os disparos saindo andam em
+  rodízio, um lote (40) de cada vez, para um disparo grande não segurar os
+  outros; a rodada para em 45 s e a próxima continua. Ritmo: 20 msg/s por
+  canal, bem abaixo das 80 da Meta.
+- **Conferência na hora do envio:** antes de cada mensagem, o contato é
+  conferido de novo (não contatar, saiu do canal, outro disparo em 24 h): quem
+  mudou depois da confirmação fica pulado, com o motivo.
+- **Erros** pela tabela da pesquisa (`classificarErroDaMeta`): do contato,
+  falha sem nova tentativa (131026); "saiu" (131050), falha e tira do
+  WhatsApp; ritmo (130429, 131056, 80007…), espera 30 s, 60 s, 120 s e falha
+  na terceira; "esperar" (131049), falha que volta no "Tentar de novo"; do
+  template (132000, 132001, 132015, 132016…) e da conta (190, 10, 200,
+  131042, 131048…), o envio volta para a fila sem gastar tentativa e o
+  disparo pausa; da conta, o canal também fica com erro. Código desconhecido
+  é tratado como ritmo (poucas tentativas).
+- **Limite da Meta:** antes de cada lote, a fila conta os contatos únicos que
+  o número alcançou em 24 h e pausa ao chegar no limite do tier do número
+  (`whatsapp_business_manager_messaging_limit`). O limite é do portfólio:
+  outro número ou outra ferramenta do mesmo portfólio não entram na conta, e
+  aí quem segura é a Meta [verificar o erro que ela devolve].
+- **Janela** das 8h às 21h em `America/Sao_Paulo`, todo dia (a configuração
+  `disparos.janela`). "Agora" fora da janela agenda para a próxima abertura;
+  agendar fora da janela é recusado com o horário que daria. O
+  `datetime-local` do agendamento é lido no fuso da janela (`instanteLocal`),
+  não no do servidor.
+- **Webhook:** `statuses` só fazem o envio andar (`proximoStatusDoEnvio`;
+  lida também marca entregue); `failed` traz o código e o motivo. `messages`
+  guardam a mensagem, acham o contato pelo wa_id, pelo telefone do wa_id
+  (normalizado, com o 9 do celular) ou pelo BSUID, e criam o contato que não
+  existe (origem WhatsApp, sem autorização). A resposta conta para o envio do
+  botão (`context.id`) ou para o último envio ao contato em 7 dias. "SAIR" e
+  companhia, o botão de saída e o `user_preferences` com `stop` tiram do
+  WhatsApp. Aviso de outro número da mesma WABA é ignorado. O status do
+  template muda pelo `message_template_status_update`.
+- **Módulo e canal:** desligar o módulo pausa os disparos daquele canal
+  (`alterarModulo`, como o LinkedIn pausa as contas); desconectar pausa e
+  apaga as credenciais. Retomar confere o módulo e o canal.
+- Telas: `/broadcasts` (lista com o andamento), `/broadcasts/new` (canal,
+  segmento, template, variáveis e a prévia com um contato de exemplo),
+  `/broadcasts/[id]` (conferência e confirmação; depois, andamento, falhas,
+  ficaram de fora e respostas, atualizando a cada 10 s enquanto sai) e
+  Configurações > WhatsApp. "Disparos" entra no menu com o WhatsApp ou o
+  Telegram. O Dashboard mostra os últimos disparos; o contato, os disparos que
+  recebeu; o Plano, as mensagens do mês.
+- [verificar] com um número real: o `override_callback_uri` dispensa mesmo a
+  configuração do webhook no app; o app do cliente precisa estar em modo Live
+  para receber webhook de produção; o 9º dígito no `wa_id`; o erro de quando
+  passa do limite do portfólio.

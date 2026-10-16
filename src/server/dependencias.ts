@@ -16,7 +16,10 @@ import { criarAjustadorDeSdrClaude, criarGeradorDeSdrClaude } from "@/server/sdr
 import type { GeradorDeSdr } from "@/server/sdr/sdr";
 import type { AjustadorDeSdr } from "@/server/sdr/teste";
 import { criarEnviadorResend } from "@/server/alertas/resend";
+import { enviadorDoWhatsapp, type EnviadorDoCanal } from "@/server/disparos/fila";
 import { criarClienteUnipile, type ClienteUnipile } from "@/server/unipile/cliente";
+import { criarClienteWhatsapp, type ClienteWhatsapp } from "@/server/whatsapp/cliente";
+import type { TipoDeCanal } from "@/domain/disparos";
 
 const envUnipile = lerEnv(
   z.object({
@@ -186,6 +189,26 @@ export function obterAjustadorDeSdr(): AjustadorDeSdr | null {
       : null;
   }
   return ajustadorDeSdr;
+}
+
+const envMeta = lerEnv(
+  z.object({
+    // A versão da Graph API fica aqui; cada versão vale pelo menos dois anos (docs/pesquisa/whatsapp-cloud-api.md).
+    META_GRAPH_VERSION: z.string().regex(/^v\d+\.\d+$/).default("v26.0"),
+  }),
+);
+
+let whatsapp: ClienteWhatsapp | undefined;
+
+/** A Cloud API do WhatsApp (§4.19). O token é de cada canal, então o cliente não guarda nenhum. */
+export function obterClienteWhatsapp(): ClienteWhatsapp {
+  whatsapp ??= criarClienteWhatsapp({ versao: envMeta().META_GRAPH_VERSION });
+  return whatsapp;
+}
+
+/** Quem manda por cada canal, para a fila dos disparos (§4.18). */
+export function obterEnviadores(): Partial<Record<TipoDeCanal, EnviadorDoCanal>> {
+  return { whatsapp: enviadorDoWhatsapp(obterClienteWhatsapp()) };
 }
 
 const envCron = lerEnv(z.object({ CRON_SECRET: z.string().min(16) }));

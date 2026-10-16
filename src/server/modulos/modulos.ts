@@ -1,4 +1,5 @@
 import { MODULOS, NOME_DO_MODULO, type Modulo } from "@/domain/modulos";
+import { pausarDisparosDoCanal } from "@/server/canais/canais";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import { pausarPerfil } from "@/server/perfis/pausa";
@@ -101,6 +102,15 @@ export async function alterarModulo(db: Db, p: MudancaDeModulo): Promise<Resulta
       em: p.agora,
     });
 
+    if (!p.ativo && (p.modulo === "whatsapp" || p.modulo === "telegram")) {
+      await pausarDisparosDoCanal(tx, {
+        organizacaoId: p.organizacaoId,
+        tipo: p.modulo,
+        motivo: `O módulo ${NOME_DO_MODULO[p.modulo]} foi desligado: ${p.motivo}`,
+        agora: p.agora,
+      });
+    }
+
     let contasPausadas = 0;
     if (!p.ativo && p.modulo === "linkedin") {
       const ativas = await tx.query<{ id: string }>(
@@ -128,6 +138,9 @@ export type UsoDoMes = {
   mensagensDoLinkedin: number;
   /** Contatos da organização, de todos os canais (base, §4.15). Não é do mês: é o total. */
   contatos: number;
+  /** Mensagens de disparo que saíram no mês, por canal (§4.18). */
+  mensagensDoWhatsapp: number;
+  mensagensDoTelegram: number;
 };
 
 /**
@@ -150,7 +163,11 @@ export async function usoDoMes(db: Db, p: { organizacaoId: string; agora: Date }
        (select count(*)::int from public.mensagens m, mes
          where m.perfil_id in (select id from contas) and m.direcao = 'saida'
            and m.em >= mes.inicio and m.em < $2::timestamptz) as "mensagensDoLinkedin",
-       (select count(*)::int from public.contatos where organizacao_id = $1::uuid) as contatos`,
+       (select count(*)::int from public.contatos where organizacao_id = $1::uuid) as contatos,
+       (select count(*)::int from public.envios_do_disparo e join public.disparos d on d.id = e.disparo_id, mes
+         where d.organizacao_id = $1::uuid and d.canal_tipo = 'whatsapp' and e.enviado_em >= mes.inicio and e.enviado_em < $2::timestamptz) as "mensagensDoWhatsapp",
+       (select count(*)::int from public.envios_do_disparo e join public.disparos d on d.id = e.disparo_id, mes
+         where d.organizacao_id = $1::uuid and d.canal_tipo = 'telegram' and e.enviado_em >= mes.inicio and e.enviado_em < $2::timestamptz) as "mensagensDoTelegram"`,
     [p.organizacaoId, p.agora],
   );
   return uso!;
