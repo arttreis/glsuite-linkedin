@@ -60,6 +60,17 @@ export function chaveRecusada(erro: unknown): boolean {
 export const PECA_A_CHAVE = "Não é a conta do LinkedIn: peça ao admin para trocar a chave da API da Unipile.";
 
 /**
+ * O que a tela diz quando a Unipile recusa um botão da Administração (registrar
+ * webhooks, atualizar status). Chave recusada aponta a chave; o resto é para
+ * tentar de novo. Erro que não é da Unipile sobe.
+ */
+export function mensagemDaRecusa(erro: unknown): string {
+  if (!(erro instanceof ErroUnipile)) throw erro;
+  if (chaveRecusada(erro)) return `A Unipile recusou a chave da API (${erro.message}). ${PECA_A_CHAVE}`;
+  return `A Unipile não respondeu (${erro.message}). Tente de novo em instantes.`;
+}
+
+/**
  * Como o despachante reage (§5.1 e §4.4):
  * - limite: conta para a parada automática e reagenda;
  * - conta: desconexão, checkpoint ou restrição, pausa o perfil na hora;

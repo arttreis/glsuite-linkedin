@@ -168,6 +168,16 @@ export function corpoDaBuscaClassica(filtros: FiltrosDaBusca): Record<string, un
   return corpo;
 }
 
+/**
+ * Uma linha nos logs por resposta recusada ou falha de rede, para achar a
+ * Unipile falhando com `vercel logs --query "Unipile 401"`. Sem corpo, header,
+ * chave nem query string (a query leva `account_id` e termos de busca).
+ */
+function registrarFalha(metodo: string, caminho: string, erro: ErroUnipile): ErroUnipile {
+  console.warn(`Unipile ${erro.status} ${erro.tipo} ${metodo} ${caminho}`);
+  return erro;
+}
+
 export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
   const host = config.dsn.replace(/^https?:\/\//, "").replace(/\/+$/, "");
   const base = `https://${host}/api/v1`;
@@ -196,7 +206,7 @@ export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
     try {
       resposta = await executar(url, { method: metodo, headers, body, signal: AbortSignal.timeout(timeoutMs) });
     } catch (erro) {
-      throw new ErroUnipile({ status: 0, tipo: "rede", titulo: (erro as Error).message });
+      throw registrarFalha(metodo, caminho, new ErroUnipile({ status: 0, tipo: "rede", titulo: (erro as Error).message }));
     }
 
     const corpoTexto = await resposta.text();
@@ -206,7 +216,7 @@ export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
     } catch {
       corpo = undefined;
     }
-    if (!resposta.ok) throw ErroUnipile.deResposta(resposta.status, corpo, corpoTexto);
+    if (!resposta.ok) throw registrarFalha(metodo, caminho, ErroUnipile.deResposta(resposta.status, corpo, corpoTexto));
     return (corpo ?? {}) as T;
   }
 

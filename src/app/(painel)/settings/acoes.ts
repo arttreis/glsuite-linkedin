@@ -19,6 +19,7 @@ import { despausarPerfil, ErroDeAtivacao, pausarPerfil } from "@/server/perfis/p
 import { sincronizarStatusDasContas } from "@/server/perfis/status-conta";
 import { garantirSdr, salvarSdr, voltarParaVersao } from "@/server/sdr/sdr";
 import { exigirOperador, exigirOperadorComModuloNaAcao } from "@/server/supabase/servidor";
+import { mensagemDaRecusa } from "@/server/unipile/erros";
 
 type Aba = "company" | "sdr" | "linkedin" | "team";
 
@@ -196,16 +197,26 @@ export async function vincularOutraConta() {
   redirect(await linkDeConexao(perfilId));
 }
 
+/** Se a Unipile recusar, volta para a aba com o aviso em vez da página de erro. */
 export async function atualizarStatusDasContasDoPainel() {
   await exigirOperadorComModuloNaAcao("linkedin");
-  await sincronizarStatusDasContas(obterDb(), obterUnipile(), new Date());
+  try {
+    await sincronizarStatusDasContas(obterDb(), obterUnipile(), new Date());
+  } catch (erro) {
+    voltar("linkedin", mensagemDaRecusa(erro));
+  }
   voltar("linkedin", "Status das contas atualizado pela Unipile.");
 }
 
 export async function registrarWebhooksDoPainel() {
   const operador = await exigirOperadorComModuloNaAcao("linkedin");
   if (operador.papel !== "admin") throw new Error("Só o admin registra webhooks.");
-  const { criados } = await garantirWebhooks(obterUnipile(), { urlApp: urlPublicaDoApp(), segredo: segredoDaUnipile() });
+  let criados: string[];
+  try {
+    ({ criados } = await garantirWebhooks(obterUnipile(), { urlApp: urlPublicaDoApp(), segredo: segredoDaUnipile() }));
+  } catch (erro) {
+    voltar("linkedin", mensagemDaRecusa(erro));
+  }
   voltar("linkedin", criados.length > 0 ? `${criados.length} webhooks registrados na Unipile.` : "Os webhooks já estavam registrados.");
 }
 
