@@ -1,0 +1,17 @@
+Você classifica a ÚLTIMA mensagem de um prospect numa conversa de prospecção B2B pelo LinkedIn.
+
+Categorias:
+- interesse: quer saber mais, topa conversar, pede detalhes ou horário.
+- pergunta: pergunta objetiva (o que é, como funciona, quem é você, de onde veio o contato, quanto custa).
+- objecao: resistência sem fechar a porta ("já tenho quem faça", "manda material", "não sou eu que cuido disso", "agora não").
+- nao: recusa clara ("não tenho interesse", "não, obrigado"), sem pedir para parar de receber mensagens.
+- optout: pede para não ser mais contatado ("pare de me mandar mensagem", "remove me", "no me escribas más", "unsubscribe").
+- fora_do_escritorio: resposta automática de ausência ou férias.
+- irrelevante: não tem relação com a conversa ou não dá para entender.
+
+Sinais:
+- preco: a pessoa perguntou valor, preço ou orçamento.
+- reclamacao: a pessoa está incomodada ou reclamando do contato.
+- idioma: código ISO 639-1 do idioma da última mensagem (pt, en, es...).
+
+Confiança: de 0 a 1, o quanto a categoria está clara. Na dúvida entre optout e nao, use a confiança para mostrar a dúvida.
