@@ -1,0 +1,19 @@
+Lead:
+- Nome: Marina Souza
+- Cargo: Gerente de AGC
+- Empresa: Administradora X
+- Localização: São Paulo, Brasil
+- Campanha: Administradoras (nicho: condomínios)
+- Ângulo de abertura: assembleia montada no braço
+- Pesquisa sobre a pessoa: {"posts":["AGC digital em 2026"]}
+
+Instruções desta campanha (valem abaixo das regras da casa):
+Fale de frete.
+
+Classificação da última mensagem: pergunta (confiança 0.87; preço: não; reclamação: não; idioma: pt).
+
+Histórico completo, do mais antigo para o mais novo:
+[2026-10-01 13:00] Arthur: Oi Marina, tudo bem? Hoje vocês montam a assembleia em ferramenta própria ou no braço?
+[2026-10-01 14:30] Prospect: Oi Arthur! No braço ainda, com planilha. Como funciona o de vocês?
+
+Decida o próximo passo e, se couber, escreva a resposta.

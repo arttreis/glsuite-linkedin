@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { CanalDoSdr } from "@/domain/sdr";
+import { canaisDoTeste } from "@/domain/teste-do-sdr";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { obterAjustadorDeSdr, obterModeloDeLinguagem } from "@/server/dependencias";
@@ -27,12 +29,15 @@ async function contexto() {
   return { operador, base: { organizacaoId: operador.organizacaoId, nome: operador.nome } };
 }
 
-/** Começa ou recomeça a conversa, com o mesmo tipo de lead ou outro. */
-export async function recomecarConversa(entrada: { segmento?: string | null }): Promise<ResultadoDoTeste> {
-  const { base } = await contexto();
+/** Começa ou recomeça a conversa, com o mesmo tipo de lead ou outro, no canal escolhido (§4.3). */
+export async function recomecarConversa(entrada: { segmento?: string | null; canal?: CanalDoSdr | null }): Promise<ResultadoDoTeste> {
+  const { operador, base } = await contexto();
+  const canal = entrada.canal ?? "linkedin";
+  // O canal vem da tela: só vale um que a organização tem.
+  if (!canaisDoTeste(operador.modulos).includes(canal)) return { ok: false, erro: "Esse canal não está no plano da sua organização." };
   const modelo = obterModeloDeLinguagem();
   if (!modelo) return SEM_CHAVE;
-  return comecarTeste({ db: obterDb(), modelo, agora: new Date() }, { ...base, segmento: entrada.segmento ?? null });
+  return comecarTeste({ db: obterDb(), modelo, agora: new Date() }, { ...base, segmento: entrada.segmento ?? null, canal });
 }
 
 /** A pessoa responde no papel de lead. */

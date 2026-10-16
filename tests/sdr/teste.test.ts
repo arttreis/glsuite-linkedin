@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { Dossie } from "@/domain/dossie";
-import { sdrDaIa, textoDoSdr, type Sdr, type SdrDaIa } from "@/domain/sdr";
+import { resumoDaOferta, type Dossie } from "@/domain/dossie";
+import { sdrDaIa, textoDoSdr, type CanalDoSdr, type Sdr, type SdrDaIa } from "@/domain/sdr";
 import type { AjusteDoSdr } from "@/domain/teste-do-sdr";
 import { estadoDoPrimeiroAcesso } from "@/server/acesso/primeiro-acesso";
 import { ErroDoModelo } from "@/server/agente/modelo";
+import { promptDeRascunho } from "@/server/agente/prompts";
 import { comOperador } from "@/server/db/operador";
 import { gravarVersaoDoSdr, obterSdr } from "@/server/sdr/sdr";
 import {
@@ -91,8 +92,8 @@ describe("chat de teste do SDR (SDR-43)", () => {
 
   const deps = () => ({ db: banco.db, modelo, agora: AGORA });
   const base = () => ({ organizacaoId: organizacao, nome: "Duda" });
-  const comecar = async (segmento?: string) => {
-    const resultado = await comecarTeste(deps(), { ...base(), segmento });
+  const comecar = async (segmento?: string, canal?: CanalDoSdr) => {
+    const resultado = await comecarTeste(deps(), { ...base(), segmento, canal });
     if (!resultado.ok) throw new Error(resultado.erro);
     return resultado.teste;
   };
@@ -254,5 +255,79 @@ describe("chat de teste do SDR (SDR-43)", () => {
   it("sem SDR não há teste", async () => {
     const outra = await criarOrganizacao(banco.db, { slug: `org-${randomUUID().slice(0, 8)}` });
     expect(await comecarTeste(deps(), { organizacaoId: outra, nome: "X" })).toMatchObject({ ok: false });
+  });
+
+  describe("o canal do teste (SDR-75)", () => {
+    it("sem canal, o teste é no LinkedIn", async () => {
+      expect(await comecar()).toMatchObject({ canal: "linkedin" });
+    });
+
+    it("no Instagram, a conversa começa sem o SDR: só a nota, sem chamar o modelo", async () => {
+      const teste = await comecar(undefined, "instagram");
+      expect(modelo.chamadas).toEqual([]);
+      expect(teste.canal).toBe("instagram");
+      expect(teste.mensagens).toEqual([
+        expect.objectContaining({
+          tipo: "nota",
+          nota: "desfecho",
+          texto: "No Instagram, quem começa a conversa é a pessoa. Escreva a primeira mensagem como Marina.",
+        }),
+      ]);
+    });
+
+    it("no Instagram, a resposta passa pela decisão da produção com o prompt do canal", async () => {
+      await comecar(undefined, "instagram");
+      const teste = await responder("Oi, vi o post de vocês");
+
+      const [rascunho] = rascunhos();
+      expect(rascunho!.sistema).toBe(
+        promptDeRascunho({
+          perfil: { nome: "Duda", praca: "domestico", idioma: "pt", voz: null, regras: null, palavrasProibidas: [] },
+          linkDeAgenda: SDR.link_agenda,
+          responsavelDiscovery: "Duda",
+          oferta: resumoDaOferta(ANALISE),
+          sdr: SDR,
+          canal: "instagram",
+        }),
+      );
+      expect(teste.mensagens.map((m) => m.tipo)).toEqual(["nota", "lead", "sdr"]);
+      expect(teste.mensagens.at(-1)).toMatchObject({ tipo: "sdr", texto: modelo.decisaoPadrao.mensagem, aviso: null });
+    });
+
+    it("no Instagram, link fora da lista vira o aviso do validador no balão", async () => {
+      await comecar(undefined, "instagram");
+      modelo.decisoes.push({ ...modelo.decisaoPadrao, mensagem: "Dá uma olhada: https://outro.com/oferta" });
+      const teste = await responder("Tem link?");
+      expect(teste.mensagens.at(-1)).toMatchObject({
+        tipo: "sdr",
+        aviso: "validador: A IA só pode mandar os links do lançamento e o de agenda (achei https://outro.com/oferta).",
+      });
+    });
+
+    it("quem volta encontra o canal onde parou", async () => {
+      await comecar(undefined, "telegram");
+      expect(await obterTeste(banco.db, base())).toMatchObject({ canal: "telegram" });
+    });
+
+    it("no Messenger, o ajuste antes de a pessoa escrever não faz o SDR abrir a conversa", async () => {
+      await comecar(undefined, "facebook");
+      const resultado = await ajustar(
+        ajustadorFalso([{ sdr: { ...semLink(SDR), voz: "Bem informal." }, resumo: "Deixei a voz mais informal.", recusa: null }]),
+        "mais informal",
+      );
+      expect(resultado.ok).toBe(true);
+      const teste = (resultado as { teste: TesteDoSdr }).teste;
+      expect(teste.mensagens.map((m) => (m.tipo === "nota" ? m.nota : m.tipo))).toEqual(["desfecho", "ajuste"]);
+      expect(teste.mensagens[0]).toMatchObject({ texto: expect.stringMatching(/^No Messenger, quem começa a conversa é a pessoa\./) });
+      expect(rascunhos()).toEqual([]);
+      expect(teste).toMatchObject({ canal: "facebook", sdrVersao: 2 });
+    });
+
+    it("o banco recusa um canal inventado", async () => {
+      await comecar();
+      await expect(banco.db.query("update public.sdr_testes set canal = 'whatsapp' where organizacao_id = $1::uuid", [organizacao])).rejects.toThrow(
+        /sdr_testes_canal_check/,
+      );
+    });
   });
 });

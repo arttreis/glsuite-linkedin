@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Aviso } from "@/components/aviso";
 import { CASOS_DE_TESTE } from "@/domain/passagem";
+import { canaisDoTeste } from "@/domain/teste-do-sdr";
 import { obterDb } from "@/server/db";
 import type { Operador } from "@/server/db/operador";
 import { obterModeloDeLinguagem } from "@/server/dependencias";
@@ -42,7 +43,15 @@ async function Chat({ operador }: { operador: Operador }) {
     teste = comecado.teste;
   }
   const casosDeTeste = CASOS_DE_TESTE.map((caso) => ({ rotulo: caso.rotulo, texto: caso.texto[teste.idioma] }));
-  return <ChatDoSdr inicial={teste} nome={operador.nome} comSeguir={false} casosDeTeste={casosDeTeste} />;
+  return (
+    <ChatDoSdr
+      inicial={teste}
+      nome={operador.nome}
+      canais={canaisDoTeste(operador.modulos)}
+      comSeguir={false}
+      casosDeTeste={casosDeTeste}
+    />
+  );
 }
 
 /** Testar o SDR em Configurações (§4.12): o mesmo chat do primeiro acesso, sem o "seguir". */

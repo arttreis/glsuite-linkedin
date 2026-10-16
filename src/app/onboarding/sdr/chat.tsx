@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent, type KeyboardEvent } from "react";
 import { Aviso } from "@/components/aviso";
 import { Avatar } from "@/components/avatar";
+import { NOME_DO_CANAL_DO_SDR, type CanalDoSdr } from "@/domain/sdr";
 import type { ItemDoTeste } from "@/domain/teste-do-sdr";
 import type { ResultadoDoTeste, TesteDoSdr } from "@/server/sdr/teste";
 import { ajustarNoChat, desfazerNoChat, ficouBom, recomecarConversa, responderNoTeste } from "./acoes";
@@ -61,17 +62,20 @@ function Nota({ item, desfazer }: { item: Extract<ItemDoTeste, { tipo: "nota" }>
 
 /**
  * O chat de teste do SDR (§4.3): a pessoa é o lead e o SDR responde como vai
- * responder os leads de verdade. O campo tem dois modos: responder como lead
- * ou ajustar o SDR.
+ * responder os leads de verdade, no canal escolhido. O campo tem dois modos:
+ * responder como lead ou ajustar o SDR.
  */
 export function ChatDoSdr({
   inicial,
   nome,
+  canais,
   comSeguir = true,
   casosDeTeste = [],
 }: {
   inicial: TesteDoSdr;
   nome: string;
+  /** Os canais que a organização tem (`canaisDoTeste`). Com um só, o seletor não aparece. */
+  canais: readonly CanalDoSdr[];
   /** "Ficou bom, seguir" só no primeiro acesso; em Configurações o chat é só teste. */
   comSeguir?: boolean;
   /** Mensagens de lead prontas para ver se o SDR passa a conversa (Configurações). */
@@ -144,11 +148,18 @@ export function ChatDoSdr({
     campo.current?.focus();
   };
 
-  const recomecar = (segmento: string) => {
+  // Trocar o segmento ou o canal recomeça a conversa; se a ação recusar, nada muda.
+  const recomecar = (segmento: string, canal: CanalDoSdr) => {
     setErro(null);
-    const antes = mensagens;
+    const antes = { teste, mensagens };
+    setTeste({ ...teste, segmento, canal });
     setMensagens([]);
-    iniciar(async () => aplicar(await recomecarConversa({ segmento }), () => setMensagens(antes)));
+    iniciar(async () =>
+      aplicar(await recomecarConversa({ segmento, canal }), () => {
+        setTeste(antes.teste);
+        setMensagens(antes.mensagens);
+      }),
+    );
   };
 
   const desfazer = () => {
@@ -167,6 +178,8 @@ export function ChatDoSdr({
 
   // O "desfazer" fica só no último ajuste, enquanto ele for a última mudança do SDR.
   const ultimaMudanca = mensagens.findLast((item) => item.tipo === "nota" && (item.nota === "ajuste" || item.nota === "desfeito"));
+  // Um teste salvo num canal que saiu do plano continua aparecendo como está.
+  const opcoesDeCanal = canais.includes(teste.canal) ? canais : [teste.canal, ...canais];
 
   return (
     <>
@@ -179,24 +192,40 @@ export function ChatDoSdr({
               <p className="text-xs text-tinta-fraca">SDR · versão {teste.sdrVersao}</p>
             </div>
           </div>
-          <label className="flex items-center gap-2 text-xs text-tinta-suave">
-            Você é {teste.lead}, de
-            <select
-              value={teste.segmento}
-              onChange={(e) => {
-                setTeste({ ...teste, segmento: e.target.value });
-                recomecar(e.target.value);
-              }}
-              className="campo campo-pequeno max-w-56"
-              disabled={pendente}
-            >
-              {teste.segmentos.map((segmento) => (
-                <option key={segmento} value={segmento}>
-                  {segmento}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {opcoesDeCanal.length > 1 && (
+              <label className="flex items-center gap-2 text-xs text-tinta-suave">
+                Canal
+                <select
+                  value={teste.canal}
+                  onChange={(e) => recomecar(teste.segmento, e.target.value as CanalDoSdr)}
+                  className="campo campo-pequeno"
+                  disabled={pendente}
+                >
+                  {opcoesDeCanal.map((canal) => (
+                    <option key={canal} value={canal}>
+                      {NOME_DO_CANAL_DO_SDR[canal]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label className="flex items-center gap-2 text-xs text-tinta-suave">
+              Você é {teste.lead}, de
+              <select
+                value={teste.segmento}
+                onChange={(e) => recomecar(e.target.value, teste.canal)}
+                className="campo campo-pequeno max-w-56"
+                disabled={pendente}
+              >
+                {teste.segmentos.map((segmento) => (
+                  <option key={segmento} value={segmento}>
+                    {segmento}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </header>
 
         <ol ref={lista} aria-live="polite" className="flex max-h-[55vh] min-h-[22rem] flex-col gap-3 overflow-y-auto px-5 py-6">
@@ -325,7 +354,7 @@ export function ChatDoSdr({
       </div>
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <button type="button" className="botao botao-pequeno" onClick={() => recomecar(teste.segmento)} disabled={pendente}>
+        <button type="button" className="botao botao-pequeno" onClick={() => recomecar(teste.segmento, teste.canal)} disabled={pendente}>
           <RotateCcw aria-hidden />
           Recomeçar conversa
         </button>

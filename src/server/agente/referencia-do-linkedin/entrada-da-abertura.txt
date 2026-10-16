@@ -1,0 +1,12 @@
+Lead:
+- Nome: Marina Souza
+- Cargo: Gerente de AGC
+- Empresa: Administradora X
+- Campanha: Administradoras (nicho: condomínios)
+
+A pessoa acabou de aceitar o seu convite de conexão e ainda não escreveu nada. Escreva a primeira mensagem da conversa, do jeito da abertura do SDR. É a primeira: pode cumprimentar uma vez, pelo primeiro nome. Não peça reunião. Use a ação "responder".
+
+A mensagem termina com uma pergunta curta sobre a realidade da pessoa, que ela responde em poucas palavras sem precisar pensar muito: como ela faz algo hoje, o que usa, quem cuida. Mesmo que a abertura do SDR não fale em pergunta, esta tem.
+Bom: "Oi Marina, tudo bem? Vi que você cuida das AGCs na administradora. Hoje vocês montam a assembleia em ferramenta própria ou no braço?"
+Ruim: "Oi Marina, tudo bem? Toda vez que vejo uma AGC sendo montada no meio de planilha, e-mail e videochamada separados, penso em quanto tempo isso consome do administrador." (é reflexão, não conversa: a pessoa não tem o que responder)
+Os exemplos mostram a forma; o assunto vem do SDR, da campanha e do lead.
