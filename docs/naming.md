@@ -146,3 +146,27 @@ oficial no Brasil e com as ferramentas de automação de LinkedIn em reais
   página de preços: como pode aparecer o nome e o logo de cada um.
 - Ligar o nome à cobrança: no GL Suite, cada módulo pode virar uma ferramenta
   do catálogo (`tools`), vendida avulsa como as outras (D16).
+
+## 6 · Os módulos do Marco E (16/10/2026)
+
+O Marco E (§4.21 a §4.29 do épico) traz três módulos. Os nomes seguem a
+família A (descritiva), como os do Marco D, e ficam em `NOME_DO_MODULO`:
+
+| Módulo | id | Nome no Plano | Resumo no Plano |
+|---|---|---|---|
+| Instagram | `instagram` | **SDR no Instagram** | "O SDR responde quem chama no direct, e quem comenta a palavra-chave num post recebe o link no direct." |
+| Facebook | `facebook` | **SDR no Facebook** | "O mesmo, no Messenger e nos posts da Página." |
+| Comunidades | `comunidades` | **Lançamentos em grupos** | "Grupos de WhatsApp e de Telegram para lançamentos: o link que enche um grupo e passa para o próximo, a agenda de mensagens, quem entrou e quem comprou." |
+
+- Na família A de venda: **Kakou Lançamentos** para Comunidades; Instagram e
+  Facebook entram no **Kakou SDR**, que deixa de ser só LinkedIn. Na família C,
+  Comunidades seria a **Rede**, que fecha a pescaria com o Anzol e a Tarrafa.
+- O critério 3 (sem marca de terceiro no nome) vale aqui também: Instagram e
+  Facebook aparecem na descrição do módulo, como o LinkedIn no "SDR no
+  LinkedIn", e não viram nome de produto.
+- Preço (D11): Lançamentos em grupos por lançamento ou por mês, não por
+  mensagem (o Telegram é gratuito e o feito por você não custa nada para a
+  GuessLess); SDR no Instagram e no Facebook por conta conectada, como o
+  LinkedIn, porque o custo é o Claude por conversa. [verificar] a faixa com
+  quem vende gestão de grupos de lançamento (SendFlow e afins, na
+  `docs/pesquisa/lancamentos-e-manychat.md`).

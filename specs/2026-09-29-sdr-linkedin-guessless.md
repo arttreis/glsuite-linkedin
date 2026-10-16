@@ -2328,3 +2328,112 @@ interpretações abaixo são minhas e estão para o Arthur confirmar.
 - [verificar] com um bot de verdade: o par `member`/`kicked` do bloqueio, se
   o "Stop Bot" chega igual ao bloqueio e se o webhook funciona no domínio de
   produção (o FAQ desconfia de certificado wildcard).
+
+## Lançamentos, Instagram, Facebook e comunidades (16/10/2026)
+
+Pedido do Arthur em 16/10/2026: "a próxima etapa: instagram, facebook e
+comunidades (comunidades de whats, de telegram, de instagram, grupos em
+geral)". Respostas dele às perguntas de escopo: o SDR fala com quem chega na
+DM, disparos, comentários em posts e "sistema similar ao manychat"; só grupos
+que a organização tem; nos grupos, disparo, boas-vindas, regras, membro
+virando contato com tag, ler o grupo e o SDR; risco do WhatsApp pela conta da
+pessoa aceito; só WhatsApp, Telegram, Instagram e Facebook; primeiro caso, a
+GuessLess gerenciando lançamentos; app da Meta da GuessLess; um módulo por
+canal mais Comunidades. Depois: reaproveitar o Marco D, desprender o SDR do
+LinkedIn, lançamento como conceito. Viraram o Marco E do épico (§4.21 a
+§4.29, SDR-74 a SDR-104, D18 a D29, T-11 a T-22). O plano saiu de um PM e de
+um designer em paralelo, conciliados abaixo.
+
+**Pesquisas** (fontes primárias, 16/10): `docs/pesquisa/instagram-messenger-api.md`,
+`whatsapp-grupos.md`, `telegram-grupos.md` e `lancamentos-e-manychat.md`. O
+que elas decidiram:
+
+- **Instagram e Messenger servem para conversa, não para disparo.** O SDR só
+  responde até 24 horas depois da última mensagem da pessoa; a tag
+  `HUMAN_AGENT` (7 dias) é só humana. Comentário vira DM pela Private Reply
+  (uma por comentário, até 7 dias). Não há disparo no Instagram fora da
+  janela; no Messenger, só pelas Marketing Messages, pagas e com Tech
+  Provider. Por isso o "sistema de disparos" do pedido ficou nos grupos
+  (agenda) e nos disparos de WhatsApp e Telegram que já existem (D22).
+- **O Marco D descartou Instagram e Messenger para disparo e a Unipile para o
+  WhatsApp.** As duas razões continuam valendo: o Instagram e o Messenger
+  entram agora para conversa, e a Unipile só para os grupos, num número
+  separado, sem conversa de um para um (D20, D21).
+- **Grupos do Instagram e do Facebook e a Comunidade do WhatsApp não têm
+  API.** A Groups API do Facebook saiu em 22/04/2024; a Unipile não enxerga
+  comunidade. Ficaram fora por impossibilidade, não por escolha.
+- **A conexão da Unipile pode não funcionar.** Desde meados de 2026, o
+  WhatsApp pede passkey para vincular aparelho em parte das contas, e o QR lido
+  no servidor para (WAHA 2026.7, Whapi); a SendFlow trocou o QR por uma
+  extensão de navegador. A doc da Unipile não fala de passkey. Daí o T-11 antes
+  de qualquer ticket do número, e o modo sem número como padrão do lançamento.
+- **No Telegram tudo é oficial,** mas o bot não cria grupo nem adiciona gente:
+  a pessoa cria o grupo e põe o bot por link.
+- **O básico do mercado** (SendFlow e afins): link que distribui entre
+  grupos, agenda para todos os grupos, entradas e saídas. O link pode girar
+  pelo clique, sem número conectado. A última linha da pesquisa de mercado
+  ("Decisão do Arthur: sem conexão por QR") era uma pergunta para ele, não uma
+  decisão; ele já tinha aceitado o risco. O PM e o designer leram como
+  decisão; ficou corrigido.
+
+**Interpretações e escolhas:**
+
+- **O lançamento é o centro.** Grupos, link, agenda, compras, palavras-chave e
+  o que o SDR sabe ficam debaixo dele. Comunidade perene fora de lançamento é,
+  por ora, um lançamento sem datas.
+- **O WhatsApp do lançamento tem dois modos, e o sem número é o padrão.** Sem
+  número: a pessoa cola os convites, o link gira pelo clique e a agenda vira
+  "feito por você" (o Kakou avisa na hora com o texto e a lista dos grupos).
+  Com número: a agenda sai sozinha e os membros são contados. Se o número cair,
+  o lançamento volta para o modo sem número sem perder nada.
+- **Agenda com tabelas próprias** (`mensagens_do_lancamento` e
+  `envios_aos_grupos`), com o desenho e o código da fila dos disparos
+  (`pegarTrava`, reserva por prazo, "pode ter chegado", mesmo cron).
+  `envios_do_disparo` é por contato (`contato_id not null`, único por disparo
+  e contato) e carrega regras que não valem para grupo (saída do canal, 24
+  horas entre disparos, janela das 8h às 21h, limite da Meta).
+- **A identidade de cada canal novo fica na relação** (`conversas_dos_canais`,
+  `membros_dos_grupos`), não em colunas do contato nem numa tabela de
+  identidades: o IGSID e o PSID valem só para aquela conta, o contato já tem
+  colunas de canal demais, e uma tabela de identidades teria um dono só,
+  travando quatro tickets da mesma onda.
+- **Os checks de `canais.tipo` e `contatos.origem` mudam uma vez, no SDR-74,
+  com a lista final.** Três migrations reescrevendo o mesmo check na mesma
+  onda apagariam o valor uma da outra.
+- **Clique não é entrada.** No WhatsApp colado, o limite padrão é 900 cliques
+  para um grupo de 1.024: robô de prévia, `HEAD` e a mesma pessoa (cookie) não
+  contam, e "Corrigir a contagem" acerta pelo que a pessoa vê no celular.
+- **A rota `/go/<código>` é uma transação curta**, sem serviço de fora no
+  caminho: num pico de anúncio, a linha do grupo da vez é o ponto quente.
+- **Pausar o lançamento pausa a agenda, não o link.** O designer propôs parar
+  os dois; parar o link no meio de um anúncio pago perde gente, e o motivo de
+  pausar é quase sempre uma mensagem errada ou o número caído.
+- **Grupo com tarefa obrigatória aberta não recebe clique** (sugestão do
+  designer): ninguém cai num grupo aberto onde qualquer um troca o nome ou
+  chama gente de fora.
+- **Tag por lançamento e por origem, nunca por grupo** (D29): 30 grupos por
+  lançamento esgotariam o teto de 200 tags em poucos lançamentos.
+- **Conversa de grupo fica no lançamento, não no Chats.** O Chats continua de
+  um para um; o que o SDR passou para você no grupo sobe para o Precisa de
+  você.
+- **O número dos grupos nunca conversa de um para um.** O designer sugeria
+  mostrar no Chats as DMs que chegam ao número; responder por ele somaria
+  risco ao número que segura os grupos.
+- **Facebook Login for Business** (D28): um app não tem os dois logins, e o
+  Instagram Login exigiria um segundo app para o Messenger. Consequência: o
+  Instagram do cliente precisa estar ligado a uma Página.
+- **Polling dos comentários** no SDR-90: sem Advanced Access, nem a conta da
+  própria GuessLess recebe o webhook de comentário; o polling deixa gravar o
+  vídeo do App Review e cobre o que o webhook perder.
+- **Webhooks respondem 200 e processam depois** (`after()` do Next 16, com
+  retentativa no cron): a Meta desinscreve o app depois de 1 hora de falha.
+- **O prompt do LinkedIn não muda.** O SDR-75 põe o canal na entrada do agente
+  e exige teste com o prompt do LinkedIn igual byte a byte.
+- **Menu:** Lançamentos e Comentários logo depois do Chats (o designer). O PM
+  punha Lançamentos entre Contatos e Disparos e as palavras-chave dentro de
+  Configurações; Comentários virou tela porque o pedido inclui "comentários em
+  posts", não só a automação.
+- **Cinco perguntas ficaram sem resposta do Arthur** quando ele aprovou o
+  plano (D18 a data, D19 o ManyChat, D24 a Hotmart, D25 o preço, D26 o aviso
+  no Telegram). Segui as sugestões e deixei cada uma aberta no épico: a regra
+  de preço (§4.7) e o SDR-103 só existem por causa delas.
