@@ -78,17 +78,31 @@ export function soOPrimeiroAcesso(modulos: readonly Modulo[], primeiroAcessoConc
   return linkedinNoPrimeiroAcesso(modulos, primeiroAcessoConcluido) && modulos.every((modulo) => modulo === "linkedin");
 }
 
-/** E-mails de quem é da plataforma (`PLATAFORMA_ADMINS`): separados por vírgula, ponto e vírgula ou espaço. */
+/**
+ * Quem é da plataforma (`PLATAFORMA_ADMINS`), separados por vírgula, ponto e
+ * vírgula ou espaço: e-mails inteiros ou domínios começando com `@`
+ * (`@guessless.com.br`). Um `@` sozinho não vale nada e fica de fora.
+ */
 export function lerAdminsDaPlataforma(valor: string | undefined): string[] {
   return (valor ?? "")
     .split(/[\s,;]+/)
     .map((email) => email.trim().toLowerCase())
-    .filter((email) => email.includes("@"));
+    .filter((email) => email.includes("@") && email !== "@");
 }
 
+/**
+ * O e-mail casa com uma entrada inteira ou com um domínio `@x`: termina
+ * exatamente em `@x` e esse é o único `@` dele. Subdomínio e sufixo parecido
+ * (`@evilx`, `@x.evil.com`, `@sub.x`) não casam.
+ */
 export function ehAdminDaPlataforma(email: string | null | undefined, admins: readonly string[]): boolean {
   const alvo = email?.trim().toLowerCase();
-  return Boolean(alvo) && admins.includes(alvo!);
+  if (!alvo) return false;
+  return admins.some(
+    (entrada) =>
+      alvo === entrada ||
+      (entrada.startsWith("@") && alvo.endsWith(entrada) && alvo.indexOf("@") === alvo.length - entrada.length),
+  );
 }
 
 /** Até 300 caracteres, sem quebra de linha: o motivo vai para a trilha e para a tela. */
