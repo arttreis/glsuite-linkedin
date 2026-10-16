@@ -8,7 +8,7 @@ import { abrirChat, lerFiltro, listarChats } from "@/server/chats/chats";
 import { contextoDoPerfil } from "@/server/campanhas/perfil";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
-import { exigirOperadorNoApp } from "@/server/supabase/servidor";
+import { exigirOperadorComModulo } from "@/server/supabase/servidor";
 import { RolarParaOFim } from "../ao-vivo";
 import { Fio } from "../fio";
 import { comFiltro, ListaDeChats } from "../lista";
@@ -27,7 +27,7 @@ const SITUACAO = {
 } as const;
 
 export default async function ChatDoLeadPage({ params, searchParams }: PageProps<"/chats/[leadId]">) {
-  const operador = await exigirOperadorNoApp();
+  const operador = await exigirOperadorComModulo("linkedin");
   const { leadId } = await params;
   const { filter, msg } = await searchParams;
   const filtro = lerFiltro(filter);

@@ -40,6 +40,8 @@ describe("primeiro acesso: organização nova por domínio (SDR-40)", () => {
       papel: "admin",
       organizacaoNome: "Empresa de Ana Souza",
       primeiroAcessoConcluido: false,
+      // Organização nova nasce com o SDR no LinkedIn (§4.14).
+      modulos: ["linkedin"],
     });
     expect(operador!.organizacaoId).not.toBe(await idDaOrganizacaoGuessless(banco.db));
 

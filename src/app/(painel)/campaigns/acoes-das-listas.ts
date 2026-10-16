@@ -16,7 +16,7 @@ import {
   renomearLista,
 } from "@/server/listas/listas";
 import type { Resultado } from "@/server/publicos/publicos";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperadorComModuloNaAcao } from "@/server/supabase/servidor";
 
 const ROTA = "/campaigns/company-lists";
 
@@ -30,7 +30,7 @@ const revalidar = (listaId?: string) => {
 
 /** Cria a lista com a primeira parte dos nomes; o resto chega por `adicionarEmpresasDoPainel`. */
 export async function criarListaDoPainel(entrada: { nome: string; nomes: string[] }): Promise<Resultado<{ id: string; adicionadas: number; repetidas: number }>> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const lidos = nomes.safeParse(entrada.nomes);
   if (!lidos.success) return { ok: false, erro: `Mande no máximo ${NOMES_POR_ENVIO} nomes por vez.` };
   const resultado = await comOperador(obterDb(), operador.id, (tx) =>
@@ -41,7 +41,7 @@ export async function criarListaDoPainel(entrada: { nome: string; nomes: string[
 }
 
 export async function adicionarEmpresasDoPainel(entrada: { listaId: string; nomes: string[] }): Promise<Resultado<{ adicionadas: number; repetidas: number }>> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const listaId = z.uuid().parse(entrada.listaId);
   const lidos = nomes.safeParse(entrada.nomes);
   if (!lidos.success) return { ok: false, erro: `Mande no máximo ${NOMES_POR_ENVIO} nomes por vez.` };
@@ -52,7 +52,7 @@ export async function adicionarEmpresasDoPainel(entrada: { listaId: string; nome
 
 /** Procura no LinkedIn a próxima leva de empresas (até 20). A tela chama de novo até não faltar nenhuma. */
 export async function procurarEmpresasDoPainel(entrada: { listaId: string }): Promise<Resultado<{ procuradas: number; faltam: number }>> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const listaId = z.uuid().parse(entrada.listaId);
   const unipile = obterUnipileSeConfigurada();
   if (!unipile) return { ok: false, erro: "A conexão com o LinkedIn (Unipile) não está configurada. Peça ao admin." };
@@ -62,7 +62,7 @@ export async function procurarEmpresasDoPainel(entrada: { listaId: string }): Pr
 }
 
 export async function escolherEmpresaDoPainel(entrada: { listaId: string; empresaId: string; opcaoId: string | null }): Promise<Resultado> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const listaId = z.uuid().parse(entrada.listaId);
   const empresaId = z.uuid().parse(entrada.empresaId);
   const opcaoId = z.string().regex(/^\d+$/).nullable().parse(entrada.opcaoId);
@@ -72,7 +72,7 @@ export async function escolherEmpresaDoPainel(entrada: { listaId: string; empres
 }
 
 export async function removerEmpresaDoPainel(entrada: { listaId: string; empresaId: string }): Promise<Resultado> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const listaId = z.uuid().parse(entrada.listaId);
   const empresaId = z.uuid().parse(entrada.empresaId);
   const resultado = await comOperador(obterDb(), operador.id, (tx) => removerEmpresa(tx, { empresaId, agora: new Date() }));
@@ -81,7 +81,7 @@ export async function removerEmpresaDoPainel(entrada: { listaId: string; empresa
 }
 
 export async function renomearListaDoPainel(entrada: { listaId: string; nome: string }): Promise<Resultado> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const listaId = z.uuid().parse(entrada.listaId);
   const resultado = await comOperador(obterDb(), operador.id, (tx) => renomearLista(tx, { listaId, nome: entrada.nome, agora: new Date() }));
   if (resultado.ok) revalidar(listaId);
@@ -89,7 +89,7 @@ export async function renomearListaDoPainel(entrada: { listaId: string; nome: st
 }
 
 export async function apagarListaDoPainel(entrada: { listaId: string }): Promise<Resultado> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const listaId = z.uuid().parse(entrada.listaId);
   const resultado = await comOperador(obterDb(), operador.id, (tx) => apagarLista(tx, { listaId }));
   if (resultado.ok) revalidatePath("/campaigns", "layout");

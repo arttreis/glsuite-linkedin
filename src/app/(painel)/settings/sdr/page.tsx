@@ -5,7 +5,7 @@ import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { passagensRecentes, type PassagensRecentes } from "@/server/sdr/passagens";
 import { historicoDoSdr, obterSdr, type Origem } from "@/server/sdr/sdr";
-import { exigirOperadorNoApp } from "@/server/supabase/servidor";
+import { exigirOperadorComModulo } from "@/server/supabase/servidor";
 import { montarSdrDoPainel, trocarModoDaConta, voltarParaVersaoDoPainel } from "../acoes";
 import { EditorDoSdr } from "./editor-do-sdr";
 import { PassagemParaVoce } from "./passagem-para-voce";
@@ -76,7 +76,7 @@ function UltimasPassagens({ recentes }: { recentes: PassagensRecentes }) {
  * histórico com voltar.
  */
 export default async function SdrPage({ searchParams }: PageProps<"/settings/sdr">) {
-  const operador = await exigirOperadorNoApp();
+  const operador = await exigirOperadorComModulo("linkedin");
   const { msg } = await searchParams;
   const { sdr, historico, contas, passagens } = await comOperador(obterDb(), operador.id, async (tx) => ({
     sdr: await obterSdr(tx, operador.organizacaoId),

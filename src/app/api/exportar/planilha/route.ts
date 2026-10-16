@@ -8,6 +8,7 @@ import { exigirOperador } from "@/server/supabase/servidor";
 /** CSV da planilha-espelho da praça. Roda com o RLS do operador: só sai o que ele enxerga. */
 export async function GET(request: NextRequest) {
   const operador = await exigirOperador();
+  if (!operador.modulos.includes("linkedin")) return Response.json({ erro: "módulo não contratado" }, { status: 403 });
   const praca = z.enum(["domestico", "canada", "espanha"]).safeParse(request.nextUrl.searchParams.get("praca"));
   if (!praca.success) return Response.json({ erro: "praça inválida" }, { status: 400 });
 

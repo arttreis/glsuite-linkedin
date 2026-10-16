@@ -15,7 +15,7 @@ import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { obterUnipile } from "@/server/dependencias";
 import { leadsVisiveis } from "@/server/painel/autorizacao";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperadorComModuloNaAcao } from "@/server/supabase/servidor";
 
 async function exigirLead(operadorId: string, valor: FormDataEntryValue | null): Promise<string> {
   const leadId = z.uuid().parse(valor);
@@ -38,7 +38,7 @@ export type EstadoDaResposta =
 
 /** Responder pelo Chats: sai na hora e a pessoa assume a conversa (§4.7). */
 export async function responder(_anterior: EstadoDaResposta, formData: FormData): Promise<EstadoDaResposta> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const leadId = await exigirLead(operador.id, formData.get("leadId"));
   const texto = z.string().trim().min(1).max(8000).safeParse(formData.get("texto"));
   const chave = z.uuid().safeParse(formData.get("chave"));
@@ -56,7 +56,7 @@ export async function responder(_anterior: EstadoDaResposta, formData: FormData)
 }
 
 export async function devolverAoSdrDoChat(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const leadId = await exigirLead(operador.id, formData.get("leadId"));
   const devolveu = await devolverAoSdr(obterDb(), { leadId, operadorId: operador.id, agora: new Date() });
   voltarAoChat(leadId, devolveu ? undefined : "A conversa não está com você agora.");
@@ -73,7 +73,7 @@ async function exigirPendente(operadorId: string, valor: FormDataEntryValue | nu
 
 /** Enviar a resposta que o SDR deixou para aprovar, como está ou editada (§4.7). */
 export async function enviarPendente(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const { acaoId, leadId } = await exigirPendente(operador.id, formData.get("acaoId"));
   const resultado = await aprovarAcao(
     { db: obterDb(), unipile: obterUnipile(), agora: new Date() },
@@ -84,7 +84,7 @@ export async function enviarPendente(formData: FormData) {
 }
 
 export async function descartarPendente(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const { acaoId, leadId } = await exigirPendente(operador.id, formData.get("acaoId"));
   const descartou = await rejeitarAcao(obterDb(), { acaoId, operadorId: operador.id, agora: new Date(), motivo: "descartada no Chats" });
   voltarAoChat(leadId, descartou ? "Descartada. Nada foi enviado." : "Essa resposta já tinha sido decidida.");
@@ -92,7 +92,7 @@ export async function descartarPendente(formData: FormData) {
 
 /** Sequência parada: refaz o último toque para você aprovar ali mesmo. */
 export async function tentarDeNovoDoChat(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const leadId = await exigirLead(operador.id, formData.get("leadId"));
   const ok = await tentarDeNovo(obterDb(), { leadId, operadorId: operador.id, agora: new Date() });
   voltarAoChat(leadId, ok ? "O toque voltou para você aprovar, no fim da conversa." : "Esse lead já foi resolvido.");
@@ -100,7 +100,7 @@ export async function tentarDeNovoDoChat(formData: FormData) {
 
 /** Sequência parada: você assume a conversa à mão. */
 export async function assumirParadoDoChat(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const leadId = await exigirLead(operador.id, formData.get("leadId"));
   const ok = await assumirParado(obterDb(), { leadId, operadorId: operador.id, agora: new Date() });
   voltarAoChat(leadId, ok ? "A conversa é sua: a sequência parou." : "Esse lead já foi resolvido.");
@@ -112,7 +112,7 @@ const entradaDoDesfecho = z.object({
 });
 
 export async function marcarConversa(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const leadId = await exigirLead(operador.id, formData.get("leadId"));
   const { para, reuniaoEm } = entradaDoDesfecho.parse({
     para: formData.get("para"),
@@ -130,7 +130,7 @@ export async function marcarConversa(formData: FormData) {
 }
 
 export async function registrarOptoutDaConversa(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const leadId = await exigirLead(operador.id, formData.get("leadId"));
   const db = obterDb();
   const [lead] = await db.query<{ provider_id: string; perfil_id: string; pedido: string | null }>(
@@ -153,7 +153,7 @@ export async function registrarOptoutDaConversa(formData: FormData) {
 
 /** Traz da Unipile as conversas recentes das contas que a pessoa opera (§4.8). */
 export async function importarHistoricoDoChat() {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const perfis = await comOperador(obterDb(), operador.id, (tx) =>
     tx.query<{ id: string; nome: string }>(
       "select id, nome from public.perfis where public.pode_ver_perfil(id) and unipile_account_id is not null and not casa",
@@ -175,7 +175,7 @@ export async function importarHistoricoDoChat() {
 }
 
 export async function responderExterna(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const conversaId = z.uuid().parse(formData.get("conversaId"));
   const [visivel] = await comOperador(obterDb(), operador.id, (tx) =>
     tx.query<{ id: string }>("select id from public.conversas where id = $1::uuid", [conversaId]),

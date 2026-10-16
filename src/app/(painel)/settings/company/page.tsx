@@ -4,7 +4,7 @@ import { Aviso } from "@/components/aviso";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { ofertaDaOrganizacao } from "@/server/oferta/oferta";
-import { exigirOperadorNoApp } from "@/server/supabase/servidor";
+import { exigirOperadorComModulo } from "@/server/supabase/servidor";
 import { EditorDaAnalise } from "../../../onboarding/analysis/editor-da-analise";
 import { confirmarAnaliseNasConfiguracoes, lerSiteDeNovo } from "../acoes";
 
@@ -16,7 +16,7 @@ const quando = (valor: Date) =>
 
 /** Empresa (§4.12): a análise de negócio, produto e mercado, editável, e ler o site de novo. */
 export default async function EmpresaPage({ searchParams }: PageProps<"/settings/company">) {
-  const operador = await exigirOperadorNoApp();
+  const operador = await exigirOperadorComModulo("linkedin");
   const { msg } = await searchParams;
   const oferta = await comOperador(obterDb(), operador.id, (tx) => ofertaDaOrganizacao(tx, operador.organizacaoId, new Date()));
   const lendo = oferta.leitura.status === "lendo";

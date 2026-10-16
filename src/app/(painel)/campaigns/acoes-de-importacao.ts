@@ -6,7 +6,7 @@ import { obterUnipile } from "@/server/dependencias";
 import { importarDaBusca } from "@/server/importacao/busca";
 import { importarPessoas, type ResumoDaImportacao } from "@/server/importacao/importar";
 import { exigirCampanhaDoOperador } from "@/server/painel/autorizacao";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperadorComModuloNaAcao } from "@/server/supabase/servidor";
 
 const pessoaImportada = z.object({
   providerId: z.string().nullable(),
@@ -33,7 +33,7 @@ const entradaDoArquivo = z.object({
 export type RespostaDaImportacao = { ok: true; resumo: ResumoDaImportacao } | { ok: false; erro: string };
 
 export async function importarArquivo(entrada: z.input<typeof entradaDoArquivo>): Promise<RespostaDaImportacao> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const dados = entradaDoArquivo.safeParse(entrada);
   if (!dados.success) return { ok: false, erro: "Arquivo com dados fora do formato esperado." };
   try {
@@ -55,7 +55,7 @@ const entradaDaBusca = z.object({
 });
 
 export async function importarBuscaDaUnipile(entrada: z.input<typeof entradaDaBusca>): Promise<RespostaDaImportacao> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const dados = entradaDaBusca.safeParse(entrada);
   if (!dados.success) return { ok: false, erro: "Informe a URL da busca ou as palavras-chave." };
   try {

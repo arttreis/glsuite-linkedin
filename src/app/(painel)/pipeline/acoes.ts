@@ -8,7 +8,7 @@ import { caminhoInternoSeguro } from "@/lib/redirecionamento";
 import { marcarDesfecho } from "@/server/conversas/desfecho";
 import { obterDb } from "@/server/db";
 import { leadsVisiveis } from "@/server/painel/autorizacao";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperadorComModuloNaAcao } from "@/server/supabase/servidor";
 
 /**
  * Mover um card à mão (§4.10): só para Qualificado, Reunião marcada ou
@@ -16,7 +16,7 @@ import { exigirOperador } from "@/server/supabase/servidor";
  * acontece e volta com o motivo.
  */
 export async function moverNoPipeline(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const leadId = z.uuid().parse(formData.get("leadId"));
   const [visivel] = await leadsVisiveis(operador.id, [leadId]);
   if (!visivel) throw new Error("Lead fora do seu acesso.");

@@ -1,6 +1,7 @@
-import { ArrowRight, Bot } from "lucide-react";
+import { ArrowRight, Bot, Rocket } from "lucide-react";
 import Link from "next/link";
 import { Aviso } from "@/components/aviso";
+import { CATALOGO_DE_MODULOS, linkedinNoPrimeiroAcesso, type Modulo } from "@/domain/modulos";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { lerPeriodo, numerosDoPeriodo } from "@/server/painel/numeros";
@@ -115,17 +116,73 @@ function ResumoDoSdrNoPainel({ sdr, contas }: { sdr: ResumoDoSdr | null; contas:
   );
 }
 
+/** O SDR no LinkedIn está contratado e o primeiro acesso ainda não foi feito (§4.14). */
+function ConfigurarOSdr() {
+  return (
+    <section className="cartao flex flex-wrap items-center justify-between gap-4 p-6" aria-labelledby="titulo-configurar">
+      <div className="min-w-0 max-w-2xl">
+        <h2 id="titulo-configurar" className="flex items-center gap-2 text-[15px] font-semibold">
+          <Rocket className="size-4 text-destaque" aria-hidden />
+          Falta configurar o SDR no LinkedIn
+        </h2>
+        <p className="mt-1 text-sm text-tinta-suave">
+          Seis passos: o site, a análise, o SDR no chat de teste, os leads, a abordagem e o seu LinkedIn. Dá para parar e voltar
+          de onde parou.
+        </p>
+      </div>
+      <Link href="/onboarding" className="botao botao-primario shrink-0">
+        Configurar o SDR
+        <ArrowRight aria-hidden />
+      </Link>
+    </section>
+  );
+}
+
+/** Sem o SDR no LinkedIn, o Dashboard mostra o que o plano da organização tem. */
+function OQueOPlanoTem({ modulos }: { modulos: Modulo[] }) {
+  const contratados = CATALOGO_DE_MODULOS.filter((modulo) => modulos.includes(modulo.id));
+  return (
+    <section className="cartao p-6" aria-labelledby="titulo-plano">
+      <h2 id="titulo-plano" className="text-[15px] font-semibold">
+        O seu plano
+      </h2>
+      {contratados.length === 0 ? (
+        <p className="mt-3 text-sm text-tinta-suave">
+          A organização ainda não tem nenhum módulo. Contatos, tags e segmentos já estão no menu.
+        </p>
+      ) : (
+        <ul className="mt-3 flex flex-col gap-2">
+          {contratados.map((modulo) => (
+            <li key={modulo.id} className="rounded-xl bg-superficie-alta px-4 py-3">
+              <p className="text-sm font-medium">{modulo.nome}</p>
+              <p className="mt-0.5 text-[13px] text-tinta-suave">{modulo.resumo}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link href="/settings/plan" className="link mt-4 inline-block text-sm">
+        Ver o plano
+      </Link>
+    </section>
+  );
+}
+
 export default async function DashboardPage({ searchParams }: PageProps<"/">) {
   const operador = await exigirOperadorNoApp();
   const { msg, period } = await searchParams;
   const periodo = lerPeriodo(period);
   const agora = new Date();
-  const { contas, precisa, numeros, sdr } = await comOperador(obterDb(), operador.id, async (tx) => ({
-    contas: await saudeDosPerfis(tx, agora),
-    precisa: await precisaDeVoce(tx),
-    numeros: await numerosDoPeriodo(tx, { periodo, agora }),
-    sdr: await resumoDoSdr(tx, operador.organizacaoId),
-  }));
+  // As partes do LinkedIn só existem com o módulo e depois do primeiro acesso (§4.14).
+  const pendente = linkedinNoPrimeiroAcesso(operador.modulos, operador.primeiroAcessoConcluido);
+  const linkedin =
+    operador.modulos.includes("linkedin") && !pendente
+      ? await comOperador(obterDb(), operador.id, async (tx) => ({
+          contas: await saudeDosPerfis(tx, agora),
+          precisa: await precisaDeVoce(tx),
+          numeros: await numerosDoPeriodo(tx, { periodo, agora }),
+          sdr: await resumoDoSdr(tx, operador.organizacaoId),
+        }))
+      : null;
   const data = agora.toLocaleDateString("pt-BR", { timeZone: FUSO, weekday: "long", day: "numeric", month: "long" });
 
   return (
@@ -133,17 +190,24 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
       <header className="cabecalho pt-10 pb-8">
         <p className="text-sm text-tinta-suave first-letter:uppercase">{data}</p>
         <h1 className="titulo-vitrine mt-3 text-[clamp(1.75rem,2.6vw,2.5rem)] text-balance">
-          {saudacao(agora)}, {operador.nome.split(/\s+/)[0]}. {fraseDoDia(precisa)}
+          {saudacao(agora)}, {operador.nome.split(/\s+/)[0]}. {linkedin ? fraseDoDia(linkedin.precisa) : "Tudo o que o seu plano tem está no menu."}
         </h1>
       </header>
       <div className="flex max-w-6xl flex-col gap-6">
         {typeof msg === "string" && <Aviso>{msg}</Aviso>}
-        <ContasDoLinkedin contas={contas} />
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-          <PrecisaDeVoce itens={precisa} />
-          <ResumoDoSdrNoPainel sdr={sdr} contas={contas} />
-        </div>
-        <Numeros numeros={numeros} periodo={periodo} />
+        {pendente && <ConfigurarOSdr />}
+        {linkedin ? (
+          <>
+            <ContasDoLinkedin contas={linkedin.contas} />
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+              <PrecisaDeVoce itens={linkedin.precisa} />
+              <ResumoDoSdrNoPainel sdr={linkedin.sdr} contas={linkedin.contas} />
+            </div>
+            <Numeros numeros={linkedin.numeros} periodo={periodo} />
+          </>
+        ) : (
+          <OQueOPlanoTem modulos={operador.modulos} />
+        )}
       </div>
     </>
   );

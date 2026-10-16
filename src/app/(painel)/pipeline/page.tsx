@@ -8,7 +8,7 @@ import { haQuantoTempo } from "@/lib/tempo";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { filtrosDoPipeline, quadroDoPipeline, type CartaoDoPipeline, type ColunaComCartoes } from "@/server/pipeline/pipeline";
-import { exigirOperadorNoApp } from "@/server/supabase/servidor";
+import { exigirOperadorComModulo } from "@/server/supabase/servidor";
 import { moverNoPipeline } from "./acoes";
 import { FiltrosDoPipeline } from "./filtros";
 
@@ -78,7 +78,7 @@ function Coluna({ coluna, children }: { coluna: ColunaComCartoes; children: Reac
 }
 
 export default async function PipelinePage({ searchParams }: PageProps<"/pipeline">) {
-  const operador = await exigirOperadorNoApp();
+  const operador = await exigirOperadorComModulo("linkedin");
   const { campaign, account, msg } = await searchParams;
   const campanhaId = uuid(campaign);
   const perfilId = uuid(account);

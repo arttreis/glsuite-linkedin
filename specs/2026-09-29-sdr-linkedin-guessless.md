@@ -1990,3 +1990,69 @@ interpretações abaixo são minhas e estão para o Arthur confirmar.
   `docs/epico-modulos-e-canais`, sem push. A ordem segue a dependência, não a
   da lista do pedido: módulos e contatos primeiro, porque os disparos usam os
   dois.
+
+### SDR-69 · Módulos e plano (16/10/2026)
+
+- Tabela `modulos_da_organizacao` (migration `20261016100000_modulos`), uma
+  linha por organização e módulo, com `ativo`, `desde` (a última vez que
+  ligou), o motivo e quem mudou (`alterado_por` é texto: o e-mail de quem é da
+  plataforma, ou `sistema`). Desligar não apaga a linha: religar mantém o
+  histórico e os dados de cada módulo ficam onde estão.
+- O catálogo fica em `domain/modulos.ts`, sem `server-only`, porque o menu e
+  as abas são client components. `NOME_DO_MODULO` é o único lugar dos nomes
+  (D13).
+- Organização nova ganha o `linkedin` por trigger (`ligar_modulo_padrao`), não
+  no código do primeiro acesso: assim qualquer caminho que crie organização
+  (o callback, o SQL do README, as fixtures dos testes) segue a regra. A
+  migration liga o `linkedin` em todas as que existem e os três na
+  `guessless`.
+- **Escrita só pela conexão do sistema.** O RLS dá leitura à organização e
+  nenhuma escrita ao `authenticated`: um admin da organização não liga módulo
+  para si. A Plataforma confere `PLATAFORMA_ADMINS` (env, como o
+  `ADMIN_EMAILS` do `/admin` do GL Suite) e quem não está recebe 404. A lista
+  vem de variável de ambiente, e não de uma coluna, para que nenhum acesso ao
+  banco da organização consiga se promover. Pelo mesmo motivo, o e-mail
+  conferido é o do login (o JWT verificado do Supabase Auth, `ehDaPlataforma`),
+  nunca o `operadores.email`: o RLS deixa o admin da organização editar as
+  linhas de operadores dela, e ele poderia escrever ali o e-mail de alguém da
+  GuessLess.
+- `Operador` ganhou `modulos` (na ordem do catálogo), lidos na mesma consulta
+  do operador. Os portões:
+  - `exigirOperadorNoApp`: só manda para `/onboarding` quando o `linkedin` é
+    o único módulo e o primeiro acesso não acabou (`soOPrimeiroAcesso`).
+    Para as organizações que já existem, nada muda;
+  - `exigirOperadorComModulo(modulo)`, nas páginas do LinkedIn (Chats,
+    Pipeline, Campanhas, Empresa, SDR, LinkedIn): sem o módulo, redireciona
+    para `/settings/plan?module=<id>`, que diz qual falta; com o primeiro
+    acesso por fazer, para `/onboarding`;
+  - `exigirOperadorComModuloNaAcao(modulo)`, em todas as ações do servidor do
+    LinkedIn (painel, campanhas, listas, importação, chats, pipeline,
+    configurações e primeiro acesso): sem o módulo, lança
+    `ModuloNaoContratado`. As de Equipe (nome da organização, papel) seguem
+    com `exigirOperador`. A exportação da planilha devolve 403;
+  - o primeiro acesso abre só com o `linkedin` pendente
+    (`linkedinNoPrimeiroAcesso`); sem o módulo, vai para o app.
+- Menu (`itensDoMenu`): Chats, Pipeline e Campanhas exigem o `linkedin`; com
+  ele pendente e outro módulo, os três viram um item "Configurar o SDR", que
+  leva ao primeiro acesso, em vez de três itens que levariam ao mesmo lugar.
+  "Plataforma" aparece só para quem é da plataforma. As abas de
+  Configurações seguem a mesma regra (`lista-de-abas.ts`, fora do client
+  component para o `/settings` do servidor poder usar) e ganharam "Plano".
+- Dashboard: as partes do LinkedIn (contas, precisa de você, SDR, números)
+  só com o módulo e o primeiro acesso feito; sem elas, o cartão do plano. Com
+  o `linkedin` pendente, o cartão "Falta configurar o SDR no LinkedIn".
+  Equipe sem o `linkedin` não mostra as contas que cada um opera.
+- Desligar o `linkedin` pausa as contas ativas da organização com
+  `pausarPerfil` (motivo "O módulo SDR no LinkedIn foi desligado: <motivo>",
+  com o alerta de sempre), menos a conta da casa, que não é de nenhuma
+  campanha. Os webhooks da Unipile continuam chegando e sendo guardados:
+  nada sai porque o despachante ignora conta pausada. A pausa dos disparos ao
+  desligar `whatsapp` ou `telegram` entra no SDR-72, quando os disparos
+  existirem.
+- Plano (`/settings/plan`): a base, cada módulo com o que faz, o que inclui,
+  "Contratado desde" ou "Fora do plano", e o uso do mês só para o `linkedin`
+  por enquanto (contas vinculadas, convites e mensagens enviadas, do dia 1 no
+  horário de Brasília até agora, a organização inteira, pela conexão do
+  sistema). Os contatos e os disparos entram no uso com os tickets deles.
+  "Quero contratar" abre o `COMERCIAL_URL`; sem ele, a tela diz para falar
+  com a GuessLess.

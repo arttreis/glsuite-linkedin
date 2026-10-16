@@ -8,7 +8,7 @@ import type { Operador } from "@/server/db/operador";
 import { obterModeloDeLinguagem } from "@/server/dependencias";
 import { obterSdr } from "@/server/sdr/sdr";
 import { comecarTeste, obterTeste } from "@/server/sdr/teste";
-import { exigirOperadorNoApp } from "@/server/supabase/servidor";
+import { exigirOperadorComModulo } from "@/server/supabase/servidor";
 import { ChatDoSdr } from "../../../../onboarding/sdr/chat";
 
 // A primeira mensagem do teste é uma chamada da IA.
@@ -47,7 +47,7 @@ async function Chat({ operador }: { operador: Operador }) {
 
 /** Testar o SDR em Configurações (§4.12): o mesmo chat do primeiro acesso, sem o "seguir". */
 export default async function TesteDoSdrPage() {
-  const operador = await exigirOperadorNoApp();
+  const operador = await exigirOperadorComModulo("linkedin");
   return (
     <div className="flex max-w-3xl flex-col gap-4">
       <Link href="/settings/sdr" className="flex w-fit items-center gap-1.5 text-[13px] text-tinta-suave hover:text-tinta">

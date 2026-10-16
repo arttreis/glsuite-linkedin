@@ -2,6 +2,7 @@
 
 import { LogOut, Menu, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
+import type { Modulo } from "@/domain/modulos";
 import { Avatar } from "./avatar";
 import { Marca } from "./marca";
 import { Navegacao } from "./navegacao";
@@ -10,6 +11,11 @@ export type OperadorDaSessao = {
   nome: string;
   email: string;
   organizacao: string;
+  /** Os módulos da organização: o menu mostra só o que eles liberam (§4.14). */
+  modulos: Modulo[];
+  linkedinNoPrimeiroAcesso: boolean;
+  /** Quem é da plataforma vê a Plataforma no menu. */
+  plataforma: boolean;
 };
 
 function PainelLateral({ operador, aoFechar }: { operador: OperadorDaSessao; aoFechar?: () => void }) {
@@ -24,7 +30,12 @@ function PainelLateral({ operador, aoFechar }: { operador: OperadorDaSessao; aoF
         )}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-1">
-        <Navegacao aoNavegar={aoFechar} />
+        <Navegacao
+          modulos={operador.modulos}
+          linkedinNoPrimeiroAcesso={operador.linkedinNoPrimeiroAcesso}
+          plataforma={operador.plataforma}
+          aoNavegar={aoFechar}
+        />
       </div>
       <div className="mt-3 rounded-xl border border-linha bg-superficie-alta p-3">
         <div className="flex items-center gap-3">

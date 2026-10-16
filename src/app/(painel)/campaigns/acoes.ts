@@ -19,7 +19,7 @@ import { exigirCampanhaDoOperador, leadsVisiveis } from "@/server/painel/autoriz
 import { comecarAAbordar } from "@/server/publicos/abordagem";
 import { gerarFluxo } from "@/server/publicos/fluxo";
 import { mudarStatusDoPublico, obterPublico } from "@/server/publicos/publicos";
-import { exigirOperador } from "@/server/supabase/servidor";
+import { exigirOperadorComModuloNaAcao } from "@/server/supabase/servidor";
 import { aprovarLeads, rejeitarLeads } from "@/server/triagem/triagem";
 
 /** As abas da campanha (§4.11), com o slug da URL em inglês. */
@@ -42,7 +42,7 @@ async function exigirCampanha(operadorId: string, valor: FormDataEntryValue | nu
 }
 
 export async function salvarCampanhaDoPainel(entrada: EntradaDeCampanha): Promise<ResultadoDoSalvamento> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const perfilId = z.uuid().safeParse(entrada.perfilId);
   if (!perfilId.success) return { ok: false, erros: ["Escolha o perfil."], problemas: [] };
 
@@ -67,7 +67,7 @@ const entradaDeStatus = z.object({
  * retomar ficam aqui também.
  */
 export async function alterarStatusDaCampanha(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const { campanhaId, status } = entradaDeStatus.parse({
     campanhaId: formData.get("campanhaId"),
     status: formData.get("status"),
@@ -88,7 +88,7 @@ export async function alterarStatusDaCampanha(formData: FormData) {
 
 /** Campanha nova (§4.11): o público (escolhido, ou a sugestão que vira escolhida) e a conta. */
 export async function criarCampanhaDoPainel(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const ids = z.object({ publicoId: z.uuid(), perfilId: z.uuid() }).safeParse({
     publicoId: formData.get("publicoId"),
     perfilId: formData.get("perfilId"),
@@ -122,7 +122,7 @@ export async function criarCampanhaDoPainel(formData: FormData) {
 
 /** Escreve (ou reescreve) a abordagem com a IA, na voz do SDR. */
 export async function escreverAbordagemDoPainel(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const campanhaId = await exigirCampanha(operador.id, formData.get("campanhaId"));
   const estilo = z.enum(["casa", "pergunta"]).catch("casa").parse(formData.get("estilo"));
   const escritor = obterEscritorDeFluxo();
@@ -141,7 +141,7 @@ export async function escreverAbordagemDoPainel(formData: FormData) {
 
 /** Os textos da linha do tempo, validados antes de gravar. */
 export async function salvarTextosDoPainel(entrada: { campanhaId: string; textos: Record<string, string> }): Promise<ResultadoDosTextos> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const campanhaId = z.uuid().parse(entrada.campanhaId);
   await exigirCampanhaDoOperador(operador.id, campanhaId);
   const textos = z.record(z.string().max(60), z.string().max(2000)).parse(entrada.textos);
@@ -151,7 +151,7 @@ export async function salvarTextosDoPainel(entrada: { campanhaId: string; textos
 }
 
 export async function salvarInstrucoesDoPainel(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const campanhaId = await exigirCampanha(operador.id, formData.get("campanhaId"));
   const resultado = await salvarInstrucoesDoSdr(obterDb(), {
     campanhaId,
@@ -165,7 +165,7 @@ export async function salvarInstrucoesDoPainel(formData: FormData) {
 const leadIds = z.array(z.uuid()).max(500);
 
 export async function aprovarLeadsDoPainel(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const campanhaId = await exigirCampanha(operador.id, formData.get("campanhaId"));
   const selecionados = await leadsVisiveis(operador.id, leadIds.parse(formData.getAll("leadIds")));
   const { aprovados, recusados } = await aprovarLeads(obterDb(), {
@@ -180,7 +180,7 @@ export async function aprovarLeadsDoPainel(formData: FormData) {
 }
 
 export async function tirarLeadsDoPainel(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const campanhaId = await exigirCampanha(operador.id, formData.get("campanhaId"));
   const selecionados = await leadsVisiveis(operador.id, leadIds.parse(formData.getAll("leadIds")));
   const tirados = await rejeitarLeads(obterDb(), { leadIds: selecionados, operadorId: operador.id, agora: new Date() });
@@ -188,7 +188,7 @@ export async function tirarLeadsDoPainel(formData: FormData) {
 }
 
 export async function darNotasDaCampanhaDoPainel(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const campanhaId = await exigirCampanha(operador.id, formData.get("campanhaId"));
   const avaliador = obterAvaliadorDeAderencia();
   if (!avaliador) voltarParaAba(campanhaId, "leads", "A nota de aderência precisa da chave da Anthropic. Peça ao admin.");
@@ -203,7 +203,7 @@ export async function darNotasDaCampanhaDoPainel(formData: FormData) {
 }
 
 export async function aprovarAcimaDoCorteDaCampanhaDoPainel(formData: FormData) {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
   const campanhaId = await exigirCampanha(operador.id, formData.get("campanhaId"));
   const { aprovados, recusados, corte } = await aprovarAcimaDoCorte(obterDb(), {
     campanhaId,

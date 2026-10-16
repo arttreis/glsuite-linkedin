@@ -1,3 +1,4 @@
+import { ehModulo, MODULOS, type Modulo } from "@/domain/modulos";
 import type { Db } from "./tipos";
 
 /**
@@ -25,18 +26,24 @@ export type Operador = {
   papel: "admin" | "operador";
   organizacaoId: string;
   organizacaoNome: string;
-  /** A organização terminou o primeiro acesso (§4.1). Sem isso, só `/onboarding` abre. */
+  /** A organização terminou o primeiro acesso (§4.1). Com só o SDR no LinkedIn, sem isso só `/onboarding` abre (§4.14). */
   primeiroAcessoConcluido: boolean;
+  /** Os módulos ligados da organização, na ordem do catálogo (§4.14). */
+  modulos: Modulo[];
 };
 
 /** Operador ativo pelo id do usuário do Supabase Auth, ou null. */
 export async function buscarOperadorAtivo(db: Db, userId: string): Promise<Operador | null> {
-  const [operador] = await db.query<Operador>(
+  const [operador] = await db.query<Omit<Operador, "modulos"> & { modulos: string[] }>(
     `select o.id, o.nome, o.email, o.papel, o.organizacao_id as "organizacaoId", g.nome as "organizacaoNome",
-            g.primeiro_acesso_em is not null as "primeiroAcessoConcluido"
+            g.primeiro_acesso_em is not null as "primeiroAcessoConcluido",
+            coalesce(array(select m.modulo from public.modulos_da_organizacao m
+                            where m.organizacao_id = g.id and m.ativo), '{}') as modulos
        from public.operadores o join public.organizacoes g on g.id = o.organizacao_id
       where o.id = $1::uuid and o.ativo`,
     [userId],
   );
-  return operador ?? null;
+  if (!operador) return null;
+  const ligados = new Set(operador.modulos.filter(ehModulo));
+  return { ...operador, modulos: MODULOS.filter((modulo) => ligados.has(modulo)) };
 }

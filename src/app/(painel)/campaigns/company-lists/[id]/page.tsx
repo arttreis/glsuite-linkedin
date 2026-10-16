@@ -4,7 +4,7 @@ import { Cabecalho } from "@/components/cabecalho";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { EMPRESAS_NA_TELA, obterLista } from "@/server/listas/listas";
-import { exigirOperadorNoApp } from "@/server/supabase/servidor";
+import { exigirOperadorComModulo } from "@/server/supabase/servidor";
 import { TelaDaLista } from "./lista";
 
 // "Procurar no LinkedIn" consulta até 20 empresas com pausa de 1 a 3 s entre elas: até 1 minuto por chamada.
@@ -12,7 +12,7 @@ export const maxDuration = 300;
 
 /** Uma lista de empresas: procurar no LinkedIn, escolher a página certa, adicionar, tirar, renomear e apagar. */
 export default async function ListaDeEmpresasPage({ params }: PageProps<"/campaigns/company-lists/[id]">) {
-  const operador = await exigirOperadorNoApp();
+  const operador = await exigirOperadorComModulo("linkedin");
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const lista = await comOperador(obterDb(), operador.id, (tx) => obterLista(tx, id));

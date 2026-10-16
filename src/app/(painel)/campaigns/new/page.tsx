@@ -6,7 +6,7 @@ import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { dossieConfirmado } from "@/server/oferta/oferta";
 import { listarPublicos } from "@/server/publicos/publicos";
-import { exigirOperadorNoApp } from "@/server/supabase/servidor";
+import { exigirOperadorComModulo } from "@/server/supabase/servidor";
 import { EditorDoPublico } from "../editor-do-publico";
 import { BotaoSugerir } from "./botao-sugerir";
 import { criarCampanhaDoPainel } from "../acoes";
@@ -27,7 +27,7 @@ const EM_BRANCO: Publico = {
  * abordagem e a permissão vêm nas abas da campanha.
  */
 export default async function NovaCampanhaPage({ searchParams }: PageProps<"/campaigns/new">) {
-  const operador = await exigirOperadorNoApp();
+  const operador = await exigirOperadorComModulo("linkedin");
   const { msg } = await searchParams;
   const { publicos, contas, dossie } = await comOperador(obterDb(), operador.id, async (tx) => ({
     publicos: (await listarPublicos(tx, operador.organizacaoId)).filter((p) => p.status !== "arquivado"),
