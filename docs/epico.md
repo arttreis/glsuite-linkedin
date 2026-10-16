@@ -1,6 +1,7 @@
 # Épico · Kakou, o SDR de LinkedIn que nasce do seu site
 
-10/10/2026 · uso interno · dono: Arthur
+10/10/2026 · uso interno · dono: Arthur · módulos, contatos e disparos em
+16/10/2026 (Marco D)
 
 Substitui o épico de 29/09/2026 (jornada do Kakou, SDR-01 a SDR-34), que está
 no histórico do git até o commit `604e192`. O motor construído naquele épico
@@ -17,6 +18,11 @@ ela acompanha tudo como se estivesse nas próprias DMs.
 O essencial é o **SDR**: um chatbot de conversa que nasce da análise do site e
 que a pessoa testa, no papel de lead, e refina até falar do jeito certo. É o
 mesmo SDR que depois responde os leads de verdade.
+
+Desde o Marco D, o Kakou é vendido em **módulos** (§4.14): o SDR no LinkedIn
+é um deles; os outros disparam mensagens pelo WhatsApp (API oficial da Meta) e
+pelo Telegram para um segmento dos contatos da organização. Toda organização
+tem a base: contatos, tags e segmentos (§4.15 a §4.17).
 
 ## 2 · A experiência
 
@@ -64,15 +70,18 @@ navegador no meio volta para o passo em que parou.
 
 ### 2.2 · O app
 
-Menu com cinco telas, nesta ordem:
+Menu com até sete telas, nesta ordem. Cada uma aparece só com o módulo que a
+libera (§4.14):
 
-| Tela | Para quê |
-|---|---|
-| **Dashboard** | a conta: LinkedIn conectado e saúde, quanto do teto de hoje já foi usado, os números da semana, o funil e o que precisa de você agora (§4.9) |
-| **Chats** | réplica das DMs do LinkedIn: lista à esquerda, conversa no meio, dados do lead à direita. Você vê o SDR conversando e responde você mesmo quando quiser (§4.8) |
-| **Pipeline** | os leads em colunas, do convite à reunião (§4.10) |
-| **Campanhas** | cada campanha é um público com a sua abordagem, rodando numa conta. Aqui a pessoa monta uma campanha específica para ela (§4.11) |
-| **Configurações** | tudo o que o primeiro acesso definiu: empresa, SDR, LinkedIn e equipe (§4.12) |
+| Tela | Módulo | Para quê |
+|---|---|---|
+| **Dashboard** | base | a conta: LinkedIn conectado e saúde, quanto do teto de hoje já foi usado, os números da semana, o funil e o que precisa de você agora (§4.9); com disparos, os últimos disparos e como foram |
+| **Chats** | SDR no LinkedIn | réplica das DMs do LinkedIn: lista à esquerda, conversa no meio, dados do lead à direita. Você vê o SDR conversando e responde você mesmo quando quiser (§4.8) |
+| **Pipeline** | SDR no LinkedIn | os leads em colunas, do convite à reunião (§4.10) |
+| **Campanhas** | SDR no LinkedIn | cada campanha é um público com a sua abordagem, rodando numa conta. Aqui a pessoa monta uma campanha específica para ela (§4.11) |
+| **Contatos** | base | todos com quem a organização pode falar, em qualquer canal, com tags e segmentos (§4.15 a §4.17) |
+| **Disparos** | WhatsApp ou Telegram | uma mensagem para um segmento, agora ou agendada, e como ela chegou (§4.18) |
+| **Configurações** | base | tudo o que o primeiro acesso definiu: empresa, SDR, LinkedIn e equipe (§4.12); WhatsApp e Telegram conectados; o plano (§4.14) |
 
 ## 3 · Fora do escopo desta versão
 
@@ -81,8 +90,16 @@ Menu com cinco telas, nesta ordem:
   as regras voltarem num épico próprio.
 - **CRM externo.** O RD Station sai. O Pipeline é o CRM do Kakou.
 - **Cadastro aberto.** No começo só entra e-mail de domínio liberado (§4.1).
-- Cobrança, planos e termos de uso.
-- E-mail, WhatsApp, InMail e Sales Navigator.
+- **Cobrança automática** (cartão, boleto, Pix) e termos de uso. Os módulos
+  existem e cada um liga e desliga por organização (§4.14), mas quem liga é a
+  GuessLess; a cobrança fica fora do Kakou (D16).
+- E-mail, InMail e Sales Navigator.
+- **Conversar pelo WhatsApp e pelo Telegram.** Os dois entram só para disparo
+  (§4.18): a resposta do contato fica guardada e aparece no resultado do
+  disparo, mas o Chats continua sendo do LinkedIn e o SDR não responde por
+  esses canais.
+- Criar e editar templates do WhatsApp (é no WhatsApp Manager da Meta) e o
+  cadastro do número pelo Embedded Signup da Meta (D15).
 - Busca de leads por sinal (quem comentou post, troca de emprego).
 
 ## 4 · As regras de negócio
@@ -375,7 +392,13 @@ confirmada e guardada em versões. Ele tem:
 | Empresa | a análise (Negócio, Produto, Mercado), editável; ler o site de novo |
 | SDR | os campos do SDR, editáveis; "Testar no chat", que abre o chat de teste; histórico de ajustes com desfazer; quando o SDR passa a conversa para você (§4.7); modo de resposta (sozinho ou aprovo cada resposta); link de agenda |
 | LinkedIn | contas vinculadas, status, rampa, teto, janela; nome e janela editáveis (o admin ou quem vinculou a conta); pausar e retomar; reconectar; vincular outra conta |
+| WhatsApp | o número conectado pela API oficial da Meta, a qualidade e o limite, os templates aprovados; conectar e desconectar (§4.19). Só com o módulo |
+| Telegram | o bot conectado, o link de entrada e os links com tag, a mensagem de boas-vindas; conectar e desconectar (§4.20). Só com o módulo |
 | Equipe | membros, papel (admin ou operador) e as contas que cada um opera. Só o admin muda |
+| Plano | os módulos, o que cada um faz, os contratados e o uso do mês (§4.14) |
+
+Empresa, SDR e LinkedIn aparecem só com o SDR no LinkedIn. Conectar e
+desconectar WhatsApp e Telegram é do admin.
 
 ### 4.13 · Regras do motor que continuam
 
@@ -416,6 +439,223 @@ E três que são do próprio motor:
   de empresa (padrão 30 dias). Todo contato guarda URL, fonte e data da
   coleta.
 
+### 4.14 · Módulos e plano
+
+- O Kakou é vendido em módulos, e a organização contrata só o que usa. Os
+  nomes de venda ficam em `docs/naming.md` (D13); no código, cada módulo tem
+  um id que não muda.
+
+  | Módulo | id | O que libera |
+  |---|---|---|
+  | **SDR no LinkedIn** | `linkedin` | o primeiro acesso, Chats, Pipeline, Campanhas, as abas Empresa, SDR e LinkedIn, e o motor (despachante, agente, busca) |
+  | **Disparos no WhatsApp** | `whatsapp` | conectar o número do WhatsApp Business da organização e disparar templates aprovados (§4.19) |
+  | **Disparos no Telegram** | `telegram` | conectar o bot da organização e disparar para quem entrou pelo bot (§4.20) |
+
+- Toda organização tem a **base**, sem contratar nada: Dashboard, Contatos
+  (com tags e segmentos), Equipe e Plano (D12).
+- Quem liga e desliga módulo é a GuessLess, na tela **Plataforma**, que só
+  abre para os e-mails em `PLATAFORMA_ADMINS`. Cada mudança grava quem, quando
+  e o motivo. Não há cobrança automática nesta versão (§3, D16).
+- Organização nova (§4.1) nasce com o SDR no LinkedIn, como hoje; as que já
+  existem também. A organização da GuessLess ganha os três.
+- **Módulo desligado:** as telas dele somem do menu; a rota abre o Plano
+  dizendo que o módulo não está contratado; as ações do servidor recusam; e
+  nada dele roda em segundo plano. Os dados ficam guardados: religar volta
+  como estava.
+  - Desligar o SDR no LinkedIn pausa as contas ativas da organização, com o
+    motivo e o aviso de sempre (§4.13). Religar não despausa: despausar é
+    sempre manual.
+  - Desligar WhatsApp ou Telegram pausa os disparos daquele canal que estão
+    agendados ou saindo, com o motivo. Religar não retoma: a pessoa retoma.
+- **Primeiro acesso.** Ele é do SDR no LinkedIn (§2.1). Organização com esse
+  módulo e sem o primeiro acesso concluído:
+  - sem outro módulo, vê só o primeiro acesso, como hoje;
+  - com outro módulo, entra no app, e as telas do LinkedIn levam ao primeiro
+    acesso.
+
+  Sem o módulo, a organização entra direto no app.
+- **Configurações > Plano** mostra cada módulo: o que faz, se está contratado
+  e desde quando, e o uso do mês (contas do LinkedIn vinculadas, convites e
+  mensagens; mensagens enviadas por WhatsApp e por Telegram; contatos). Módulo
+  fora do plano tem o botão "Quero contratar", que leva ao comercial da
+  GuessLess (`COMERCIAL_URL`).
+
+### 4.15 · Contatos
+
+- **Contato** é qualquer pessoa com quem a organização pode falar, em qualquer
+  canal: nome, empresa, cargo, e-mail e os canais (LinkedIn, WhatsApp e
+  Telegram). Contato é da organização.
+- Ele vem de quatro lugares:
+  - do LinkedIn: toda pessoa que entra numa campanha vira contato, ligado ao
+    lead;
+  - da importação de planilha;
+  - de quem entra pelo bot do Telegram (§4.20);
+  - de quem escreve primeiro para o WhatsApp da organização (§4.19).
+- Um contato por telefone e um por conta do Telegram, por organização.
+  Importar de novo completa só o que estava vazio (não troca o que já existe)
+  e soma as tags.
+- **Telefone** fica no formato internacional (`+5511999998888`). Número com
+  DDD e sem DDI ganha +55; número que não forma telefone válido não entra, e a
+  linha volta com o motivo.
+- **Importar planilha** (CSV ou texto colado): as colunas são reconhecidas
+  pelo nome (nome, telefone, celular, whatsapp, e-mail, empresa, cargo, tags).
+  Até 5.000 linhas por vez. Para o WhatsApp, quem importa marca que **essas
+  pessoas autorizaram receber mensagens da empresa pelo WhatsApp**. Sem a
+  marca, os contatos entram mas não recebem disparo pelo WhatsApp. A
+  autorização guarda quem marcou, quando e em qual importação.
+- **Sair** tem dois tamanhos (D14):
+  - **sair de um canal**: o contato não recebe mais disparo por aquele canal.
+    É o que acontece com "SAIR" ou o botão de parar no WhatsApp (§4.19) e com
+    /sair ou bloquear o bot no Telegram (§4.20);
+  - **não contatar mais**: o contato não recebe mais nada da organização, por
+    nenhum canal. É o opt-out do LinkedIn (§4.13), que passa a valer também
+    para os disparos, e o botão "Não contatar mais" no contato. Se o contato
+    for lead do LinkedIn, o botão também registra o opt-out da §4.13.
+
+  Pela tela, ninguém desfaz uma saída. Quem saiu do Telegram volta só pelo
+  próprio Telegram (/start); quem saiu do WhatsApp não volta nesta versão.
+- A tela **Contatos**: a lista com busca e filtros (tag, canal, origem,
+  segmento, quem saiu), selecionar e pôr ou tirar tags em massa, importar, e
+  o contato com os canais, as tags, os disparos que recebeu, as respostas e o
+  lead do LinkedIn, se houver.
+
+### 4.16 · Tags
+
+- Tag é um rótulo da organização, com nome e cor, que se põe em contatos.
+  Nome único na organização, sem diferença de maiúscula ou acento, até 40
+  caracteres; até 200 tags por organização.
+- Põe e tira: no contato; em massa, em Contatos (os selecionados ou todos do
+  filtro); na importação (coluna tags, separadas por vírgula ou ponto e
+  vírgula, e a tag que não existe é criada); no painel do lead no Chats; e
+  pelo link de entrada do Telegram (§4.20).
+- O Chats e o Pipeline mostram as tags do lead, e o Pipeline filtra por tag.
+- Renomear ou trocar a cor vale para todos os contatos. Apagar tira a tag de
+  todos, e a tela diz de quantos antes de confirmar. Tag usada por um
+  segmento não se apaga: a tela diz quais segmentos usam.
+- Pôr e tirar tag fica na trilha: quem, quando e em quantos contatos.
+
+### 4.17 · Segmentos
+
+- Segmento é um filtro de contatos com nome, salvo para usar de novo. Ele é
+  recalculado a cada uso: quem passa a cumprir o filtro entra, quem deixa de
+  cumprir sai.
+- As condições valem juntas:
+  - tags: tem todas estas; tem pelo menos uma destas; não tem nenhuma destas;
+  - canal: pode receber pelo WhatsApp, pelo Telegram, ou é lead do LinkedIn;
+  - origem: LinkedIn, importação, Telegram ou WhatsApp;
+  - do LinkedIn: etapa do Pipeline (§4.10), campanha e nota mínima;
+  - texto no nome, na empresa ou no cargo;
+  - entrou a partir de uma data.
+- Quem pediu para não ser mais contatado (§4.15) nunca está em segmento.
+- Enquanto a pessoa monta, a tela mostra quantos contatos o segmento tem
+  agora, os primeiros deles e a descrição em português ("contatos com a tag
+  Cliente, sem a tag Inativo, que podem receber pelo WhatsApp").
+- Contatos aceita um segmento como filtro. Apagar um segmento não mexe nos
+  disparos feitos com ele: cada disparo guarda o filtro que usou.
+
+### 4.18 · Disparos
+
+- Disparo é uma mensagem para um segmento, por um canal (WhatsApp ou
+  Telegram), agora ou numa data e hora. Precisa do módulo do canal e do canal
+  conectado.
+- **Quem recebe é o segmento na hora da confirmação.** A lista congela ali e
+  não muda durante o envio. Antes de confirmar, a tela mostra quantos vão
+  receber, quantos ficam de fora e por quê (sem o canal, sem autorização do
+  WhatsApp, saiu do canal, recebeu outro disparo há pouco, campo do template
+  vazio), e a mensagem como chega para três contatos do segmento.
+- **Nada sai sem confirmação.** "Disparar agora" ou "Agendar" grava quem
+  confirmou e quando. Disparo confirmado não se edita: pausa, retoma ou
+  cancela. Cancelar não desfaz o que já saiu.
+- **Conferência na hora de cada envio:** quem não pode mais ser contatado,
+  saiu do canal ou bloqueou depois da confirmação não recebe; fica pulado, com
+  o motivo.
+- **Uma mensagem por contato por disparo**, e um contato não recebe dois
+  disparos pelo mesmo canal em menos de 24 horas (`disparos.intervalo_horas`,
+  D17).
+- **Janela:** disparo só sai das 8h às 21h no horário de Brasília
+  (`disparos.janela`, D17). O que não coube continua no dia seguinte, às 8h.
+  Agendar fora da janela é recusado com o horário em que daria.
+- **Ritmo:** os envios saem numa fila, no ritmo de cada canal, sem depender da
+  tela aberta. Fechar o navegador não para o disparo. A fila roda a cada
+  minuto (`/api/cron/disparos`) e também logo depois da confirmação.
+- **Nunca duas vezes:** envio que caiu no meio, sem a resposta do canal, não é
+  repetido sozinho. Ele fica como falha com o motivo "pode ter chegado", e
+  quem decide é a pessoa ("Tentar de novo as falhas").
+- **Falhas:**
+  - do contato (número sem WhatsApp, bot bloqueado, conta apagada): falha com o
+    motivo, sem nova tentativa, e o contato sai do canal quando o motivo é
+    definitivo;
+  - de ritmo (limite por segundo do canal): espera e tenta de novo, até 3
+    vezes;
+  - da conta (token inválido, número restrito, template pausado ou apagado,
+    limite diário da Meta): o disparo pausa sozinho, com o motivo, e quem
+    confirmou é avisado no Dashboard.
+- **Resultado:** na fila, enviadas, entregues, lidas (só WhatsApp),
+  responderam, falharam e puladas, com o motivo de cada falha e as respostas.
+  Resposta é mensagem do contato no canal em até 7 dias depois do envio.
+  "Tentar de novo as falhas" põe de volta na fila só as falhas que podem dar
+  certo agora (ritmo, conta, pode ter chegado), com nova conferência.
+
+### 4.19 · WhatsApp pela API oficial da Meta
+
+- **Conectar** (Configurações > WhatsApp, só o admin): a organização informa o
+  id da conta do WhatsApp Business (WABA), o id do número e um token
+  permanente de usuário do sistema com as permissões
+  `whatsapp_business_messaging` e `whatsapp_business_management`. O Kakou
+  confere na Meta (número, nome verificado, qualidade e limite), guarda o
+  token cifrado e inscreve o app da GuessLess na conta, para receber os
+  status e as respostas. Um número por organização nesta versão. O caminho
+  pelo Embedded Signup fica para quando a GuessLess for Tech Provider (D15).
+- **Templates:** o Kakou lista os templates aprovados da conta (nome,
+  categoria, idioma e texto). O disparo só usa template aprovado. Cada
+  variável do template vem de um campo do contato (primeiro nome, nome,
+  empresa, cargo) ou de um texto fixo; contato sem o campo fica de fora, com
+  o motivo. Cabeçalho com imagem, vídeo ou documento pede o link público do
+  arquivo. Criar e editar template é no WhatsApp Manager.
+- Recebe o disparo só quem tem telefone, autorização para o WhatsApp (§4.15) e
+  não saiu do WhatsApp.
+- Quem escreve primeiro para o número vira contato (origem WhatsApp), sem a
+  autorização de disparo: escrever não é autorizar marketing.
+- **Sair do WhatsApp:** a mensagem que é só "SAIR", "PARAR", "PARE", "STOP",
+  "CANCELAR" ou "DESCADASTRAR" (sem diferença de maiúscula ou acento), um
+  pedido claro para parar (o detector da §7) ou o botão de parar promoções da
+  Meta tiram o contato do WhatsApp na hora.
+- **Custo:** a Meta cobra cada mensagem de template entregue direto na conta
+  do WhatsApp Business da organização; não passa pela GuessLess. A tela de
+  confirmação mostra a estimativa com o preço por categoria da configuração
+  `whatsapp.precos` e diz que o valor é da Meta.
+- Status de entrega e de leitura chegam pelo webhook da Meta, assinado com o
+  segredo do app da GuessLess (`META_APP_SECRET`). Webhook sem assinatura
+  válida é recusado.
+- Número com qualidade baixa (vermelha) ou conta restrita pausa os disparos
+  do WhatsApp da organização, com o motivo.
+
+### 4.20 · Telegram
+
+- **Conectar** (Configurações > Telegram, só o admin): a organização cria um
+  bot no @BotFather e cola o token. O Kakou confere o bot, guarda o token
+  cifrado e liga o webhook, com um segredo que o Telegram devolve em cada
+  aviso.
+- Bot só fala com quem falou com ele primeiro (regra do Telegram). Por isso a
+  lista do Telegram é feita de quem entra pelo **link do bot**
+  (`t.me/<bot>?start=...`): quem abre e toca em Começar vira contato (origem
+  Telegram), com nome e @usuário, e já pode receber disparo.
+- **Links de entrada com tag:** a organização cria links que põem uma tag em
+  quem entra por eles ("evento-sp", "site"), para saber de onde a pessoa veio
+  e segmentar.
+- O bot responde a entrada com a mensagem de boas-vindas da organização
+  (padrão: "Pronto, {{first_name}}! Você vai receber as novidades da
+  <organização> por aqui. Para sair, mande /sair.").
+- **Sair do Telegram:** /sair, /stop ou a mensagem que é só "sair", "parar"
+  ou "stop" tiram o contato do Telegram, e o bot confirma; /start volta.
+  Bloquear o bot também tira; desbloquear não volta sozinho (volta com
+  /start).
+- O texto do disparo tem até 4.096 caracteres, usa `{{first_name}}` e
+  `{{company}}` como os textos do LinkedIn (§4.5), sem formatação, e pode ter
+  um botão com link.
+- Mensagem que o contato manda para o bot fica guardada e conta como resposta
+  ao último disparo que ele recebeu em até 7 dias.
+
 ## 5 · Arquitetura
 
 O motor fica como está. Muda o que está por cima e entra a conta da casa:
@@ -437,6 +677,13 @@ O motor fica como está. Muda o que está por cima e entra a conta da casa:
  │ Despachante ├────┴──► Unipile ──► LinkedIn das organizações
  └─────────────┘           │
                            └──► conta da casa: só a busca da prévia
+
+ Marco D: contatos · tags · segmentos · disparos
+ ┌──────────────────┐ cron 1 min ┌──────────────────────────────────┐
+ │ Fila de disparos ├───────────►│ Meta Cloud API ──► WhatsApp      │
+ │ envios_do_disparo│            │ Telegram Bot API ──► Telegram    │
+ └──────────────────┘◄───────────┤ webhooks: status e respostas     │
+                                 └──────────────────────────────────┘
 ```
 
 | Peça | Escolha |
@@ -447,6 +694,10 @@ O motor fica como está. Muda o que está por cima e entra a conta da casa:
 | Agendamento | tabela `acoes` + tick a cada 5 minutos; um despachante central soma o teto por perfil |
 | IA | `@anthropic-ai/sdk`; Haiku classifica e dá nota; Sonnet lê o site, gera e ajusta o SDR, escreve a abordagem e rascunha. Modelos em variável de ambiente |
 | Alertas | e-mail pela Resend |
+| WhatsApp | API oficial da Meta (Cloud API), chamada direto pelo Kakou, sem BSP no meio; um app da GuessLess recebe os webhooks de todas as organizações ([pesquisa](pesquisa/whatsapp-cloud-api.md)) |
+| Telegram | Bot API, um bot por organização, webhook com segredo por canal ([pesquisa](pesquisa/telegram-bot-api.md)) |
+| Disparos | tabela `envios_do_disparo` como fila, com reserva por prazo; `/api/cron/disparos` a cada minuto pelo pg_cron e logo depois da confirmação |
+| Segredos | tokens do WhatsApp e do Telegram cifrados (AES-256-GCM) com `SEGREDOS_CHAVE` |
 
 ## 6 · Modelo de dados: o que muda
 
@@ -483,6 +734,51 @@ rascunhos     + sdr_versao                          -- que versão do SDR escrev
 Sai: `rd_eventos`, `leads.rd_deal_id`, a configuração `rd_station`, as tarefas
 manuais da Espanha e o rodapé obrigatório do Canadá. Fuso e feriados ficam no
 perfil.
+
+Entra no Marco D (o banco é dividido com o GL Suite: nome novo de tabela é
+conferido contra as dele, e a migration recusa rodar se achar uma tabela de
+mesmo nome que não é do Kakou):
+
+```text
+modulos_da_organizacao (                           -- §4.14
+  organizacao_id, modulo,                          -- 'linkedin' | 'whatsapp' | 'telegram'
+  ativo, desde, motivo, alterado_em, alterado_por  -- alterado_por: e-mail de quem é da plataforma
+)
+contatos (                                         -- §4.15, um por telefone e um por Telegram na organização
+  id, organizacao_id, nome, primeiro_nome, empresa, cargo, email,
+  origem,                                          -- 'linkedin' | 'importacao' | 'telegram' | 'whatsapp'
+  pessoa_id unique,                                -- o lead do LinkedIn, quando há
+  telefone, whatsapp_autorizado_em, whatsapp_autorizacao jsonb, whatsapp_saiu_em, whatsapp_motivo,
+  telegram_canal_id, telegram_id, telegram_usuario, telegram_entrou_em, telegram_saiu_em, telegram_motivo,
+  nao_contatar_em, nao_contatar_motivo, criado_em, atualizado_em
+)
+tags (id, organizacao_id, nome, chave, cor, criado_em, criado_por)   -- §4.16; chave: nome sem acento e caixa
+contato_tags (contato_id, tag_id, em, por)
+segmentos (id, organizacao_id, nome, filtros jsonb, criado_em, criado_por, atualizado_em)   -- §4.17
+canais (                                           -- §4.19 e §4.20, um por tipo na organização
+  id, organizacao_id, tipo,                        -- 'whatsapp' | 'telegram'
+  nome, status, credencial,                        -- credencial: token cifrado
+  dados jsonb,                                     -- WABA, número, qualidade, limite | bot e @usuário
+  boas_vindas, erro, conectado_em, conectado_por, verificado_em
+)
+links_de_entrada (id, canal_id, codigo unique, nome, tag_id, criado_em)   -- §4.20
+disparos (                                         -- §4.18
+  id, organizacao_id, canal_id, nome, segmento_id, filtros jsonb,  -- filtros: o do segmento na confirmação
+  conteudo jsonb,                                  -- template e variáveis | texto e botão
+  status,                                          -- 'rascunho' | 'agendado' | 'enviando' | 'pausado' | 'concluido' | 'cancelado'
+  agendado_para, confirmado_em, confirmado_por, iniciado_em, concluido_em, motivo_pausa,
+  total, criado_em, criado_por
+)
+envios_do_disparo (                                -- a fila: um por contato do disparo
+  id, disparo_id, contato_id, destino, texto,
+  status,                                          -- 'pendente' | 'enviando' | 'enviado' | 'entregue' | 'lido' | 'falhou' | 'pulado' | 'cancelado'
+  motivo, provider_message_id, tentativas, reservado_ate, tentar_apos,
+  enviado_em, entregue_em, lido_em, respondido_em
+)
+mensagens_dos_canais (                             -- o que chega pelo WhatsApp e pelo Telegram
+  id, canal_id, contato_id, direcao, texto, provider_message_id, envio_id, em, payload
+)
+```
 
 ### 6.1 · Estados do lead
 
@@ -529,6 +825,11 @@ tirada é `rejeitado`. Toda transição grava um evento.
 | T-3 | Domínio de produção nas Redirect URLs do Auth do GL Suite | login | Arthur |
 | T-4 | Resend com domínio verificado | aviso de "o SDR chamou você" | Arthur |
 | T-5 | `SUPABASE_SECRET_KEY` do projeto do GL Suite na Vercel | primeiro acesso de e-mail novo (SDR-40) | Arthur |
+| T-6 | Migrations do Marco D aplicadas por SQL no banco do GL Suite (nunca por `db push`) | tudo do Marco D | Arthur |
+| T-7 | `PLATAFORMA_ADMINS` e `COMERCIAL_URL` na Vercel | ligar módulos pela tela e o "Quero contratar" (SDR-69) | Arthur |
+| T-8 | `SEGREDOS_CHAVE` (32 bytes aleatórios em base64) na Vercel. Trocar a chave invalida os tokens guardados | conectar WhatsApp e Telegram (SDR-72, SDR-73) | Arthur |
+| T-9 | App da GuessLess na Meta (tipo Business) com o produto WhatsApp e o negócio verificado; `META_APP_SECRET` e `META_WEBHOOK_VERIFY_TOKEN` na Vercel; webhook em `/api/webhooks/whatsapp` com o campo `messages` assinado | status de entrega e respostas do WhatsApp (SDR-72) | Arthur |
+| T-10 | pg_cron dos disparos a cada minuto (`supabase/snippets/disparos-pg-cron.sql`) | disparo agendado e disparo que segue com a tela fechada (SDR-72) | Arthur |
 
 ## 9 · Tickets
 
@@ -824,6 +1125,106 @@ Ordem e dependências (a onda diz o que pode correr em paralelo):
   Mercado, Negócio e Produto ficam feitos; leitura de mais de 2 minutos mostra
   o aviso; leitura antiga, sem o teto gravado, conta só as lidas.
 
+### Marco D · Módulos, contatos e disparos
+
+Pedido do Arthur em 15/10/2026: disparador pela Meta, disparador de
+Telegram, tags, segmentação de leads, módulos para cobrar só o que a
+organização usa, e os nomes (`docs/naming.md`).
+
+| Onda | Ticket | Depende de |
+|---|---|---|
+| 7 | SDR-69 Módulos e plano | — |
+| 7 | SDR-70 Contatos e tags | — |
+| 8 | SDR-71 Segmentos | 70 |
+| 9 | SDR-72 Disparos no WhatsApp | 69, 71 |
+| 10 | SDR-73 Disparos no Telegram | 72 |
+
+**SDR-69 · Módulos e plano**
+- Tabela `modulos_da_organizacao` e o catálogo dos módulos no domínio (§4.14).
+  Migration liga o SDR no LinkedIn em toda organização que existe e os três
+  na da GuessLess; organização nova nasce com o SDR no LinkedIn.
+- O menu, as abas de Configurações e as rotas seguem os módulos; ação do
+  servidor de módulo desligado recusa; o portão do primeiro acesso vale só
+  com o SDR no LinkedIn.
+- Tela **Plataforma** (`/platform`), só para `PLATAFORMA_ADMINS`: as
+  organizações, os módulos de cada uma, ligar e desligar com motivo.
+  Desligar o SDR no LinkedIn pausa as contas ativas.
+- Configurações > Plano: módulos, contratados, uso do mês e "Quero
+  contratar".
+- Aceite: organização sem o módulo não vê a tela no menu e a rota abre o
+  Plano; a ação do servidor recusa mesmo chamada direto; desligar o LinkedIn
+  pausa as contas e religar não despausa; organização só com WhatsApp entra
+  no app sem o primeiro acesso; quem não está em `PLATAFORMA_ADMINS` não abre
+  a Plataforma; toda mudança de módulo fica na trilha.
+
+**SDR-70 · Contatos e tags**
+- Tabelas `contatos`, `tags` e `contato_tags` (§6). Toda pessoa do LinkedIn
+  vira contato da organização dela (as que já existem, na migration; as
+  novas, ao entrar), e o opt-out do LinkedIn vira "não contatar mais".
+- Tela Contatos (§4.15): lista, busca, filtros, contato, selecionar e pôr ou
+  tirar tags em massa (selecionados ou todos do filtro), "Não contatar mais".
+- Importar CSV ou texto colado, com telefone no formato internacional, tags e
+  a marca de autorização do WhatsApp.
+- Tags (§4.16): criar, renomear, cor, apagar com a contagem; no painel do lead
+  no Chats; nos cards e no filtro do Pipeline.
+- Aceite: pessoa nova do LinkedIn vira contato uma vez só; telefone igual não
+  duplica e completa só o vazio; telefone inválido volta com o motivo;
+  autorização do WhatsApp guarda quem e quando; tag com nome igual (caixa e
+  acento) não duplica; apagar tag tira de todos; tag em massa vale para todos
+  do filtro, não só os da tela; o opt-out do LinkedIn aparece como "não
+  contatar mais"; contato de outra organização não aparece nem muda.
+
+**SDR-71 · Segmentos**
+- Tabela `segmentos` e os filtros da §4.17 no domínio, com o SQL parametrizado
+  e a descrição em português.
+- Tela de segmentos em Contatos: lista com a contagem de agora, editor com a
+  contagem e os primeiros contatos ao vivo, salvar, renomear, apagar. Contatos
+  filtra por segmento.
+- Tag usada por segmento não se apaga (SDR-70 passa a conferir).
+- Aceite: cada condição sozinha e juntas; "não tem nenhuma destas" com
+  contato sem tag; quem não pode ser contatado nunca entra; segmento de outra
+  organização não abre; contagem igual à lista; filtro com id de tag de outra
+  organização não vaza contato.
+
+**SDR-72 · Disparos no WhatsApp**
+- Tabelas `canais`, `disparos`, `envios_do_disparo` e `mensagens_dos_canais`;
+  cifra dos tokens com `SEGREDOS_CHAVE`.
+- Configurações > WhatsApp: conectar (WABA, número, token), conferir na Meta,
+  inscrever o app, mostrar qualidade, limite e templates aprovados;
+  desconectar.
+- Tela Disparos: novo disparo (canal, segmento, template, variáveis, nome),
+  conferência (quem recebe, quem fica de fora e por quê, prévia de três,
+  estimativa de custo), disparar agora ou agendar; pausar, retomar, cancelar;
+  resultado com falhas e respostas; tentar de novo as falhas.
+- A fila (§4.18): `/api/cron/disparos` a cada minuto (snippet do pg_cron) e
+  logo depois da confirmação; reserva por prazo, conferência na hora, ritmo,
+  janela, intervalo entre disparos, classificação dos erros da Meta, pausa
+  por problema da conta.
+- Webhook `/api/webhooks/whatsapp`: verificação, assinatura, status
+  (enviada, entregue, lida, falhou), mensagens recebidas (contato novo,
+  resposta, sair do WhatsApp).
+- Aceite: nada sai sem confirmação; lista congelada na confirmação; quem saiu
+  depois da confirmação é pulado; envio interrompido não se repete sozinho;
+  número sem WhatsApp falha sem nova tentativa; token inválido pausa o
+  disparo; webhook sem assinatura é recusado; status repetido não volta
+  estado (lida não vira entregue); "SAIR" tira do WhatsApp; fora da janela não
+  sai; módulo desligado pausa; dois contatos com o mesmo telefone não
+  existem.
+
+**SDR-73 · Disparos no Telegram**
+- Configurações > Telegram: conectar o bot (token, `getMe`, `setWebhook` com
+  segredo), boas-vindas, link de entrada e links com tag; desconectar.
+- Webhook `/api/webhooks/telegram/[canal]`: /start com e sem código (contato
+  novo ou de volta, tag do link, boas-vindas), /sair e as palavras de saída,
+  bloqueio do bot, mensagens como resposta.
+- O disparo da SDR-72 ganha o Telegram: texto com `{{first_name}}` e
+  `{{company}}`, botão com link, prévia; a fila no ritmo do Telegram, com o
+  `retry_after`.
+- Aceite: /start com código põe a tag; /start de quem saiu volta; /sair
+  confirma e tira; bot bloqueado vira falha definitiva e tira do Telegram;
+  segredo errado no webhook é recusado; 429 espera o `retry_after`; texto com
+  variável sem valor fica de fora com o motivo.
+
 ## 10 · Decisões abertas
 
 | # | Decisão | Sugestão | Dono |
@@ -838,6 +1239,19 @@ Continuam decididas, do épico anterior: teto de busca de 100 resultados por
 dia por perfil (D8), nota de corte 70 (D9), opt-out por organização (D10) e
 cooldown de empresa de 30 dias (D4).
 
+Do Marco D (a numeração segue do D11 para não confundir com as do épico
+anterior):
+
+| # | Decisão | Sugestão | Dono |
+|---|---|---|---|
+| D11 | Preço de cada módulo | ver `docs/naming.md` §4: SDR no LinkedIn por conta vinculada; WhatsApp e Telegram por mês, sem preço por mensagem (a Meta cobra direto a organização) | Arthur |
+| D12 | O que é base e o que é módulo | contatos, tags e segmentos na base: os disparos dependem deles e eles organizam os leads do LinkedIn. Se virar módulo, o catálogo já aceita | Arthur |
+| D13 | Nome dos módulos e do plano completo | ver `docs/naming.md` | Arthur |
+| D14 | Sair de um canal ou de tudo | o pedido vale para o canal em que foi feito; o opt-out do LinkedIn e o "Não contatar mais" valem para todos | Arthur |
+| D15 | Conectar o WhatsApp do cliente | agora, à mão (WABA, número e token); o Embedded Signup quando a GuessLess for Tech Provider da Meta | Arthur |
+| D16 | Cobrança | pela cobrança que o GL Suite já tem (Stripe, assinatura por ferramenta), com o webhook ligando o módulo no Kakou; até lá, a GuessLess liga à mão | Arthur |
+| D17 | Janela e intervalo dos disparos | das 8h às 21h, horário de Brasília; 24 h entre dois disparos do mesmo canal para o mesmo contato | Arthur |
+
 ## 11 · Custos de operação
 
 | Item | Custo/mês |
@@ -846,6 +1260,9 @@ cooldown de empresa de 30 dias (D4).
 | Claude API · primeiro acesso | leitura do site, SDR, cada turno do chat de teste (classificação + rascunho) e cada ajuste. Estimativa a medir no SDR-43: menos de US$ 1 por primeiro acesso |
 | Claude API · operação | ~US$ 20 a 40 por conta ativa (rascunhos), nota de aderência ~US$ 2 por conta; conversa da busca, uma chamada de Haiku por mensagem (centavos por conversa) |
 | Vercel, Supabase, Resend | planos que a casa já tem |
+| WhatsApp (Meta) | zero para a GuessLess: cada template entregue é cobrado pela Meta na conta do WhatsApp Business da organização (preços na [pesquisa](pesquisa/whatsapp-cloud-api.md)) |
+| Telegram | zero: a Bot API é gratuita |
+| Cron dos disparos | uma chamada por minuto (~43 mil por mês) na Vercel, a maioria sem trabalho |
 
 ## 12 · Como rodar este épico
 

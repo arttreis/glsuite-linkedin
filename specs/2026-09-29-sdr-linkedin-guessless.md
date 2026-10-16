@@ -1925,3 +1925,68 @@ Em três PRs, para cada um ser revisável e publicável sozinho.
   fica como próxima etapa, com o que ela faz, em vez de fingir que começou.
 - O checklist é um componente só (`onboarding/etapas.tsx`), usado nas duas
   telas.
+
+## Módulos, contatos e disparos (16/10/2026)
+
+Pedido do Arthur em 15/10/2026, à noite, para adiantar enquanto ele dormia:
+"disparador de meta", "disparador de telegram", "sistema de tagmento",
+"segmentação de leads", "separar em módulos pra faturamento / precificação
+(usuário não precisa contratar todas as ferramentas)" e "naming". Viraram o
+Marco D do épico (§4.14 a §4.20, SDR-69 a SDR-73) e o `docs/naming.md`. As
+interpretações abaixo são minhas e estão para o Arthur confirmar.
+
+- **"Disparador de Meta" é o WhatsApp pela API oficial da Meta** (Cloud API),
+  com template aprovado. Descartados: Instagram Direct e Messenger, que não
+  deixam a empresa iniciar conversa em massa; e o WhatsApp da Unipile, que
+  conecta pelo WhatsApp Web (sem template, sem status oficial e com risco de
+  bloqueio do número em disparo). O Votto já tem um adaptador "WhatsApp
+  oficial" que ainda não envia; o Kakou é o primeiro a ligar a Cloud API.
+- **"Disparador de Telegram" é pela Bot API**, com o bot da organização. Bot só
+  fala com quem falou com ele primeiro, então a lista nasce do link do bot.
+  Descartado: conta de usuário pela Unipile, que faria disparo em massa por
+  uma pessoa (contra os termos do Telegram e com risco de banimento).
+- **"Segmentação de leads" vale para todos os contatos**, não só os do
+  LinkedIn: o segmento é o público do disparo. Os leads do LinkedIn entram como
+  contatos e são segmentáveis pela etapa do Pipeline, pela campanha e pela
+  nota.
+- **"Tags" e não "etiquetas"** na tela e no código: é a palavra que o Arthur
+  usou e a que o mercado usa, e `etiqueta` já é a classe dos selos de status do
+  painel.
+- **Módulos sem cobrança automática.** A organização tem módulos ligados ou
+  desligados; quem liga é a GuessLess, numa tela própria (`/platform`) aberta
+  só para `PLATAFORMA_ADMINS`, como o `/admin` do GL Suite com o
+  `ADMIN_EMAILS`. O GL Suite já vende ferramentas avulsas pelo Stripe
+  (`subscriptions.kind = 'tool'`); o caminho natural é cada módulo virar uma
+  ferramenta desse catálogo e o webhook do Stripe ligar o módulo no Kakou
+  (D16). Não fiz essa ponte: o `sdr_servidor` não lê as tabelas do GL Suite
+  por desenho, e a decisão de cruzar os dois produtos é do Arthur.
+- **Contato separado de pessoa.** `pessoas` é a identidade do LinkedIn: o
+  `provider_id` é único, há um perfil dono, e URL, fonte e data da coleta são
+  obrigatórias (base do legítimo interesse). O motor inteiro depende disso.
+  Contato do WhatsApp ou do Telegram não tem nada disso. Por isso `contatos` é
+  uma tabela nova, da organização, e cada pessoa do LinkedIn ganha o contato
+  dela por trigger (as antigas na migration). As tags e os segmentos ficam no
+  contato.
+- **Sair por canal** (D14): quem manda "SAIR" no WhatsApp sai do WhatsApp; o
+  opt-out do LinkedIn e o "Não contatar mais" valem para tudo. A regra de
+  opt-out global da §4.13 continua como estava para o LinkedIn.
+- **A fila dos disparos copia o desenho do Votto** (migration
+  `0085_disparos_em_massa`, que já roda em produção lá): a fila é a tabela de
+  destinatários, congelada na confirmação; a reserva é por prazo; envio
+  interrompido sem confirmação vira falha com "pode ter chegado" e nunca é
+  repetido sozinho; pg_cron a cada minuto mais a chamada logo depois da
+  confirmação.
+- **Banco dividido com o GL Suite.** Cada tabela nova declara o próprio grant
+  (`authenticated` e `sdr_servidor`) e cada migration começa conferindo que
+  nenhuma tabela de mesmo nome já existe sem ser do Kakou: `create table if
+  not exists` pularia a criação em silêncio e os `alter` seguintes mexeriam
+  na tabela de outro produto. Os nomes foram conferidos contra os 587 arquivos
+  SQL dos repositórios da GuessLess nesta máquina.
+- **Tokens cifrados no banco** (AES-256-GCM, chave `SEGREDOS_CHAVE`): o token
+  do WhatsApp dá acesso à conta de WhatsApp Business do cliente. O segredo do
+  webhook do Telegram não é guardado: é derivado da mesma chave e do id do
+  canal (HMAC), e o Kakou recalcula para conferir.
+- Os tickets vão empilhados, um branch cada, a partir de
+  `docs/epico-modulos-e-canais`, sem push. A ordem segue a dependência, não a
+  da lista do pedido: módulos e contatos primeiro, porque os disparos usam os
+  dois.
