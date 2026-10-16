@@ -98,7 +98,10 @@ export async function editarTag(db: Db, p: { tagId: string; nome?: unknown; cor?
   return { ok: true };
 }
 
-/** Apaga a tag e tira de todos os contatos (§4.16). Roda como o operador. */
+/**
+ * Apaga a tag e tira de todos os contatos (§4.16). Tag usada por segmento não
+ * se apaga: o segmento mudaria de gente sem ninguém ver. Roda como o operador.
+ */
 export async function apagarTag(
   db: Db,
   p: { tagId: string; operadorId: string; agora: Date },
@@ -106,6 +109,11 @@ export async function apagarTag(
   return db.transacao(async (tx) => {
     const [tag] = await tx.query<{ nome: string }>("select nome from public.tags where id = $1::uuid for update", [p.tagId]);
     if (!tag) return { ok: false, erro: "Tag não encontrada." };
+    const usadaEm = await segmentosComATag(tx, p.tagId);
+    if (usadaEm.length > 0) {
+      const lista = usadaEm.map((nome) => `"${nome}"`).join(", ");
+      return { ok: false, erro: `A tag "${tag.nome}" está ${usadaEm.length === 1 ? "no segmento" : "nos segmentos"} ${lista}. Tire dele${usadaEm.length === 1 ? "" : "s"} antes de apagar.` };
+    }
     const [contagem] = await tx.query<{ n: number }>("select count(*)::int as n from public.contato_tags where tag_id = $1::uuid", [p.tagId]);
     await tx.query("delete from public.tags where id = $1::uuid", [p.tagId]);
     await registrarEvento(tx, {
@@ -199,4 +207,16 @@ export async function tagsDoLead(db: Db, leadId: string): Promise<{ contatoId: s
     [leadId],
   );
   return linha ?? null;
+}
+
+/** Os segmentos que usam a tag em alguma condição: tag usada por segmento não se apaga (§4.16). */
+export async function segmentosComATag(db: Db, tagId: string): Promise<string[]> {
+  const linhas = await db.query<{ nome: string }>(
+    `select s.nome from public.segmentos s
+      where exists (select 1 from jsonb_each(coalesce(s.filtros -> 'tags', '{}'::jsonb)) as t (modo, ids)
+                     where jsonb_typeof(t.ids) = 'array' and t.ids ? $1)
+      order by s.chave`,
+    [tagId],
+  );
+  return linhas.map((linha) => linha.nome);
 }
