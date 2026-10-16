@@ -521,8 +521,12 @@ E três que são do próprio motor:
 - Toda organização tem a **base**, sem contratar nada: Dashboard, Contatos
   (com tags e segmentos), Equipe e Plano (D12).
 - Quem liga e desliga módulo é a GuessLess, na tela **Plataforma**, que só
-  abre para os e-mails em `PLATAFORMA_ADMINS`. Cada mudança grava quem, quando
-  e o motivo. Não há cobrança automática nesta versão (§3, D16).
+  abre para quem está em `PLATAFORMA_ADMINS`: e-mails inteiros ou domínios
+  começando com `@`. Em produção são `@guessless.com.br` e `@guessless.ca`,
+  ou seja, todo e-mail da GuessLess (SDR-126). O domínio casa exato: o e-mail
+  termina em `@<domínio>` e não tem outro `@`; subdomínio e sufixo parecido
+  não abrem. Variável vazia, ninguém abre. Cada mudança grava quem, quando e o
+  motivo. Não há cobrança automática nesta versão (§3, D16).
 - Organização nova (§4.1) nasce com o SDR no LinkedIn, como hoje; as que já
   existem também. A organização da GuessLess ganha todos.
 - **Módulo desligado:** as telas dele somem do menu; a rota abre o Plano
@@ -1409,7 +1413,7 @@ tirada é `rejeitado`. Toda transição grava um evento.
 | T-4 | Resend com domínio verificado | aviso de "o SDR chamou você"; desde o Marco E, também o aviso de hora de mandar e o de grupo quase cheio (SDR-82, SDR-93), que sem ela só aparecem no Dashboard | Arthur |
 | T-5 | `SUPABASE_SECRET_KEY` do projeto do GL Suite na Vercel | primeiro acesso de e-mail novo (SDR-40) | Arthur |
 | T-6 | Migrations do Marco D aplicadas por SQL no banco do GL Suite (nunca por `db push`) | tudo do Marco D | Arthur |
-| T-7 | `PLATAFORMA_ADMINS` e `COMERCIAL_URL` na Vercel | ligar módulos pela tela e o "Quero contratar" (SDR-69) | Arthur |
+| T-7 | `PLATAFORMA_ADMINS` e `COMERCIAL_URL` na Vercel. Em Production, `PLATAFORMA_ADMINS=@guessless.com.br,@guessless.ca` (SDR-126) e redeploy | ligar módulos pela tela e o "Quero contratar" (SDR-69); abrir a Plataforma (SDR-123, SDR-124) | Arthur |
 | T-8 | `SEGREDOS_CHAVE` (32 bytes aleatórios em base64) na Vercel. Trocar a chave invalida os tokens guardados | conectar WhatsApp e Telegram (SDR-72, SDR-73) | Arthur |
 | T-9 | Um número de WhatsApp Business de verdade, com o app da empresa na Meta, para o primeiro disparo real (o código foi testado só com a Meta de mentira) | aceite do SDR-72 com serviço real | Arthur |
 | T-10 | pg_cron dos disparos a cada minuto (`supabase/snippets/disparos-pg-cron.sql`) | disparo agendado e disparo que segue com a tela fechada (SDR-72) | Arthur |
@@ -2412,6 +2416,7 @@ operá-las sem mexer no banco à mão. Os tickets são as sub-issues da #113.
 
 | Onda | Ticket | Issue | Depende de |
 |---|---|---|---|
+| 1 | SDR-126 Abrir a Plataforma para todo e-mail @guessless.com.br e @guessless.ca (§4.14) | #124 | — |
 | 2 | SDR-123 Reconectar a conta da casa pela Plataforma (§4.14) | #116 | — |
 
 ## 10 · Decisões abertas
