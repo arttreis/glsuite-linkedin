@@ -14,6 +14,7 @@ type Etapa = FiltroDeContatos["linkedin"]["etapas"][number];
 
 const ROTULO_DO_CANAL: Record<(typeof CANAIS_DO_FILTRO)[number], string> = {
   whatsapp: "Podem receber pelo WhatsApp",
+  telegram: "Podem receber pelo Telegram",
   linkedin: "São leads do LinkedIn",
 };
 

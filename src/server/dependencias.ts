@@ -16,7 +16,8 @@ import { criarAjustadorDeSdrClaude, criarGeradorDeSdrClaude } from "@/server/sdr
 import type { GeradorDeSdr } from "@/server/sdr/sdr";
 import type { AjustadorDeSdr } from "@/server/sdr/teste";
 import { criarEnviadorResend } from "@/server/alertas/resend";
-import { enviadorDoWhatsapp, type EnviadorDoCanal } from "@/server/disparos/fila";
+import { enviadorDoTelegram, enviadorDoWhatsapp, type EnviadorDoCanal } from "@/server/disparos/fila";
+import { criarClienteTelegram, type ClienteTelegram } from "@/server/telegram/cliente";
 import { criarClienteUnipile, type ClienteUnipile } from "@/server/unipile/cliente";
 import { criarClienteWhatsapp, type ClienteWhatsapp } from "@/server/whatsapp/cliente";
 import type { TipoDeCanal } from "@/domain/disparos";
@@ -206,9 +207,17 @@ export function obterClienteWhatsapp(): ClienteWhatsapp {
   return whatsapp;
 }
 
+let telegram: ClienteTelegram | undefined;
+
+/** A Bot API do Telegram (§4.20). O token é de cada bot, então o cliente não guarda nenhum. */
+export function obterClienteTelegram(): ClienteTelegram {
+  telegram ??= criarClienteTelegram();
+  return telegram;
+}
+
 /** Quem manda por cada canal, para a fila dos disparos (§4.18). */
 export function obterEnviadores(): Partial<Record<TipoDeCanal, EnviadorDoCanal>> {
-  return { whatsapp: enviadorDoWhatsapp(obterClienteWhatsapp()) };
+  return { whatsapp: enviadorDoWhatsapp(obterClienteWhatsapp()), telegram: enviadorDoTelegram(obterClienteTelegram()) };
 }
 
 const envCron = lerEnv(z.object({ CRON_SECRET: z.string().min(16) }));

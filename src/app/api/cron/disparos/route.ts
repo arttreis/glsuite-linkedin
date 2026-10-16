@@ -1,6 +1,7 @@
 import { obterDb } from "@/server/db";
-import { obterEnviadores, segredoDoCron } from "@/server/dependencias";
+import { obterClienteTelegram, obterEnviadores, segredoDoCron } from "@/server/dependencias";
 import { processarDisparos } from "@/server/disparos/fila";
+import { reprocessarAvisosDoTelegram } from "@/server/disparos/webhook-telegram";
 import { reprocessarAvisosPendentes } from "@/server/disparos/webhook-whatsapp";
 import { obterCofre } from "@/server/segredos";
 import { segredoConfere } from "@/server/unipile/webhooks";
@@ -19,7 +20,10 @@ async function rodada(request: Request) {
   const db = obterDb();
   const cofre = obterCofre();
   const fila = await processarDisparos({ db, cofre, agora: () => new Date(), enviadores: obterEnviadores() });
-  const avisos = await reprocessarAvisosPendentes({ db, cofre, agora: () => new Date() });
+  const avisos = {
+    whatsapp: await reprocessarAvisosPendentes({ db, cofre, agora: () => new Date() }),
+    telegram: await reprocessarAvisosDoTelegram({ db, cofre, telegram: obterClienteTelegram(), agora: () => new Date() }),
+  };
   return Response.json({ fila, avisos });
 }
 

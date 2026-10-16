@@ -14,6 +14,7 @@ import { ListaDeContatos } from "./lista";
 
 const ROTULO_DO_CANAL: Record<(typeof CANAIS_DO_FILTRO)[number], string> = {
   whatsapp: "Podem receber pelo WhatsApp",
+  telegram: "Podem receber pelo Telegram",
   linkedin: "Leads do LinkedIn",
 };
 
@@ -65,7 +66,7 @@ export default async function ContatosPage({ searchParams }: PageProps<"/contact
     <>
       <Cabecalho
         titulo="Contatos"
-        descricao="Todo mundo com quem a organização pode falar: os leads do LinkedIn, quem você importou e quem entrou pelos canais. Use as tags para separar e achar."
+        descricao={`Todo mundo com quem a organização pode falar: ${operador.modulos.includes("linkedin") ? "os leads do LinkedIn, " : ""}quem você importou e quem entrou pelos canais. Use as tags para separar e achar.`}
       >
         <Link href="/contacts/segments" className="botao">
           <Layers aria-hidden />
@@ -157,9 +158,16 @@ export default async function ContatosPage({ searchParams }: PageProps<"/contact
         </p>
 
         {lista.total === 0 ? (
-          <p className="vazio">
-            Nenhum contato aqui. Os leads do LinkedIn entram sozinhos; para os outros, use <Link href="/contacts/import" className="link">Importar contatos</Link>.
-          </p>
+          <div className="vazio">
+            <p>
+              Nenhum contato aqui.
+              {operador.modulos.includes("linkedin") ? " Os leads do LinkedIn entram sozinhos; os outros você importa de uma planilha." : " Importe os seus de uma planilha."}
+            </p>
+            <Link href="/contacts/import" className="botao botao-primario">
+              <Upload aria-hidden />
+              Importar contatos
+            </Link>
+          </div>
         ) : (
           <ListaDeContatos
             contatos={lista.contatos.map((c) => ({ ...c, criadoEm: new Date(c.criadoEm).toISOString() }))}

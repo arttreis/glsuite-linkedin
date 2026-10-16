@@ -1,6 +1,7 @@
 import { normalizarTelefone } from "@/domain/contatos";
 import {
   classificarErroDaMeta,
+  classificarErroDoTelegram,
   dentroDaJanela,
   limiteDoTier,
   motivoParaPular,
@@ -14,6 +15,7 @@ import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import type { Cofre } from "@/server/segredos";
 import { pegarTrava } from "@/server/travas";
+import { ErroDoTelegram, type ClienteTelegram } from "@/server/telegram/cliente";
 import { ErroDaMeta, type ClienteWhatsapp } from "@/server/whatsapp/cliente";
 
 export type EnvioReservado = {
@@ -68,6 +70,22 @@ export function enviadorDoWhatsapp(whatsapp: ClienteWhatsapp): EnviadorDoCanal {
     tratar(erro) {
       if (!(erro instanceof ErroDaMeta) || erro.semResposta) return INTERROMPIDO;
       return { ...classificarErroDaMeta(erro.codigo), codigo: erro.codigo };
+    },
+  };
+}
+
+/** O enviador do Telegram sobre a Bot API (§4.20): texto sem formatação e o botão com link, se houver. */
+export function enviadorDoTelegram(telegram: ClienteTelegram): EnviadorDoCanal {
+  return {
+    async enviar({ canal, envio, conteudo }) {
+      if (conteudo.tipo !== "telegram" || !envio.texto) throw new Error("Disparo do Telegram sem texto.");
+      const { messageId } = await telegram.enviarMensagem({ token: canal.token, chatId: envio.destino, texto: envio.texto, botao: conteudo.botao });
+      return { providerMessageId: `${envio.destino}:${messageId}` };
+    },
+    tratar(erro) {
+      if (!(erro instanceof ErroDoTelegram) || erro.semResposta) return INTERROMPIDO;
+      const tratado = classificarErroDoTelegram(erro.codigo, erro.descricao);
+      return { ...tratado, codigo: `telegram_${erro.codigo}`, esperarMs: erro.esperarSegundos ? erro.esperarSegundos * 1000 : undefined };
     },
   };
 }
@@ -312,16 +330,19 @@ async function conferirNaHora(db: Db, p: { envio: EnvioReservado; canal: TipoDeC
     telefone: string | null;
     whatsappAutorizadoEm: Date | null;
     whatsappSaiuEm: Date | null;
+    telegramId: string | null;
+    telegramSaiuEm: Date | null;
     ultimoEnvioNoCanalEm: Date | null;
   }>(
     `select c.nao_contatar_em as "naoContatarEm", c.telefone, c.whatsapp_autorizado_em as "whatsappAutorizadoEm", c.whatsapp_saiu_em as "whatsappSaiuEm",
+            c.telegram_id as "telegramId", c.telegram_saiu_em as "telegramSaiuEm",
             (select max(e.enviado_em) from public.envios_do_disparo e join public.disparos d on d.id = e.disparo_id
               where e.contato_id = c.id and d.canal_tipo = $2 and e.disparo_id <> $3::uuid and e.enviado_em is not null) as "ultimoEnvioNoCanalEm"
        from public.contatos c where c.id = $1::uuid`,
     [p.envio.contatoId, p.canal, p.envio.disparoId],
   );
   if (!contato) return "O contato foi apagado.";
-  return motivoParaPular(p.canal, { ...contato, telegramId: null, telegramSaiuEm: null }, p.agora, p.intervaloHoras);
+  return motivoParaPular(p.canal, contato, p.agora, p.intervaloHoras);
 }
 
 /** O contato sai do canal (§4.15): não recebe mais disparo por ele. */

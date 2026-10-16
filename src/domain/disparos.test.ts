@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   classificarErroDaMeta,
+  classificarErroDoTelegram,
+  codigoDoStart,
+  ehComandoDeSair,
+  textoDoTelegram,
   dentroDaJanela,
   estimativaDoCusto,
   idDaVariavel,
@@ -167,5 +171,34 @@ describe("saída do canal e custo", () => {
     const tabela = { precos: { marketing: 0.0625, utility: 0.0068 }, moeda: "USD", tabela_em: "2026-10-16" };
     expect(estimativaDoCusto(1000, "MARKETING", tabela)).toEqual({ valor: 62.5, moeda: "USD" });
     expect(estimativaDoCusto(10, "SERVICE", tabela)).toBeNull();
+  });
+});
+
+describe("Telegram (SDR-73, §4.20)", () => {
+  it("lê o código do /start, com ou sem o @ do bot", () => {
+    expect(codigoDoStart("/start k7Qm2xPa")).toBe("k7Qm2xPa");
+    expect(codigoDoStart("/start")).toBeNull();
+    expect(codigoDoStart("/start@loja_bot abc")).toBe("abc");
+    expect(codigoDoStart("oi")).toBeUndefined();
+    expect(codigoDoStart("/start a b")).toBeUndefined();
+    expect(ehComandoDeSair("/sair")).toBe(true);
+    expect(ehComandoDeSair("/STOP@loja_bot")).toBe(true);
+    expect(ehComandoDeSair("/sairr")).toBe(false);
+  });
+
+  it("troca as variáveis e diz o que falta; recusa variável desconhecida e texto longo demais", () => {
+    expect(textoDoTelegram("Oi {{first_name}}, da {{company}}", ANA)).toEqual({ ok: true, texto: "Oi Ana, da Acme" });
+    expect(textoDoTelegram("Oi {{first_name}}, da {{company}}", { ...ANA, empresa: null })).toEqual({ ok: false, motivo: "Contato sem empresa para a mensagem." });
+    expect(textoDoTelegram("Oi {{nome}}", ANA)).toMatchObject({ ok: false, motivo: expect.stringContaining("{{nome}}") });
+    expect(textoDoTelegram("x".repeat(4097), ANA)).toMatchObject({ ok: false });
+  });
+
+  it("classifica os erros da Bot API", () => {
+    expect(classificarErroDoTelegram("403", "Forbidden: bot was blocked by the user").classe).toBe("saiu");
+    expect(classificarErroDoTelegram("403", "Forbidden: user is deactivated").classe).toBe("contato");
+    expect(classificarErroDoTelegram("400", "Bad Request: chat not found").classe).toBe("contato");
+    expect(classificarErroDoTelegram("401", "Unauthorized").classe).toBe("conta");
+    expect(classificarErroDoTelegram("429", "Too Many Requests: retry after 5").classe).toBe("ritmo");
+    expect(classificarErroDoTelegram("502", "Bad Gateway").classe).toBe("ritmo");
   });
 });

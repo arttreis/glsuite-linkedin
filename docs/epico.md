@@ -642,7 +642,9 @@ E três que são do próprio motor:
 - **Conectar** (Configurações > Telegram, só o admin): a organização cria um
   bot no @BotFather e cola o token. O Kakou confere o bot, guarda o token
   cifrado e liga o webhook, com um segredo que o Telegram devolve em cada
-  aviso.
+  aviso. Bot tem um webhook só: se ele já manda os avisos para outro sistema,
+  a tela avisa e só conecta se a pessoa confirmar que pode desligar o outro.
+  Um bot é de uma organização só.
 - Bot só fala com quem falou com ele primeiro (regra do Telegram). Por isso a
   lista do Telegram é feita de quem entra pelo **link do bot**
   (`t.me/<bot>?start=...`): quem abre e toca em Começar vira contato (origem

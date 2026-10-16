@@ -8,9 +8,11 @@ import { Aviso } from "@/components/aviso";
 import {
   CAMPOS_DO_CONTATO,
   idDaVariavel,
+  MAX_TEXTO_DO_TELEGRAM,
   preencherTemplate,
   ROTULO_DO_CAMPO,
   rotuloDaVariavel,
+  textoDoTelegram,
   variaveisDoTemplate,
   type CampoDoContato,
   type FonteDaVariavel,
@@ -27,6 +29,12 @@ const EXEMPLO = { nome: "Ana Souza", primeiroNome: "Ana", empresa: "Acme", cargo
 
 const TEXTO_FIXO = "texto";
 
+/** Sugestão de partida: a primeira variável do texto costuma ser o primeiro nome. */
+function sugerirVariaveis(template: TemplateDoWhatsapp | undefined): Record<string, FonteDaVariavel> {
+  const primeira = template ? variaveisDoTemplate(template).find((variavel) => variavel.onde === "corpo") : undefined;
+  return primeira ? { [idDaVariavel(primeira)]: { campo: "primeiro_nome" } } : {};
+}
+
 /**
  * Novo disparo (§4.18): o canal, o segmento e a mensagem. No WhatsApp, o
  * template aprovado e de onde vem cada variável. Continuar guarda o rascunho e
@@ -39,7 +47,16 @@ export function NovoDisparo({
 }: {
   canais: CanalParaEscolher[];
   segmentos: Segmento[];
-  rascunho: { id: string; nome: string; canal: TipoDeCanal; segmentoId: string | null; templateId: string | null; variaveis: Record<string, FonteDaVariavel> } | null;
+  rascunho: {
+    id: string;
+    nome: string;
+    canal: TipoDeCanal;
+    segmentoId: string | null;
+    templateId: string | null;
+    variaveis: Record<string, FonteDaVariavel>;
+    texto: string | null;
+    botao: { texto: string; url: string } | null;
+  } | null;
 }) {
   const router = useRouter();
   const [canal, setCanal] = useState<TipoDeCanal>(rascunho?.canal ?? canais[0]!.tipo);
@@ -47,13 +64,20 @@ export function NovoDisparo({
   const [segmentoId, setSegmentoId] = useState(rascunho?.segmentoId ?? segmentos[0]?.id ?? "");
   const aprovados = canais.find((c) => c.tipo === canal)?.templates.filter((t) => t.status === "APPROVED") ?? [];
   const [templateId, setTemplateId] = useState(rascunho?.templateId ?? aprovados[0]?.id ?? "");
-  const [variaveis, setVariaveis] = useState<Record<string, FonteDaVariavel>>(rascunho?.variaveis ?? {});
+  const [variaveis, setVariaveis] = useState<Record<string, FonteDaVariavel>>(
+    () => rascunho?.variaveis ?? sugerirVariaveis(aprovados.find((t) => t.id === (rascunho?.templateId ?? aprovados[0]?.id))),
+  );
+  const [texto, setTexto] = useState(rascunho?.texto ?? "Oi {{first_name}}! ");
+  const [botaoTexto, setBotaoTexto] = useState(rascunho?.botao?.texto ?? "");
+  const [botaoUrl, setBotaoUrl] = useState(rascunho?.botao?.url ?? "");
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, iniciar] = useTransition();
 
   const template = aprovados.find((t) => t.id === templateId) ?? null;
   const pedidas = template ? variaveisDoTemplate(template) : [];
-  const previa = template ? preencherTemplate({ tipo: "whatsapp", template, variaveis }, EXEMPLO) : null;
+  const telegram = canal === "telegram";
+  const previa = telegram ? textoDoTelegram(texto, EXEMPLO) : template ? preencherTemplate({ tipo: "whatsapp", template, variaveis }, EXEMPLO) : null;
+  const botao = botaoTexto.trim() && botaoUrl.trim() ? { texto: botaoTexto.trim(), url: botaoUrl.trim() } : null;
   const faltando = pedidas
     .filter((variavel) => {
       const fonte = variaveis[idDaVariavel(variavel)];
@@ -63,13 +87,7 @@ export function NovoDisparo({
 
   const escolherTemplate = (id: string) => {
     setTemplateId(id);
-    // Sugestão: a primeira variável do texto costuma ser o primeiro nome.
-    const novo = aprovados.find((t) => t.id === id);
-    const sugeridas: Record<string, FonteDaVariavel> = {};
-    for (const variavel of novo ? variaveisDoTemplate(novo) : []) {
-      if (variavel.onde === "corpo" && Object.keys(sugeridas).length === 0) sugeridas[idDaVariavel(variavel)] = { campo: "primeiro_nome" };
-    }
-    setVariaveis(sugeridas);
+    setVariaveis(sugerirVariaveis(aprovados.find((t) => t.id === id)));
   };
 
   const continuar = () =>
@@ -80,7 +98,7 @@ export function NovoDisparo({
         canal,
         nome,
         segmentoId,
-        conteudo: { tipo: "whatsapp", templateId, variaveis },
+        conteudo: telegram ? { tipo: "telegram", texto, botao } : { tipo: "whatsapp", templateId, variaveis },
       });
       if (!resultado.ok) {
         setErro(resultado.erro);
@@ -134,7 +152,34 @@ export function NovoDisparo({
           <h2 id="titulo-mensagem" className="text-[15px] font-semibold">
             A mensagem
           </h2>
-          {aprovados.length === 0 ? (
+          {telegram ? (
+            <>
+              <label className="rotulo">
+                Texto
+                <textarea
+                  value={texto}
+                  onChange={(e) => setTexto(e.target.value)}
+                  rows={6}
+                  maxLength={MAX_TEXTO_DO_TELEGRAM}
+                  className="campo"
+                />
+              </label>
+              <p className="-mt-2 text-xs text-tinta-fraca">
+                Sem formatação. Use {"{{first_name}}"} e {"{{company}}"}: contato sem o campo fica de fora, com o motivo. Até {MAX_TEXTO_DO_TELEGRAM.toLocaleString("pt-BR")}{" "}
+                caracteres.
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+                <label className="rotulo">
+                  Botão (opcional)
+                  <input value={botaoTexto} onChange={(e) => setBotaoTexto(e.target.value)} maxLength={64} placeholder="Ex.: Ver a oferta" className="campo campo-pequeno" />
+                </label>
+                <label className="rotulo">
+                  Link do botão
+                  <input value={botaoUrl} onChange={(e) => setBotaoUrl(e.target.value)} maxLength={2000} placeholder="https://…" className="campo campo-pequeno" />
+                </label>
+              </div>
+            </>
+          ) : aprovados.length === 0 ? (
             <p className="text-[13px] text-tinta-suave">
               Nenhum template aprovado. Crie no WhatsApp Manager da Meta e atualize em{" "}
               <Link href="/settings/whatsapp" className="link">
@@ -214,10 +259,17 @@ export function NovoDisparo({
             Como chega (exemplo)
           </h2>
           {previa?.ok ? (
-            <p className="whitespace-pre-line rounded-xl bg-superficie-alta p-3 text-sm">{previa.texto}</p>
+            <div className="flex flex-col gap-2">
+              <p className="whitespace-pre-line rounded-xl bg-superficie-alta p-3 text-sm">{previa.texto}</p>
+              {telegram && botao && <span className="botao botao-pequeno w-fit">{botao.texto}</span>}
+            </div>
           ) : (
             <p className="text-[13px] text-tinta-suave">
-              {faltando.length > 0 ? `Falta dizer de onde vem: ${faltando.join(", ")}.` : "Escolha um template."}
+              {telegram && previa && !previa.ok
+                ? previa.motivo
+                : faltando.length > 0
+                  ? `Falta dizer de onde vem: ${faltando.join(", ")}.`
+                  : "Escolha um template."}
             </p>
           )}
           <p className="text-xs text-tinta-fraca">Com um contato de exemplo (Ana, da Acme). Na próxima tela você vê quem recebe e quem fica de fora.</p>
@@ -227,7 +279,7 @@ export function NovoDisparo({
           type="button"
           className="botao botao-primario"
           onClick={continuar}
-          disabled={salvando || !nome.trim() || !segmentoId || !template || !previa?.ok}
+          disabled={salvando || !nome.trim() || !segmentoId || (!telegram && !template) || !previa?.ok || (telegram && Boolean(botaoTexto.trim()) !== Boolean(botaoUrl.trim()))}
         >
           {salvando ? "Guardando…" : "Conferir quem recebe"}
           <ArrowRight aria-hidden />

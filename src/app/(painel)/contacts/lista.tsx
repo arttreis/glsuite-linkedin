@@ -1,6 +1,6 @@
 "use client";
 
-import { BriefcaseBusiness, MessageCircle } from "lucide-react";
+import { BriefcaseBusiness, MessageCircle, Send } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -35,7 +35,13 @@ function Canais({ contato }: { contato: ContatoNaTela }) {
           {WHATSAPP[contato.whatsapp].rotulo}
         </span>
       )}
-      {!contato.linkedin && !contato.whatsapp && contato.email && <span className="text-tinta-fraca">só e-mail</span>}
+      {contato.telegram && (
+        <span className={`flex items-center gap-1 ${contato.telegram === "pode" ? "text-tinta" : "text-tinta-fraca line-through"}`}>
+          <Send className="size-3" aria-hidden />
+          {contato.telegram === "pode" ? "Telegram" : "Saiu do Telegram"}
+        </span>
+      )}
+      {!contato.linkedin && !contato.whatsapp && !contato.telegram && contato.email && <span className="text-tinta-fraca">só e-mail</span>}
     </span>
   );
 }
