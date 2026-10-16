@@ -13,9 +13,15 @@ function fluxoDoLegado(legado: Legado): Fluxo {
   return sequenciaParaFluxo(lista, legado.pos_t4);
 }
 
-function lerGrafo(grafo: unknown, legado: Legado): Fluxo {
+/**
+ * Grafo gravado que não passa no esquema cai na sequência da campanha, mas com
+ * aviso: sem ele, o lead seguiria uma régua diferente da que o operador editou.
+ */
+export function lerGrafo(grafo: unknown, legado: Legado): Fluxo {
   const lido = esquemaDoFluxo.safeParse(grafo);
-  return lido.success ? lido.data : fluxoDoLegado(legado);
+  if (lido.success) return lido.data;
+  console.error("Grafo do fluxo inválido; usando a sequência da campanha", lido.error.message);
+  return fluxoDoLegado(legado);
 }
 
 /** O fluxo atual da campanha: a versão mais recente, ou a sequência antiga convertida. */
