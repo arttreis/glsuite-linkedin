@@ -1,5 +1,6 @@
-import { FileJson, Link2, Pause, Pencil, Play, Plus, RefreshCw, Webhook } from "lucide-react";
+import { FileJson, Link2, Pause, Pencil, Play, Plus, RefreshCw, Unlink, Webhook } from "lucide-react";
 import Link from "next/link";
+import { z } from "zod";
 import { Avatar } from "@/components/avatar";
 import { Aviso } from "@/components/aviso";
 import { EtiquetaDoPerfil } from "@/components/etiquetas";
@@ -9,6 +10,8 @@ import { resumoDaRampa } from "@/domain/ativacao";
 import type { EtapaDaRampa } from "@/domain/rampa";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
+import { desfechoDaConexao } from "@/server/perfis/conexao";
+import { contasParaLigar, ERRO_DA_ULTIMA_MARCA, perfisDaMarca, type ContaDaMarca } from "@/server/perfis/marcas-dos-perfis";
 import { exigirOperadorComModulo } from "@/server/supabase/servidor";
 import {
   atualizarStatusDasContasDoPainel,
@@ -20,6 +23,8 @@ import {
   retomarContaDoPainel,
   vincularOutraConta,
 } from "../acoes";
+import { ligarContaNaMarca, tirarContaDaMarca } from "./acoes";
+import { TirarDaMarca } from "./tirar-da-marca";
 
 type Conta = {
   id: string;
@@ -38,38 +43,117 @@ type Conta = {
   ativado_em: Date | null;
 };
 
+const CONTA_EM_OUTRA_ORGANIZACAO = "Essa conta do LinkedIn já está conectada em outra organização do Kakou. Fale com a GuessLess.";
+
 const CONEXAO: Record<string, { tom: "ok" | "erro"; texto: string }> = {
   ok: { tom: "ok", texto: "LinkedIn vinculado. Conta nova nasce pausada: ative no Dashboard quando quiser começar." },
   falhou: { tom: "erro", texto: "A conexão não foi concluída na Unipile. Tente de novo." },
 };
+
+/** "Kakou, Aulão" ou "Kakou e mais 2": nunca o nome de uma marca que o operador não vê (§4.30). */
+function outrasMarcas({ visiveis, ocultas }: ContaDaMarca["outrasMarcas"]): string | null {
+  if (visiveis.length === 0) return ocultas === 0 ? null : ocultas === 1 ? "outra marca" : `outras ${ocultas} marcas`;
+  return ocultas === 0 ? visiveis.join(", ") : `${visiveis.join(", ")} e mais ${ocultas}`;
+}
+
+/** Na volta do hosted auth, o que o callback decidiu sobre a conta (§4.30). */
+async function desfecho(conexao: unknown, perfil: unknown, desde: unknown, marca: string) {
+  const id = z.uuid().safeParse(perfil);
+  const quando = new Date(Number(desde));
+  if (conexao !== "ok" || !id.success || Number.isNaN(quando.getTime())) return undefined;
+  const resultado = await desfechoDaConexao(obterDb(), { perfilId: id.data, desde: quando });
+  if (resultado === "ligada_a_existente") {
+    return { tom: "ok" as const, texto: `Essa conta do LinkedIn já estava conectada. Ela foi ligada à ${marca}, sem criar outra conta: o teto continua um só.` };
+  }
+  if (resultado === "outra_organizacao") return { tom: "erro" as const, texto: CONTA_EM_OUTRA_ORGANIZACAO };
+  return undefined;
+}
 
 const TIPO: Record<string, string> = { gratuita: "conta gratuita", premium: "Premium", sales_navigator: "Sales Navigator" };
 
 /** LinkedIn (§4.12): as contas, status, rampa, teto e janela; editar nome e janela; pausar, retomar, reconectar e vincular outra. */
 export default async function LinkedinPage({ searchParams }: PageProps<"/settings/linkedin">) {
   const operador = await exigirOperadorComModulo("linkedin");
-  const { msg, conexao } = await searchParams;
-  const contas = await comOperador(obterDb(), operador.id, (tx) =>
-    tx.query<Conta>(
+  const { msg, conexao, perfil, desde } = await searchParams;
+  const marca = operador.marcaNome;
+  const { contas, daMarca, paraLigar } = await comOperador(obterDb(), operador.id, async (tx) => {
+    // Só as contas da marca atual (§4.30): a mesma conta pode estar em outras marcas.
+    const daMarca = new Map((await perfisDaMarca(tx, operador.marcaId)).map((conta) => [conta.perfilId, conta]));
+    const contas = await tx.query<Conta>(
       `select id, nome, operador_id, status, motivo_pausa, unipile_account_id is not null as conectada, unipile_status, tipo_conta,
               rampa, teto_convites_semana, janela, fuso, modo_resposta, ativado_em
          from public.perfis
-        where not casa and public.pode_ver_perfil(id)
+        where not casa and public.pode_ver_perfil(id) and id = any($1::uuid[])
         order by nome`,
-    ),
+      [[...daMarca.keys()]],
+    );
+    return { contas, daMarca, paraLigar: await contasParaLigar(tx, operador.marcaId) };
+  });
+  const aviso = (await desfecho(conexao, perfil, desde, marca)) ?? (typeof conexao === "string" ? CONEXAO[conexao] : undefined);
+  const podeUsar = paraLigar.some((conta) => conta.podeLigar);
+  const usar = (
+    <details className="cartao p-5">
+      <summary className="flex w-fit cursor-pointer items-center gap-1.5 text-sm font-medium">
+        <Link2 className="size-4" aria-hidden />
+        Usar uma conta já conectada
+      </summary>
+      {paraLigar.length === 0 ? (
+        <p className="mt-3 text-sm text-tinta-suave">Todas as contas que você pode ver já estão na {marca}.</p>
+      ) : (
+        <ul className="mt-4 flex flex-col gap-2">
+          {paraLigar.map((conta) => {
+            const em = outrasMarcas({ visiveis: conta.marcas, ocultas: conta.ocultas });
+            return (
+              <li key={conta.perfilId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-superficie-alta px-4 py-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar nome={conta.nome} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{conta.nome}</p>
+                    {em && <p className="text-xs text-tinta-suave">Em: {em}</p>}
+                  </div>
+                  <EtiquetaDoPerfil status={conta.status} nuncaAtivado={false} />
+                </div>
+                {conta.podeLigar && (
+                  <form action={ligarContaNaMarca}>
+                    <input type="hidden" name="perfilId" value={conta.perfilId} />
+                    <button type="submit" className="botao botao-pequeno botao-primario">
+                      Usar na {marca}
+                    </button>
+                  </form>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </details>
   );
-  const aviso = typeof conexao === "string" ? CONEXAO[conexao] : undefined;
 
   return (
     <div className="flex max-w-4xl flex-col gap-5">
       {typeof msg === "string" && <Aviso>{msg}</Aviso>}
       {aviso && <Aviso tom={aviso.tom}>{aviso.texto}</Aviso>}
 
+      {contas.length === 0 && (
+        <section className="cartao p-6">
+          <h2 className="text-[15px] font-semibold">Nenhuma conta do LinkedIn na {marca}</h2>
+          <p className="mt-1 text-sm text-tinta-suave">Vincule uma conta nova ou use uma que já está conectada em outra marca.</p>
+          <form action={vincularOutraConta} className="mt-4">
+            <button type="submit" className="botao botao-primario">
+              <Plus aria-hidden />
+              Vincular uma conta do LinkedIn
+            </button>
+          </form>
+        </section>
+      )}
+      {contas.length === 0 && podeUsar && usar}
+
       <ul className="flex flex-col gap-4">
         {contas.map((conta) => {
           const saudavel = conta.conectada && (conta.unipile_status === null || STATUS_SAUDAVEIS.has(conta.unipile_status));
           const nuncaAtivada = conta.ativado_em === null;
           const podeEditar = operador.papel === "admin" || conta.operador_id === operador.id;
+          const tambem = outrasMarcas(daMarca.get(conta.id)?.outrasMarcas ?? { visiveis: [], ocultas: 0 });
           return (
             <li key={conta.id} id={`conta-${conta.id}`} className="cartao scroll-mt-6 p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -82,6 +166,7 @@ export default async function LinkedinPage({ searchParams }: PageProps<"/setting
                         ? `LinkedIn vinculado${conta.tipo_conta ? `, ${TIPO[conta.tipo_conta] ?? conta.tipo_conta}` : ""}${saudavel ? "" : ` (a Unipile informa ${conta.unipile_status})`}`
                         : "LinkedIn não vinculado"}
                     </p>
+                    {tambem && <p className="text-xs text-tinta-suave">Também em: {tambem}</p>}
                   </div>
                 </div>
                 <EtiquetaDoPerfil status={conta.status} nuncaAtivado={nuncaAtivada} />
@@ -178,18 +263,35 @@ export default async function LinkedinPage({ searchParams }: PageProps<"/setting
                     Ativar no Dashboard
                   </Link>
                 )}
+                {podeEditar &&
+                  (tambem ? (
+                    <TirarDaMarca perfilId={conta.id} conta={conta.nome} marca={marca} acao={tirarContaDaMarca} />
+                  ) : (
+                    <span className="flex flex-wrap items-center gap-2">
+                      <button type="button" className="botao botao-pequeno" disabled>
+                        <Unlink aria-hidden />
+                        Tirar desta marca
+                      </button>
+                      <span className="text-xs text-tinta-fraca">{ERRO_DA_ULTIMA_MARCA}</span>
+                    </span>
+                  ))}
               </div>
             </li>
           );
         })}
       </ul>
 
-      <form action={vincularOutraConta}>
-        <button type="submit" className="botao">
-          <Plus aria-hidden />
-          Vincular outra conta do LinkedIn
-        </button>
-      </form>
+      {contas.length > 0 && (
+        <>
+          <form action={vincularOutraConta}>
+            <button type="submit" className="botao">
+              <Plus aria-hidden />
+              Vincular outra conta do LinkedIn
+            </button>
+          </form>
+          {(podeUsar || operador.papel === "admin") && usar}
+        </>
+      )}
 
       {operador.papel === "admin" && (
         <section className="cartao mt-2 p-5">

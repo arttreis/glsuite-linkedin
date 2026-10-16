@@ -11,6 +11,7 @@ import { comOperador } from "@/server/db/operador";
 import { lerPeriodo, numerosDoPeriodo } from "@/server/painel/numeros";
 import { precisaDeVoce, type ItemDoPrecisa } from "@/server/painel/precisa";
 import { saudeDosPerfis, type SaudeDoPerfil } from "@/server/painel/saude";
+import { soDaMarca } from "@/server/perfis/marcas-dos-perfis";
 import { resumoDoSdr, type Origem, type ResumoDoSdr } from "@/server/sdr/sdr";
 import { exigirOperadorNoApp } from "@/server/supabase/servidor";
 import { ContasDoLinkedin, MODO_DE_RESPOSTA } from "./conta";
@@ -231,7 +232,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
   const linkedin =
     operador.modulos.includes("linkedin") && !pendente
       ? await comOperador(obterDb(), operador.id, async (tx) => ({
-          contas: await saudeDosPerfis(tx, agora),
+          contas: await soDaMarca(obterDb(), operador.marcaId, await saudeDosPerfis(tx, agora)),
           precisa: await precisaDeVoce(tx),
           numeros: await numerosDoPeriodo(tx, { periodo, agora }),
           sdr: await resumoDoSdr(tx, operador.organizacaoId),
