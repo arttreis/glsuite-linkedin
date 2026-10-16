@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { corpoDaBuscaClassica, criarClienteUnipile } from "@/server/unipile/cliente";
+import { caminhoSemIdentificador, corpoDaBuscaClassica, criarClienteUnipile } from "@/server/unipile/cliente";
 import { classificarErro, ErroUnipile, mensagemDaRecusa, PECA_A_CHAVE } from "@/server/unipile/erros";
 
 type Requisicao = { url: URL; metodo: string; headers: Record<string, string>; corpo: unknown };
@@ -187,7 +187,30 @@ describe("recusa da Unipile no log (SDR-122)", () => {
 
     expect(erro).toMatchObject({ status: 0, tipo: "rede" });
     expect(aviso).toHaveBeenCalledTimes(1);
-    expect(aviso).toHaveBeenCalledWith("Unipile 0 rede GET /accounts/acc");
+    expect(aviso).toHaveBeenCalledWith("Unipile 0 rede GET /accounts/:id");
+  });
+
+  it("o log não leva o slug público do perfil (LGPD)", async () => {
+    const aviso = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { cliente } = clienteComFetch([{ status: 404, corpo: { type: "errors/resource_not_found", title: "Not found" } }]);
+    const erro = await cliente.obterPerfil("acc", "joao-silva-123").catch((e: unknown) => e);
+
+    expect(erro).toBeInstanceOf(ErroUnipile);
+    expect(aviso).toHaveBeenCalledTimes(1);
+    const linha = aviso.mock.calls.flat().map(String).join(" ");
+    expect(linha).not.toContain("joao-silva-123");
+    expect(linha).toMatch(/^Unipile 404 \S+ GET \/users\/:id$/);
+  });
+
+  it("mascara os identificadores do caminho e mantém os segmentos fixos", () => {
+    expect(caminhoSemIdentificador("/users/joao-silva-123")).toBe("/users/:id");
+    expect(caminhoSemIdentificador("/users/ACo1/posts")).toBe("/users/:id/posts");
+    expect(caminhoSemIdentificador("/chats/chat-9/messages")).toBe("/chats/:id/messages");
+    expect(caminhoSemIdentificador("/chat_attendees/ACo1/chats")).toBe("/chat_attendees/:id/chats");
+    expect(caminhoSemIdentificador("/users/invite/sent/inv-1")).toBe("/users/invite/sent/:id");
+    expect(caminhoSemIdentificador("/users/me")).toBe("/users/me");
+    expect(caminhoSemIdentificador("/hosted/accounts/link")).toBe("/hosted/accounts/link");
+    expect(caminhoSemIdentificador("/linkedin/search/parameters")).toBe("/linkedin/search/parameters");
   });
 
   it("resposta 2xx não deixa log", async () => {
