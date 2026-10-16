@@ -611,13 +611,13 @@ Anotadas durante a execução, por ticket.
   o projeto foi criado pela CLI sem detecção. Variáveis só no ambiente de
   produção.
 - Banco: sem cota para um projeto gratuito novo no Supabase, o SDR divide o
-  projeto **GL Suite** (`bfxytlaffkkcugqjsgtk`, us-west-2), por decisão do
+  projeto **GL Suite** (us-west-2), por decisão do
   Arthur. Nenhum nome de tabela ou função colide. As regras do
   compartilhamento:
   - grants e revoke só nas tabelas do SDR, nunca no schema inteiro (a
     migration de RLS foi corrigida para isso);
-  - o app conecta como `sdr_servidor`, pelo pooler
-    `aws-1-us-west-2.pooler.supabase.com:6543`. Esse papel tem BYPASSRLS e
+  - o app conecta como `sdr_servidor`, pelo pooler em modo transação
+    (host no painel do Supabase). Esse papel tem BYPASSRLS e
     direitos só nas 19 tabelas do SDR;
   - o `sdr_servidor` é membro de `authenticated` com `inherit false, set
     true`: troca para `authenticated` no painel, mas não herda o acesso desse
