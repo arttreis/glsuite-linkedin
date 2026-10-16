@@ -2469,6 +2469,49 @@ que elas decidiram:
   no Telegram). Segui as sugestões e deixei cada uma aberta no épico: a regra
   de preço (§4.7) e o SDR-103 só existem por causa delas.
 
+### SDR-75 (#64) · O canal na entrada do agente e no chat de teste (16/10/2026)
+
+- **O prompt do LinkedIn sai do mesmo código, igual byte a byte.** O que muda
+  por canal (§4.3, "Onde o canal pede, a regra da casa muda") virou um
+  objeto (`regrasDoCanal`: tamanho, tom, links, de onde veio o contato,
+  outro canal) e o enquadramento, uma linha; o resto do texto é um só para
+  todo canal. Os seis textos de referência foram gravados em
+  `src/server/agente/referencia-do-linkedin/` num commit só deles, com o
+  código da `main`, e o teste confere as funções sem canal, com
+  `canal: "linkedin"` e pelo `decidirResposta`/`abrirConversa` de verdade
+  (sem canal, como o `agente.ts`, e com `linkedin` mais links e lançamento,
+  que no LinkedIn são ignorados).
+- Fora do LinkedIn, o limite do Instagram (1.000 bytes, acento conta 2) entra
+  na mesma regra das 30 palavras; Messenger e Telegram ficam só com as 30.
+- **Fora do LinkedIn sem SDR e `abrirConversa` fora do LinkedIn lançam erro,
+  não viram desfecho.** Quem chama (SDR-78, SDR-89, SDR-96) não deve chamar
+  nesses casos ("Organização sem SDR: ninguém responde sozinho", §4.26); o
+  chat de teste sempre tem SDR.
+- **Validador:** com `linksPermitidos`, cada link do texto da IA (a versão
+  global do `PADRAO_URL`, sem a pontuação colada no fim) tem de ser igual a
+  um da lista ou ao de agenda. Igual de verdade: link sem `https://` ou com
+  outro parâmetro é barrado, e a IA copia o link como está na mensagem.
+- **`canaisDoTeste`:** o LinkedIn com o módulo `linkedin`, Instagram com
+  `instagram`, Messenger com `facebook`, Telegram com `telegram` ou
+  `comunidades`, na ordem de `CANAIS_DO_SDR`; sem nenhum, o LinkedIn (a lista
+  nunca volta vazia). Hoje as duas telas do chat exigem o módulo `linkedin`;
+  abrir o chat para quem não tem é do SDR-81.
+- **Chat de teste:** fora do LinkedIn, o começo é só a nota (sem chamar o
+  modelo). Ajustar o SDR antes de a pessoa escrever mantém a nota do começo e
+  acrescenta o aviso do ajuste (as respostas do SDR saem para serem
+  refeitas; a nota fica, porque continua valendo). Trocar canal ou segmento
+  recomeça; se a ação recusar (canal fora do plano, sem chave), a tela volta
+  o canal e o segmento de antes. Teste salvo num canal que saiu do plano
+  aparece com esse canal no seletor.
+- `noGrupo` só entra no tipo (SDR-97). `linksPermitidos` e
+  `contextoDoLancamento` vão vazios no chat de teste até o SDR-88.
+- `VERSAO_DOS_PROMPTS` subiu para `2026-10-16.1`. Como em toda subida, o
+  veredito do eval que libera o modo automático é por versão: a rodada da
+  versão anterior não vale para ligar o automático, e o eval roda de novo.
+- Migration `20261017107500_canal_do_teste` (`sdr_testes.canal`, padrão
+  `linkedin`, check com os quatro canais), aplicada no banco do GL Suite
+  antes do merge.
+
 ## Marcas (Marco F, 16/10/2026)
 
 Regras na §4.30 do épico, decisões D30 a D44. A marca é a fronteira dos dados
