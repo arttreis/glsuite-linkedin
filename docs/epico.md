@@ -565,6 +565,17 @@ E três que são do próprio motor:
   casa" ("Vincular", se ela ainda não tem LinkedIn). O hosted auth volta para
   a Plataforma. A conta da casa não aparece em Configurações: quando ela cai,
   é a GuessLess quem reconecta.
+- A **Plataforma** liga a um perfil uma conta que já está na Unipile
+  (SDR-124). A seção "Contas na Unipile sem perfil" lista as contas do
+  LinkedIn do workspace da Unipile que nenhum perfil tem, de nenhuma
+  organização (as conectadas direto no dashboard da Unipile): nome, status e
+  quando foi criada. Para cada uma, escolhe-se a organização e o perfil que a
+  recebe: um perfil sem conta ou com a conta apagada na Unipile, ou uma conta
+  nova da organização, operada por quem é admin dela há mais tempo. Ligar faz
+  as checagens do hosted auth (é do LinkedIn, o dono, não está em outro
+  perfil), grava `conta_conectada` com o e-mail de quem é da plataforma e traz
+  o histórico de conversas. O perfil segue pausado (§4.4). O workspace da
+  Unipile é de todas as organizações: a lista só aparece na Plataforma.
 
 ### 4.15 · Contatos
 
@@ -2437,6 +2448,7 @@ operá-las sem mexer no banco à mão. Os tickets são as sub-issues da #113.
 |---|---|---|---|
 | 1 | SDR-126 Abrir a Plataforma para todo e-mail @guessless.com.br e @guessless.ca (§4.14) | #124 | — |
 | 2 | SDR-123 Reconectar a conta da casa pela Plataforma (§4.14) | #116 | — |
+| 3 | SDR-124 Ligar a um perfil uma conta que já está na Unipile, pela Plataforma (§4.14) | #117 | — |
 
 ## 10 · Decisões abertas
 
