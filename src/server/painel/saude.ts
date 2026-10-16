@@ -59,7 +59,7 @@ export async function saudeDosPerfis(db: Db, agora: Date): Promise<SaudeDoPerfil
            unipile_account_id, unipile_status, unipile_status_em, status, motivo_pausa, modo_resposta,
            public.pode_ver_perfil(id) as acessivel
       from public.perfis
-     where not casa
+     where not casa and arquivado_em is null
      order by array_position(array['arthur', 'juliano', 'luiz', 'jp'], slug)`);
   const guardas = await lerConfiguracao(db, "guardas");
 

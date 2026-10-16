@@ -96,6 +96,6 @@ export async function filtrosDoPipeline(
       `select c.id, c.nome from public.campanhas c join public.perfis pf on pf.id = c.perfil_id
         where not pf.casa order by c.nome`,
     ),
-    contas: await db.query("select id, nome from public.perfis where not casa and public.pode_ver_perfil(id) order by nome"),
+    contas: await db.query("select id, nome from public.perfis where not casa and arquivado_em is null and public.pode_ver_perfil(id) order by nome"),
   };
 }

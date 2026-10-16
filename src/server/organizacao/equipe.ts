@@ -16,11 +16,12 @@ export async function equipeDaOrganizacao(db: Db): Promise<{ membros: MembroDaEq
     `select o.id, o.nome, o.email, o.papel, o.ativo,
             coalesce(array_agg(op.perfil_id) filter (where op.perfil_id is not null), '{}') as "perfilIds"
        from public.operadores o
-       left join public.operador_perfis op on op.operador_id = o.id
+       left join public.operador_perfis op
+         on op.operador_id = o.id and not exists (select 1 from public.perfis pf where pf.id = op.perfil_id and pf.arquivado_em is not null)
       group by o.id
       order by o.ativo desc, o.papel, o.nome`,
   );
-  const contas = await db.query<{ id: string; nome: string }>("select id, nome from public.perfis where not casa order by nome");
+  const contas = await db.query<{ id: string; nome: string }>("select id, nome from public.perfis where not casa and arquivado_em is null order by nome");
   return { membros, contas };
 }
 
@@ -75,14 +76,17 @@ export async function definirContasDoMembro(
     const acesso = await exigirAdmin(tx, p.adminId, p.membroId);
     if ("erro" in acesso) return { ok: false, erro: acesso.erro };
     const validas = await tx.query<{ id: string }>(
-      "select id from public.perfis where organizacao_id = $1::uuid and not casa and id = any($2::uuid[])",
+      "select id from public.perfis where organizacao_id = $1::uuid and not casa and arquivado_em is null and id = any($2::uuid[])",
       [acesso.organizacaoId, p.perfilIds],
     );
     if (validas.length !== new Set(p.perfilIds).size) return { ok: false, erro: "Conta fora da organização." };
-    await tx.query("delete from public.operador_perfis where operador_id = $1::uuid and not (perfil_id = any($2::uuid[]))", [
-      p.membroId,
-      p.perfilIds,
-    ]);
+    // A conta excluída (arquivada) não aparece na tela: o acesso a ela fica, para o histórico.
+    await tx.query(
+      `delete from public.operador_perfis
+        where operador_id = $1::uuid and not (perfil_id = any($2::uuid[]))
+          and perfil_id not in (select id from public.perfis where arquivado_em is not null)`,
+      [p.membroId, p.perfilIds],
+    );
     for (const { id } of validas) {
       await tx.query(
         "insert into public.operador_perfis (operador_id, perfil_id) values ($1::uuid, $2::uuid) on conflict do nothing",

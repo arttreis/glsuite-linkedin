@@ -32,7 +32,7 @@ export default async function NovaCampanhaPage({ searchParams }: PageProps<"/cam
   const { publicos, contas, dossie } = await comOperador(obterDb(), operador.id, async (tx) => ({
     publicos: (await listarPublicos(tx, operador.organizacaoId)).filter((p) => p.status !== "arquivado"),
     contas: await tx.query<{ id: string; nome: string; status: string }>(
-      "select id, nome, status from public.perfis where not casa and public.pode_ver_perfil(id) order by nome",
+      "select id, nome, status from public.perfis where not casa and arquivado_em is null and public.pode_ver_perfil(id) order by nome",
     ),
     dossie: await dossieConfirmado(tx, operador.organizacaoId),
   }));

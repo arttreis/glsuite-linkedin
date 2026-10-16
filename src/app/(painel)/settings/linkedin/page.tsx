@@ -1,4 +1,4 @@
-import { FileJson, Link2, Pause, Pencil, Play, Plus, RefreshCw, Webhook } from "lucide-react";
+import { FileJson, Link2, Pause, Pencil, Play, Plus, RefreshCw, Trash2, Webhook } from "lucide-react";
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { Aviso } from "@/components/aviso";
@@ -13,6 +13,7 @@ import { exigirOperadorComModulo } from "@/server/supabase/servidor";
 import {
   atualizarStatusDasContasDoPainel,
   editarContaDoPainel,
+  excluirContaDoPainel,
   pausarContaDoPainel,
   reconectarConta,
   registrarEvalDoPainel,
@@ -45,7 +46,7 @@ const CONEXAO: Record<string, { tom: "ok" | "erro"; texto: string }> = {
 
 const TIPO: Record<string, string> = { gratuita: "conta gratuita", premium: "Premium", sales_navigator: "Sales Navigator" };
 
-/** LinkedIn (§4.12): as contas, status, rampa, teto e janela; editar nome e janela; pausar, retomar, reconectar e vincular outra. */
+/** LinkedIn (§4.12): as contas, status, rampa, teto e janela; editar nome e janela; excluir; pausar, retomar, reconectar e vincular outra. */
 export default async function LinkedinPage({ searchParams }: PageProps<"/settings/linkedin">) {
   const operador = await exigirOperadorComModulo("linkedin");
   const { msg, conexao } = await searchParams;
@@ -54,7 +55,7 @@ export default async function LinkedinPage({ searchParams }: PageProps<"/setting
       `select id, nome, operador_id, status, motivo_pausa, unipile_account_id is not null as conectada, unipile_status, tipo_conta,
               rampa, teto_convites_semana, janela, fuso, modo_resposta, ativado_em
          from public.perfis
-        where not casa and public.pode_ver_perfil(id)
+        where not casa and arquivado_em is null and public.pode_ver_perfil(id)
         order by nome`,
     ),
   );
@@ -139,6 +140,23 @@ export default async function LinkedinPage({ searchParams }: PageProps<"/setting
                       escreve em nome de quem está no nome.
                     </p>
                   </form>
+                  <details className="mt-4 border-t border-linha pt-4">
+                    <summary className="flex w-fit cursor-pointer items-center gap-1.5 text-[13px] text-erro hover:underline">
+                      <Trash2 className="size-3.5" aria-hidden />
+                      Excluir esta conta
+                    </summary>
+                    <form action={excluirContaDoPainel} className="mt-3 flex flex-col gap-3">
+                      <input type="hidden" name="perfilId" value={conta.id} />
+                      <p className="text-[13px] text-tinta-suave">
+                        Excluir a conta de {conta.nome}? O SDR para de usar esta conta, a conexão com o LinkedIn é desfeita e o histórico de
+                        leads e conversas continua guardado. Não dá para desfazer pelo painel.
+                      </p>
+                      <button type="submit" className="botao botao-pequeno botao-perigo w-fit">
+                        <Trash2 aria-hidden />
+                        Excluir
+                      </button>
+                    </form>
+                  </details>
                 </details>
               )}
 

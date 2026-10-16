@@ -453,7 +453,7 @@ LinkedIn e, desde o Marco E, no Instagram, no Messenger e no Telegram (§4.26).
 |---|---|
 | Empresa | a análise (Negócio, Produto, Mercado), editável; ler o site de novo |
 | SDR | os campos do SDR, editáveis; "Testar no chat", que abre o chat de teste; histórico de ajustes com desfazer; quando o SDR passa a conversa para você (§4.7); modo de resposta (sozinho ou aprovo cada resposta); link de agenda; onde o SDR responde, canal por canal (§4.26) |
-| LinkedIn | contas vinculadas, status, rampa, teto, janela; nome e janela editáveis (o admin ou quem vinculou a conta); pausar e retomar; reconectar; vincular outra conta |
+| LinkedIn | contas vinculadas, status, rampa, teto, janela; nome e janela editáveis (o admin ou quem vinculou a conta); pausar e retomar; reconectar; vincular outra conta; excluir a conta (o admin ou quem vinculou; não vale para a conta da casa): arquiva, preserva o histórico e solta a conta da Unipile (SDR-125) |
 | Instagram e Facebook | a Página e o Instagram conectados pelo app da GuessLess, as permissões e o último aviso da Meta; conectar, trocar de Página e desconectar (§4.27 e §4.28). Com Instagram ou Facebook |
 | WhatsApp | o número conectado pela API oficial da Meta, a qualidade e o limite, os templates aprovados; conectar e desconectar (§4.19). Só com o módulo. Com Comunidades, também o número dos grupos (§4.29) |
 | Telegram | o bot conectado, o link de entrada e os links com tag, a mensagem de boas-vindas; conectar e desconectar (§4.20). Só com o módulo. Com Comunidades, também os grupos e canais em que o bot está (§4.23) |
@@ -1372,6 +1372,16 @@ marca 1, unique novo ao lado do antigo, policy por `marca_id = marca_atual()`
 (com uma marca por organização, devolve as mesmas linhas de hoje). O SDR-115
 derruba os uniques por organização e põe `not null`, quando nenhum código no
 ar depende mais deles.
+
+Entra com o SDR-125:
+
+```text
+perfis        + arquivado_em timestamptz            -- §4.12: excluir a conta é arquivar; null é ativo no painel
+```
+
+Apagar a linha de `perfis` não dá: eventos, leads, ações, mensagens e
+conversas apontam para ela. A conta arquivada some das listas do painel e fica
+pausada e sem `unipile_account_id`; o histórico continua.
 
 ### 6.1 · Estados do lead
 
@@ -2437,6 +2447,7 @@ operá-las sem mexer no banco à mão. Os tickets são as sub-issues da #113.
 |---|---|---|---|
 | 1 | SDR-126 Abrir a Plataforma para todo e-mail @guessless.com.br e @guessless.ca (§4.14) | #124 | — |
 | 2 | SDR-123 Reconectar a conta da casa pela Plataforma (§4.14) | #116 | — |
+| 2 | SDR-125 Excluir uma conta do LinkedIn em Configurações, arquivando e preservando o histórico (§4.12) | #118 | — |
 
 ## 10 · Decisões abertas
 

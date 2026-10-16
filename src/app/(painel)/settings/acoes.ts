@@ -13,6 +13,7 @@ import { definirContasDoMembro, mudarPapelDoMembro } from "@/server/organizacao/
 import { renomearOrganizacao } from "@/server/organizacao/organizacao";
 import { garantirWebhooks, gerarLinkDeConexao, mensagemDaFalhaDoLink } from "@/server/perfis/conexao";
 import { editarConta } from "@/server/perfis/edicao";
+import { excluirConta } from "@/server/perfis/exclusao";
 import { ErroDeModo, registrarEval, trocarModo } from "@/server/perfis/modo";
 import { contaNovaDoLinkedin } from "@/server/perfis/nova-conta";
 import { despausarPerfil, ErroDeAtivacao, pausarPerfil } from "@/server/perfis/pausa";
@@ -165,6 +166,16 @@ export async function editarContaDoPainel(formData: FormData) {
     }),
   );
   voltar("linkedin", resultado.ok ? "Conta atualizada. O novo horário vale a partir da próxima ação." : resultado.erro);
+}
+
+/** Excluir é arquivar: pausa, solta a conta da Unipile e preserva o histórico. O RLS deixa só o admin ou quem vinculou. */
+export async function excluirContaDoPainel(formData: FormData) {
+  const operador = await exigirOperadorComModuloNaAcao("linkedin");
+  const perfilId = await exigirAcessoAConta(operador.id, formData.get("perfilId"));
+  const resultado = await comOperador(obterDb(), operador.id, (tx) =>
+    excluirConta(tx, { perfilId, operadorId: operador.id, operadorNome: operador.nome, agora: new Date() }),
+  );
+  voltar("linkedin", resultado.ok ? `Conta ${resultado.nome} excluída.` : resultado.erro);
 }
 
 export async function reconectarConta(formData: FormData) {
