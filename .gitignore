@@ -58,3 +58,7 @@ worktrees/
 
 # Prints e logs do Playwright MCP
 .playwright-mcp/
+
+# Worktrees do fluxo de ondas (uma por ticket) e as dos agentes do Claude Code
+.worktrees/
+.claude/worktrees/

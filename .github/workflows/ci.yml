@@ -16,6 +16,8 @@ jobs:
   verificar:
     name: lint · typecheck · testes · build
     runs-on: ubuntu-latest
+    # Job pendurado trava a onda inteira.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6

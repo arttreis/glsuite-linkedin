@@ -1,0 +1,59 @@
+{
+  "repo": "glsuite-linkedin",
+  "base": "main",
+  "node": "24",
+  "deployNoMerge": true,
+  "fonte": "github",
+  "github": {
+    "repo": "arttreis/glsuite-linkedin",
+    "labels": {
+      "projeto": "projeto",
+      "projetoPrefix": "proj-",
+      "refinar": "refinar",
+      "emAndamento": "andamento",
+      "emReview": "review",
+      "followUp": "follow-up"
+    }
+  },
+  "clickup": {
+    "espelho": {
+      "listId": "1400460000002344",
+      "listName": "GL Suite › Linkedin SDR › Projetos",
+      "statuses": {
+        "emAndamento": "produção",
+        "emReview": "revisão interna",
+        "aprovado": "aprovado"
+      }
+    }
+  },
+  "prod": {
+    "url": "https://guessless-sdr.vercel.app",
+    "deployProvider": "vercel",
+    "smokeLogin": null
+  },
+  "posthog": null,
+  "worktrees": {
+    "dir": ".worktrees",
+    "bootstrap": "pnpm install --frozen-lockfile",
+    "maxParalelo": 2
+  },
+  "gates": {
+    "lint": "pnpm lint",
+    "typecheck": "pnpm typecheck",
+    "test": "pnpm test --maxWorkers=2",
+    "build": "pnpm build"
+  },
+  "dev": "pnpm dev",
+  "devPortEnv": "PORT",
+  "ci": {
+    "provider": "github-actions",
+    "workflow": ".github/workflows/ci.yml",
+    "cancelaRunAnterior": true
+  },
+  "convencoes": {
+    "branch": "ticket/<numero-da-issue>-<slug>",
+    "commit": "<tipo>(<escopo>): <descrição em pt-br, imperativo>",
+    "testeAoLado": true,
+    "maxLinhasPr": 400
+  }
+}
