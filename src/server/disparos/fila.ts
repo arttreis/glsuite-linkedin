@@ -1,3 +1,4 @@
+import type { CanalDeDisparo } from "@/domain/canais";
 import { normalizarTelefone } from "@/domain/contatos";
 import {
   classificarErroDaMeta,
@@ -7,7 +8,6 @@ import {
   motivoParaPular,
   type ClasseDoErro,
   type ConteudoDoDisparo,
-  type TipoDeCanal,
 } from "@/domain/disparos";
 import { canalParaEnvio, marcarCanalComErro, type CanalParaEnvio, type DadosDoWhatsapp } from "@/server/canais/canais";
 import { lerConfiguracao, type Configuracao } from "@/server/configuracoes";
@@ -94,7 +94,7 @@ export type DependenciasDaFila = {
   db: Db;
   cofre: Cofre;
   agora: () => Date;
-  enviadores: Partial<Record<TipoDeCanal, EnviadorDoCanal>>;
+  enviadores: Partial<Record<CanalDeDisparo, EnviadorDoCanal>>;
   /** Pausa entre envios (o ritmo). Os testes não esperam. */
   esperar?: (ms: number) => Promise<void>;
   /** Até quanto tempo esta rodada trabalha (a próxima continua de onde parou). */
@@ -107,7 +107,7 @@ export type RelatorioDaFila =
 
 const esperarDeVerdade = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-type DisparoSaindo = { id: string; organizacao_id: string; canal_id: string; canal_tipo: TipoDeCanal; conteudo: ConteudoDoDisparo };
+type DisparoSaindo = { id: string; organizacao_id: string; canal_id: string; canal_tipo: CanalDeDisparo; conteudo: ConteudoDoDisparo };
 
 /**
  * Uma rodada da fila dos disparos (§4.18). Roda a cada minuto pelo cron e logo
@@ -324,7 +324,7 @@ async function devolverReservados(db: Db, disparoId: string): Promise<void> {
 }
 
 /** Na hora de cada envio, o contato é conferido de novo (§4.18): quem saiu depois da confirmação não recebe. */
-async function conferirNaHora(db: Db, p: { envio: EnvioReservado; canal: TipoDeCanal; agora: Date; intervaloHoras: number }): Promise<string | null> {
+async function conferirNaHora(db: Db, p: { envio: EnvioReservado; canal: CanalDeDisparo; agora: Date; intervaloHoras: number }): Promise<string | null> {
   const [contato] = await db.query<{
     naoContatarEm: Date | null;
     telefone: string | null;
@@ -346,7 +346,7 @@ async function conferirNaHora(db: Db, p: { envio: EnvioReservado; canal: TipoDeC
 }
 
 /** O contato sai do canal (§4.15): não recebe mais disparo por ele. */
-export async function sairDoCanal(db: Db, p: { contatoId: string; canal: TipoDeCanal; motivo: string; agora: Date }): Promise<boolean> {
+export async function sairDoCanal(db: Db, p: { contatoId: string; canal: CanalDeDisparo; motivo: string; agora: Date }): Promise<boolean> {
   const coluna = p.canal === "whatsapp" ? "whatsapp" : "telegram";
   const sairam = await db.query(
     `update public.contatos set ${coluna}_saiu_em = $2, ${coluna}_motivo = $3 where id = $1::uuid and ${coluna}_saiu_em is null returning id`,

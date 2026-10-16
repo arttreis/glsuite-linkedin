@@ -6,13 +6,19 @@
  * o que cada módulo libera.
  */
 
-export const MODULOS = ["linkedin", "whatsapp", "telegram"] as const;
+export const MODULOS = ["linkedin", "whatsapp", "telegram", "instagram", "facebook", "comunidades"] as const;
 export type Modulo = (typeof MODULOS)[number];
+
+/** Basta um para Lançamentos (§4.14, §4.21). */
+export const MODULOS_DOS_LANCAMENTOS = ["comunidades", "instagram", "facebook"] as const satisfies readonly Modulo[];
 
 export const NOME_DO_MODULO: Record<Modulo, string> = {
   linkedin: "SDR no LinkedIn",
   whatsapp: "Disparos no WhatsApp",
   telegram: "Disparos no Telegram",
+  instagram: "SDR no Instagram",
+  facebook: "SDR no Facebook",
+  comunidades: "Lançamentos em grupos",
 };
 
 export type DescricaoDoModulo = {
@@ -42,6 +48,25 @@ export const CATALOGO_DE_MODULOS: readonly DescricaoDoModulo[] = [
     nome: NOME_DO_MODULO.telegram,
     resumo: "Uma mensagem para todo mundo que entrou pelo bot da empresa no Telegram.",
     inclui: ["Bot da empresa", "Links de entrada com tag", "Disparo agora ou agendado"],
+  },
+  {
+    id: "instagram",
+    nome: NOME_DO_MODULO.instagram,
+    resumo: "O SDR responde quem chama no direct, e quem comenta a palavra-chave num post recebe o link no direct.",
+    inclui: ["SDR no direct", "Palavras-chave nos comentários", "Lançamentos"],
+  },
+  {
+    id: "facebook",
+    nome: NOME_DO_MODULO.facebook,
+    resumo: "O mesmo, no Messenger e nos posts da Página.",
+    inclui: ["SDR no Messenger", "Palavras-chave nos posts da Página", "Lançamentos"],
+  },
+  {
+    id: "comunidades",
+    nome: NOME_DO_MODULO.comunidades,
+    resumo:
+      "Grupos de WhatsApp e de Telegram para lançamentos: o link que enche um grupo e passa para o próximo, a agenda de mensagens, quem entrou e quem comprou.",
+    inclui: ["Lançamentos", "Grupos de WhatsApp e de Telegram", "Link que enche os grupos", "Agenda de mensagens", "Quem comprou"],
   },
 ];
 

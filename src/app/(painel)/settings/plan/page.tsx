@@ -101,7 +101,7 @@ export default async function PlanoPage({ searchParams }: PageProps<"/settings/p
                   </div>
                 </dl>
               )}
-              {linha.ativo && modulo.id !== "linkedin" && (
+              {linha.ativo && (modulo.id === "whatsapp" || modulo.id === "telegram") && (
                 <dl className="border-t border-linha pt-3 text-sm">
                   <dt className="text-xs text-tinta-fraca">Mensagens de disparo em {mes}</dt>
                   <dd className="mt-0.5 tabular-nums">{numero(modulo.id === "whatsapp" ? uso.mensagensDoWhatsapp : uso.mensagensDoTelegram)}</dd>

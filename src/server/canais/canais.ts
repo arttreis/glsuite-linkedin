@@ -1,4 +1,5 @@
-import type { TemplateDoWhatsapp, TipoDeCanal } from "@/domain/disparos";
+import type { TipoDeCanal } from "@/domain/canais";
+import type { TemplateDoWhatsapp } from "@/domain/disparos";
 import { classificarErroDaMeta } from "@/domain/disparos";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";

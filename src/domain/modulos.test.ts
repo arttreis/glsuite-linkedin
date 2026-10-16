@@ -7,7 +7,9 @@ import {
   liberado,
   linkedinNoPrimeiroAcesso,
   MODULOS,
+  MODULOS_DOS_LANCAMENTOS,
   motivoDaMudanca,
+  NOME_DO_MODULO,
   soOPrimeiroAcesso,
 } from "./modulos";
 
@@ -17,6 +19,21 @@ describe("módulos (SDR-69, §4.14)", () => {
     expect(ehModulo("whatsapp")).toBe(true);
     expect(ehModulo("email")).toBe(false);
     expect(ehModulo(undefined)).toBe(false);
+  });
+
+  it("o Marco E traz Instagram, Facebook e Comunidades, com o nome de docs/naming.md (SDR-74)", () => {
+    expect(MODULOS).toEqual(["linkedin", "whatsapp", "telegram", "instagram", "facebook", "comunidades"]);
+    expect(CATALOGO_DE_MODULOS.map((m) => m.id)).toEqual([...MODULOS]);
+    expect(NOME_DO_MODULO.comunidades).toBe("Lançamentos em grupos");
+    expect(CATALOGO_DE_MODULOS.find((m) => m.id === "facebook")!.resumo).toBe("O mesmo, no Messenger e nos posts da Página.");
+    expect(ehModulo("comunidades")).toBe(true);
+  });
+
+  it("Lançamentos sai com qualquer um dos três módulos novos (§4.14, §4.21)", () => {
+    expect(liberado(["instagram"], MODULOS_DOS_LANCAMENTOS)).toBe(true);
+    expect(liberado(["facebook"], MODULOS_DOS_LANCAMENTOS)).toBe(true);
+    expect(liberado(["comunidades"], MODULOS_DOS_LANCAMENTOS)).toBe(true);
+    expect(liberado(["linkedin", "whatsapp"], MODULOS_DOS_LANCAMENTOS)).toBe(false);
   });
 
   it("libera quando a organização tem pelo menos um dos módulos exigidos; sem exigência, é da base", () => {

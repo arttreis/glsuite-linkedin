@@ -1,4 +1,5 @@
 import { Temporal } from "temporal-polyfill";
+import { NOME_DO_CANAL, type CanalDeDisparo } from "./canais";
 import { detectarOptout } from "./optout";
 import { primeiroNome, semAcentos } from "./texto";
 
@@ -7,10 +8,9 @@ import { primeiroNome, semAcentos } from "./texto";
  * confirmar, a fila e os webhooks usam as mesmas funções.
  */
 
-export const TIPOS_DE_CANAL = ["whatsapp", "telegram"] as const;
-export type TipoDeCanal = (typeof TIPOS_DE_CANAL)[number];
-
-export const NOME_DO_CANAL: Record<TipoDeCanal, string> = { whatsapp: "WhatsApp", telegram: "Telegram" };
+export { NOME_DO_CANAL } from "./canais";
+/** @deprecated Use `CanalDeDisparo` (disparo) ou `TipoDeCanal` de `@/domain/canais` (todos os canais). */
+export type TipoDeCanal = CanalDeDisparo;
 
 export type StatusDoDisparo = "rascunho" | "agendado" | "enviando" | "pausado" | "concluido" | "cancelado";
 export type StatusDoEnvio = "pendente" | "enviando" | "enviado" | "entregue" | "lido" | "falhou" | "pulado" | "cancelado";
@@ -184,7 +184,7 @@ export type ContatoParaDisparo = {
  * mesma regra vale na confirmação e na hora de cada envio: quem saiu depois de
  * confirmado também fica de fora.
  */
-export function motivoParaPular(canal: TipoDeCanal, contato: ContatoParaDisparo, agora: Date, intervaloHoras: number): string | null {
+export function motivoParaPular(canal: CanalDeDisparo, contato: ContatoParaDisparo, agora: Date, intervaloHoras: number): string | null {
   if (contato.naoContatarEm) return "Pediu para não ser contatado.";
   if (canal === "whatsapp") {
     if (!contato.telefone) return "Sem telefone.";

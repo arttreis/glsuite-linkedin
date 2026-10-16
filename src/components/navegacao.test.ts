@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { abasDoLancamento } from "@/app/(painel)/launches/[id]/lista-de-abas";
 import { abasDaOrganizacao } from "@/app/(painel)/settings/lista-de-abas";
 import { itensDoMenu } from "./navegacao";
 
@@ -38,6 +39,24 @@ describe("menu e abas por módulo (SDR-69, §4.14)", () => {
       "Configurações",
       "Plataforma",
     ]);
+  });
+
+  it("Lançamentos vem logo depois de Chats; sem o LinkedIn, logo depois do Dashboard (SDR-74)", () => {
+    const menu = (modulos: Parameters<typeof itensDoMenu>[0]["modulos"]) =>
+      rotulos(itensDoMenu({ modulos, linkedinNoPrimeiroAcesso: false, plataforma: false }));
+    expect(menu(["linkedin", "comunidades"])).toEqual(["Dashboard", "Chats", "Lançamentos", "Pipeline", "Campanhas", "Contatos", "Configurações"]);
+    expect(menu(["facebook"])).toEqual(["Dashboard", "Lançamentos", "Contatos", "Configurações"]);
+    expect(menu(["instagram", "whatsapp"])).toEqual(["Dashboard", "Lançamentos", "Contatos", "Disparos", "Configurações"]);
+    expect(menu(["linkedin", "whatsapp"])).not.toContain("Lançamentos");
+    expect(itensDoMenu({ modulos: ["comunidades"], linkedinNoPrimeiroAcesso: false, plataforma: false })[1]!.href).toBe("/launches");
+  });
+
+  it("as abas do lançamento: Hoje e SDR, nessa ordem (SDR-74)", () => {
+    expect(abasDoLancamento("abc", ["comunidades"])).toEqual([
+      { href: "/launches/abc", rotulo: "Hoje" },
+      { href: "/launches/abc/sdr", rotulo: "SDR" },
+    ]);
+    expect(rotulos(abasDoLancamento("abc", ["instagram"]))).toEqual(["Hoje", "SDR"]);
   });
 
   it("as abas de Configurações seguem os módulos; Equipe e Plano são da base", () => {

@@ -2469,6 +2469,50 @@ que elas decidiram:
   no Telegram). Segui as sugestões e deixei cada uma aberta no épico: a regra
   de preço (§4.7) e o SDR-103 só existem por causa delas.
 
+### SDR-74 (#63) · Lançamentos e os módulos novos (16/10/2026)
+
+- **Os checks do Marco E mudam uma vez só** (migration
+  `20261017107400_lancamentos`): `modulos_da_organizacao.modulo`,
+  `canais.tipo` e `contatos.origem` com a lista final; `disparos.canal_tipo`
+  fica só WhatsApp e Telegram (D22). A migration também liga Instagram,
+  Facebook e Comunidades na GuessLess e cria `lancamentos` inteira, com as
+  colunas que só o SDR-76 e o SDR-77 usam.
+- **Canal largo e canal de disparo** (`src/domain/canais.ts`): `TipoDeCanal`
+  são os cinco tipos de `canais`; o disparo usa `CanalDeDisparo` (WhatsApp e
+  Telegram). `src/domain/disparos.ts` reexporta `NOME_DO_CANAL` e guarda
+  `TipoDeCanal` como apelido de `CanalDeDisparo` só para os testes de
+  `tests/disparos/` compilarem sem mudança.
+- **Lançamentos aparece com qualquer um dos três módulos novos**
+  (`MODULOS_DOS_LANCAMENTOS`). Sem nenhum, a rota abre o Plano em
+  `?module=comunidades` ("Lançamentos em grupos"), e as funções do servidor
+  lançam `ModuloNaoContratado("comunidades")` antes de ler ou escrever.
+  `exigirOperadorComModuloNaAcao` aceita a lista, como a página já aceitava.
+- **A tag nasce com o lançamento** pelo `garantirTags`: nome igual (sem caixa e
+  acento) reaproveita a tag, e o teto de 200 recusa sem criar o lançamento.
+  Editar o nome não renomeia a tag. O nome do lançamento segue a regra da tag
+  (espaço sobrando sai, até 40).
+- **Datas no horário de Brasília**, lidas do `datetime-local` como os
+  disparos (`instanteLocal`). A aula fica em `aulas` (jsonb) com o instante em
+  UTC. Linha de aula ou de pergunta toda em branco é ignorada, para "Adicionar"
+  sem preencher não travar o salvar. O banco recusa carrinho invertido; aula
+  fora de ordem, só o domínio (`problemaNasDatas`), que o Pôr no ar confere de
+  novo.
+- **Pausado é no ar com pausa** (`status = 'no_ar'` e `pausado_em`), não um
+  estado à parte: o link continua mandando para os grupos (§4.21). Pausar,
+  Retomar e Encerrar aqui só gravam o estado e o evento; a agenda entra no
+  SDR-85 e no SDR-93.
+- **Encerrar sozinho** roda no `/api/cron/disparos`, depois da fila, e pula a
+  organização que desligou os três módulos: nada dele roda em segundo plano
+  (§4.14). Lançamento montando nunca encerra sozinho. `encerrado_por` null é o
+  sistema.
+- **Dashboard:** o Precisa de você aparece com qualquer módulo; sem o
+  LinkedIn, vazio, diz "Nada esperando por você agora.", e a frase do topo
+  sempre conta os itens dele. Cada lançamento no ar ganha um cartão com a fase
+  e a próxima data. O Plano mostra "Mensagens de disparo" só no WhatsApp e no
+  Telegram.
+- O resumo dos três módulos no Plano vem de `docs/naming.md` §6; o "inclui"
+  de cada um saiu da tabela da §4.14.
+
 ## Marcas (Marco F, 16/10/2026)
 
 Regras na §4.30 do épico, decisões D30 a D44. A marca é a fronteira dos dados

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { CanalDeDisparo } from "@/domain/canais";
 import {
   CAMPOS_DO_CONTATO,
   classificarErroDaMeta,
@@ -15,7 +16,6 @@ import {
   type StatusDoDisparo,
   type StatusDoEnvio,
   type TemplateDoWhatsapp,
-  type TipoDeCanal,
 } from "@/domain/disparos";
 import { filtroDoSegmento, sqlDoFiltro, type FiltroDeContatos } from "@/domain/filtro-de-contatos";
 import { lerConfiguracao } from "@/server/configuracoes";
@@ -57,7 +57,7 @@ function conteudoGuardado(entrada: EntradaDoConteudo, templates: TemplateDoWhats
 /** Cria ou salva o rascunho (§4.18). Confirmado não se edita. Roda como o operador. */
 export async function salvarRascunho(
   db: Db,
-  p: { organizacaoId: string; id: string | null; canal: TipoDeCanal; nome: unknown; segmentoId: string; conteudo: unknown; operadorId: string; agora: Date },
+  p: { organizacaoId: string; id: string | null; canal: CanalDeDisparo; nome: unknown; segmentoId: string; conteudo: unknown; operadorId: string; agora: Date },
 ): Promise<Resultado<{ id: string }>> {
   const nome = typeof p.nome === "string" ? p.nome.replace(/\s+/g, " ").trim().slice(0, MAX_NOME_DO_DISPARO) : "";
   if (!nome) return { ok: false, erro: "Dê um nome ao disparo (só você vê)." };
@@ -96,7 +96,7 @@ export type DisparoGuardado = {
   id: string;
   organizacaoId: string;
   canalId: string;
-  canalTipo: TipoDeCanal;
+  canalTipo: CanalDeDisparo;
   nome: string;
   segmentoId: string | null;
   segmentoNome: string | null;
@@ -157,7 +157,7 @@ type ContatoDoSegmento = {
  */
 export async function contatosDoSegmento(
   db: Db,
-  p: { organizacaoId: string; filtros: FiltroDeContatos; canal: TipoDeCanal; disparoId: string },
+  p: { organizacaoId: string; filtros: FiltroDeContatos; canal: CanalDeDisparo; disparoId: string },
 ): Promise<ContatoDoSegmento[]> {
   const { condicoes, parametros } = sqlDoFiltro(p.filtros, 4);
   return db.query<ContatoDoSegmento>(
@@ -293,7 +293,7 @@ export async function confirmarDisparo(
   const agendadoPara = p.quando ?? proximaAbertura(p.agora, config.janela);
 
   return db.transacao(async (tx) => {
-    const [disparo] = await tx.query<{ status: string; canal_tipo: TipoDeCanal }>(
+    const [disparo] = await tx.query<{ status: string; canal_tipo: CanalDeDisparo }>(
       "select status, canal_tipo from public.disparos where id = $1::uuid and organizacao_id = $2::uuid for update",
       [p.disparoId, p.organizacaoId],
     );
@@ -343,7 +343,7 @@ export async function pausarDisparo(db: Db, p: { organizacaoId: string; disparoI
 
 /** Retoma o pausado: volta para a fila na hora (ou no horário agendado, se ainda não chegou). */
 export async function retomarDisparo(db: Db, p: { organizacaoId: string; disparoId: string; operadorId: string; agora: Date }): Promise<Resultado> {
-  const [disparo] = await db.query<{ canal_tipo: TipoDeCanal }>(
+  const [disparo] = await db.query<{ canal_tipo: CanalDeDisparo }>(
     "select canal_tipo from public.disparos where id = $1::uuid and organizacao_id = $2::uuid and status = 'pausado'",
     [p.disparoId, p.organizacaoId],
   );
@@ -487,7 +487,7 @@ export async function resultadoDoDisparo(db: Db, disparoId: string): Promise<Res
   return { contagem, falhas: falhas.map(({ codigo, ...f }) => ({ ...f, volta: falhaQueVolta(codigo) })), pulados, respostas };
 }
 
-export type DisparoDoContato = { disparoId: string; nome: string; canal: TipoDeCanal; status: StatusDoEnvio; motivo: string | null; em: Date | null; resposta: string | null };
+export type DisparoDoContato = { disparoId: string; nome: string; canal: CanalDeDisparo; status: StatusDoEnvio; motivo: string | null; em: Date | null; resposta: string | null };
 
 /** Os disparos que o contato recebeu (ou de que ficou de fora) e a resposta a cada um, os mais novos primeiro (§4.15). Roda como o operador. */
 export async function disparosDoContato(db: Db, contatoId: string, limite = 20): Promise<DisparoDoContato[]> {
