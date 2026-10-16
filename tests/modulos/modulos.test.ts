@@ -170,8 +170,10 @@ describe("módulos por organização (SDR-69, §4.14)", () => {
       convites: 1,
       mensagensDoLinkedin: 1,
       contatos: 1,
+      mensagensDoWhatsapp: 0,
+      mensagensDoTelegram: 0,
     });
-    expect(await usoDoMes(banco.db, { organizacaoId: outra, agora: AGORA })).toEqual({ contasDoLinkedin: 0, convites: 0, mensagensDoLinkedin: 0, contatos: 0 });
+    expect(await usoDoMes(banco.db, { organizacaoId: outra, agora: AGORA })).toEqual({ contasDoLinkedin: 0, convites: 0, mensagensDoLinkedin: 0, contatos: 0, mensagensDoWhatsapp: 0, mensagensDoTelegram: 0 });
   });
 
   it("a Plataforma lista as organizações com admins, equipe, contas e os três módulos de cada uma", async () => {

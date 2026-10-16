@@ -194,6 +194,30 @@ são da base. Organização nova nasce com o `linkedin`.
   ```
 - `COMERCIAL_URL` é para onde leva o "Quero contratar" de Configurações > Plano.
 
+## Disparos no WhatsApp (API oficial da Meta)
+
+Com o módulo `whatsapp` (§4.18 e §4.19). Detalhes da API em
+[`docs/pesquisa/whatsapp-cloud-api.md`](docs/pesquisa/whatsapp-cloud-api.md).
+
+1. Gere a `SEGREDOS_CHAVE` (`openssl rand -base64 32`) e cadastre na Vercel. O
+   token e o app secret de cada canal ficam cifrados com ela.
+2. Agende a fila a cada minuto: `supabase/snippets/disparos-pg-cron.sql`
+   (`/api/cron/disparos`, com o mesmo `CRON_SECRET` do tick). Sem o cron, o
+   disparo sai só logo depois de confirmado e enquanto alguém mexe nele.
+3. O admin da organização conecta em **Configurações > WhatsApp**, com o app
+   da própria empresa na Meta: id da WABA, id do número, token permanente de
+   usuário do sistema e o segredo do app. O Kakou inscreve o app na WABA com o
+   webhook `/api/webhooks/whatsapp/<canal>` (verify token derivado da
+   `SEGREDOS_CHAVE`). Se a Meta recusar a inscrição, a tela mostra a URL e o
+   token para configurar à mão.
+4. Os templates são lidos da Meta na conexão e em "Atualizar da Meta". Só
+   template aprovado vai para disparo.
+
+A fila manda das 8h às 21h (horário de Brasília), no máximo 20 mensagens por
+segundo e um disparo por contato por canal a cada 24 h (configuração
+`disparos`). Envio que cai sem a resposta da Meta vira falha "pode ter
+chegado" e nunca é repetido sozinho.
+
 ## Deploy (Vercel)
 
 Importe o repositório na Vercel (framework Next.js, detectado sozinho) e

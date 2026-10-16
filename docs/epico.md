@@ -598,14 +598,18 @@ E três que são do próprio motor:
 
 ### 4.19 · WhatsApp pela API oficial da Meta
 
-- **Conectar** (Configurações > WhatsApp, só o admin): a organização informa o
-  id da conta do WhatsApp Business (WABA), o id do número e um token
-  permanente de usuário do sistema com as permissões
-  `whatsapp_business_messaging` e `whatsapp_business_management`. O Kakou
-  confere na Meta (número, nome verificado, qualidade e limite), guarda o
-  token cifrado e inscreve o app da GuessLess na conta, para receber os
-  status e as respostas. Um número por organização nesta versão. O caminho
-  pelo Embedded Signup fica para quando a GuessLess for Tech Provider (D15).
+- **Conectar** (Configurações > WhatsApp, só o admin), pelo app da própria
+  organização na Meta: ela informa o id da conta do WhatsApp Business (WABA),
+  o id do número, um token permanente de usuário do sistema com as permissões
+  `whatsapp_business_messaging` e `whatsapp_business_management`, e o segredo
+  do app. O Kakou confere na Meta (número, nome verificado, qualidade e
+  limite), guarda o token e o segredo cifrados e inscreve o app na conta com o
+  webhook do Kakou, para receber os status e as respostas. Se a Meta não
+  aceitar a inscrição, o canal conecta assim mesmo e a tela mostra a URL e o
+  token para configurar no app. Um número por organização, e um número numa
+  organização só. O Embedded Signup, com o app da GuessLess, fica para quando
+  a GuessLess for Tech Provider (D15): até lá, nada é preciso do lado da
+  GuessLess na Meta.
 - **Templates:** o Kakou lista os templates aprovados da conta (nome,
   categoria, idioma e texto). O disparo só usa template aprovado. Cada
   variável do template vem de um campo do contato (primeiro nome, nome,
@@ -625,10 +629,13 @@ E três que são do próprio motor:
   confirmação mostra a estimativa com o preço por categoria da configuração
   `whatsapp.precos` e diz que o valor é da Meta.
 - Status de entrega e de leitura chegam pelo webhook da Meta, assinado com o
-  segredo do app da GuessLess (`META_APP_SECRET`). Webhook sem assinatura
-  válida é recusado.
-- Número com qualidade baixa (vermelha) ou conta restrita pausa os disparos
-  do WhatsApp da organização, com o motivo.
+  segredo do app da organização. Webhook sem assinatura válida é recusado.
+  O status só anda para a frente (aviso repetido ou fora de ordem não volta
+  estado).
+- Erro da conta (token, permissão, pagamento, número restrito) pausa o
+  disparo e deixa o canal com erro até alguém atualizar ou reconectar.
+  Template pausado ou desativado pela Meta pausa o disparo. O limite de
+  pessoas por 24 h da Meta (o do número) também pausa, com o aviso.
 
 ### 4.20 · Telegram
 
@@ -694,7 +701,7 @@ O motor fica como está. Muda o que está por cima e entra a conta da casa:
 | Agendamento | tabela `acoes` + tick a cada 5 minutos; um despachante central soma o teto por perfil |
 | IA | `@anthropic-ai/sdk`; Haiku classifica e dá nota; Sonnet lê o site, gera e ajusta o SDR, escreve a abordagem e rascunha. Modelos em variável de ambiente |
 | Alertas | e-mail pela Resend |
-| WhatsApp | API oficial da Meta (Cloud API), chamada direto pelo Kakou, sem BSP no meio; um app da GuessLess recebe os webhooks de todas as organizações ([pesquisa](pesquisa/whatsapp-cloud-api.md)) |
+| WhatsApp | API oficial da Meta (Cloud API), chamada direto pelo Kakou, sem BSP no meio; o app de cada organização manda os webhooks para `/api/webhooks/whatsapp/<canal>`, assinados com o segredo dele ([pesquisa](pesquisa/whatsapp-cloud-api.md)) |
 | Telegram | Bot API, um bot por organização, webhook com segredo por canal ([pesquisa](pesquisa/telegram-bot-api.md)) |
 | Disparos | tabela `envios_do_disparo` como fila, com reserva por prazo; `/api/cron/disparos` a cada minuto pelo pg_cron e logo depois da confirmação |
 | Segredos | tokens do WhatsApp e do Telegram cifrados (AES-256-GCM) com `SEGREDOS_CHAVE` |
@@ -828,7 +835,7 @@ tirada é `rejeitado`. Toda transição grava um evento.
 | T-6 | Migrations do Marco D aplicadas por SQL no banco do GL Suite (nunca por `db push`) | tudo do Marco D | Arthur |
 | T-7 | `PLATAFORMA_ADMINS` e `COMERCIAL_URL` na Vercel | ligar módulos pela tela e o "Quero contratar" (SDR-69) | Arthur |
 | T-8 | `SEGREDOS_CHAVE` (32 bytes aleatórios em base64) na Vercel. Trocar a chave invalida os tokens guardados | conectar WhatsApp e Telegram (SDR-72, SDR-73) | Arthur |
-| T-9 | App da GuessLess na Meta (tipo Business) com o produto WhatsApp e o negócio verificado; `META_APP_SECRET` e `META_WEBHOOK_VERIFY_TOKEN` na Vercel; webhook em `/api/webhooks/whatsapp` com o campo `messages` assinado | status de entrega e respostas do WhatsApp (SDR-72) | Arthur |
+| T-9 | Um número de WhatsApp Business de verdade, com o app da empresa na Meta, para o primeiro disparo real (o código foi testado só com a Meta de mentira) | aceite do SDR-72 com serviço real | Arthur |
 | T-10 | pg_cron dos disparos a cada minuto (`supabase/snippets/disparos-pg-cron.sql`) | disparo agendado e disparo que segue com a tela fechada (SDR-72) | Arthur |
 
 ## 9 · Tickets
@@ -1200,7 +1207,7 @@ organização usa, e os nomes (`docs/naming.md`).
   logo depois da confirmação; reserva por prazo, conferência na hora, ritmo,
   janela, intervalo entre disparos, classificação dos erros da Meta, pausa
   por problema da conta.
-- Webhook `/api/webhooks/whatsapp`: verificação, assinatura, status
+- Webhook `/api/webhooks/whatsapp/[canal]`: verificação, assinatura com o segredo do app do cliente, status
   (enviada, entregue, lida, falhou), mensagens recebidas (contato novo,
   resposta, sair do WhatsApp).
 - Aceite: nada sai sem confirmação; lista congelada na confirmação; quem saiu
@@ -1248,7 +1255,7 @@ anterior):
 | D12 | O que é base e o que é módulo | contatos, tags e segmentos na base: os disparos dependem deles e eles organizam os leads do LinkedIn. Se virar módulo, o catálogo já aceita | Arthur |
 | D13 | Nome dos módulos e do plano completo | ver `docs/naming.md` | Arthur |
 | D14 | Sair de um canal ou de tudo | o pedido vale para o canal em que foi feito; o opt-out do LinkedIn e o "Não contatar mais" valem para todos | Arthur |
-| D15 | Conectar o WhatsApp do cliente | agora, à mão (WABA, número e token); o Embedded Signup quando a GuessLess for Tech Provider da Meta | Arthur |
+| D15 | Conectar o WhatsApp do cliente | agora, à mão, com o app do próprio cliente (WABA, número, token e segredo do app): não precisa de App Review da GuessLess; o Embedded Signup quando a GuessLess for Tech Provider da Meta (verificação do negócio e App Review) | Arthur |
 | D16 | Cobrança | pela cobrança que o GL Suite já tem (Stripe, assinatura por ferramenta), com o webhook ligando o módulo no Kakou; até lá, a GuessLess liga à mão | Arthur |
 | D17 | Janela e intervalo dos disparos | das 8h às 21h, horário de Brasília; 24 h entre dois disparos do mesmo canal para o mesmo contato | Arthur |
 

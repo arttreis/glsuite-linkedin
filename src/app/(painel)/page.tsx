@@ -4,6 +4,8 @@ import { Aviso } from "@/components/aviso";
 import { lerFiltro } from "@/domain/filtro-de-contatos";
 import { CATALOGO_DE_MODULOS, linkedinNoPrimeiroAcesso, type Modulo } from "@/domain/modulos";
 import { contarContatos } from "@/server/contatos/contatos";
+import { listarDisparos, type DisparoNaLista } from "@/server/disparos/disparos";
+import { BarraDoDisparo, EtiquetaDoDisparo, resumoDoDisparo } from "./broadcasts/situacao";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
 import { lerPeriodo, numerosDoPeriodo } from "@/server/painel/numeros";
@@ -140,6 +142,50 @@ function ConfigurarOSdr() {
   );
 }
 
+/** Os últimos disparos e como estão indo (§2.2); o pausado diz por quê, porque espera a pessoa. */
+function DisparosRecentes({ disparos }: { disparos: DisparoNaLista[] }) {
+  return (
+    <section className="cartao p-6" aria-labelledby="titulo-disparos">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="titulo-disparos" className="text-[15px] font-semibold">
+          Disparos
+        </h2>
+        <Link href="/broadcasts" className="link text-sm">
+          Ver todos
+        </Link>
+      </div>
+      {disparos.length === 0 ? (
+        <p className="mt-3 text-sm text-tinta-suave">
+          Nenhum disparo ainda.{" "}
+          <Link href="/broadcasts/new" className="link">
+            Fazer o primeiro
+          </Link>
+        </p>
+      ) : (
+        <ul className="mt-4 flex flex-col gap-3">
+          {disparos.map((disparo) => (
+            <li key={disparo.id} className="flex flex-col gap-2 rounded-xl bg-superficie-alta px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Link href={`/broadcasts/${disparo.id}`} className="link text-sm font-medium">
+                  {disparo.nome}
+                </Link>
+                <EtiquetaDoDisparo status={disparo.status} />
+              </div>
+              {disparo.status !== "rascunho" && (
+                <>
+                  <BarraDoDisparo contagem={disparo.contagem} />
+                  <p className="text-xs text-tinta-suave">{resumoDoDisparo(disparo.contagem)}</p>
+                </>
+              )}
+              {disparo.status === "pausado" && disparo.motivoPausa && <p className="text-xs text-atencao">{disparo.motivoPausa}</p>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 /** Sem o SDR no LinkedIn, o Dashboard mostra o que o plano da organização tem. */
 function OQueOPlanoTem({ modulos, contatos }: { modulos: Modulo[]; contatos: number }) {
   const contratados = CATALOGO_DE_MODULOS.filter((modulo) => modulos.includes(modulo.id));
@@ -192,6 +238,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
         }))
       : null;
   const data = agora.toLocaleDateString("pt-BR", { timeZone: FUSO, weekday: "long", day: "numeric", month: "long" });
+  const comDisparos = operador.modulos.includes("whatsapp") || operador.modulos.includes("telegram");
+  const disparos = comDisparos ? await comOperador(obterDb(), operador.id, (tx) => listarDisparos(tx, operador.organizacaoId, 3)) : [];
 
   return (
     <>
@@ -221,6 +269,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
             )}
           />
         )}
+        {comDisparos && <DisparosRecentes disparos={disparos} />}
       </div>
     </>
   );

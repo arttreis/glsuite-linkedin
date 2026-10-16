@@ -9,6 +9,7 @@ const ABAS: { href: string; rotulo: string; modulo?: ExigenciaDeModulo }[] = [
   { href: "/settings/company", rotulo: "Empresa", modulo: "linkedin" },
   { href: "/settings/sdr", rotulo: "SDR", modulo: "linkedin" },
   { href: "/settings/linkedin", rotulo: "LinkedIn", modulo: "linkedin" },
+  { href: "/settings/whatsapp", rotulo: "WhatsApp", modulo: "whatsapp" },
   { href: "/settings/team", rotulo: "Equipe" },
   { href: "/settings/plan", rotulo: "Plano" },
 ];

@@ -45,6 +45,15 @@ export const ESQUEMAS_DE_CONFIGURACAO = {
     max_por_dia: z.number().int().min(0),
     proporcao_personalizada: z.number().min(0).max(1),
   }),
+  disparos: z.object({
+    janela: z.object({ inicio: z.string().regex(/^\d{2}:\d{2}$/), fim: z.string().regex(/^\d{2}:\d{2}$/), fuso: z.string().min(1) }),
+    intervalo_horas: z.number().min(0),
+    por_segundo: z.object({ whatsapp: z.number().positive(), telegram: z.number().positive() }),
+    lote: z.number().int().positive(),
+    tentativas: z.number().int().positive(),
+    reserva_segundos: z.number().int().positive(),
+  }),
+  whatsapp: z.object({ precos: z.record(z.string(), z.number().min(0)), moeda: z.string(), tabela_em: z.string() }),
 } as const;
 
 export type ChaveDeConfiguracao = keyof typeof ESQUEMAS_DE_CONFIGURACAO;
