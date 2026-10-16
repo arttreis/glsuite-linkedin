@@ -2,7 +2,7 @@
 -- Teto de perfis trazidos pela busca, por perfil do LinkedIn, em 24 horas.
 -- O padrão segue a recomendação da Unipile para a busca clássica. 0 desliga.
 insert into public.configuracoes (chave, valor, descricao) values
-  ('busca', '{"max_perfis_por_dia": 1000}',
+  ('busca_leads', '{"max_perfis_por_dia": 1000}',
    'Busca de leads: perfis trazidos pela busca do LinkedIn por perfil nas últimas 24 horas (0 desliga)')
 on conflict (chave) do nothing;
 

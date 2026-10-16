@@ -49,7 +49,7 @@ describe("busca de leads com filtros (§4.11)", () => {
     );
 
   const definirTeto = (maximo: number) =>
-    banco.db.query("update public.configuracoes set valor = $1::jsonb where chave = 'busca'", [
+    banco.db.query("update public.configuracoes set valor = $1::jsonb where chave = 'busca_leads'", [
       JSON.stringify({ max_perfis_por_dia: maximo }),
     ]);
 

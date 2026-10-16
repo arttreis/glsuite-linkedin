@@ -797,7 +797,7 @@ existir, ele só preenche os filtros.
   outro perfil não são selecionáveis. Nova e já na base vêm pré-marcadas.
   Por padrão, a prévia esconde quem não pode entrar. O filtro "nesta lista"
   roda no navegador e não gasta busca.
-- Teto: configuração `busca.max_perfis_por_dia` (padrão 1.000, a recomendação
+- Teto: configuração `busca_leads.max_perfis_por_dia` (padrão 1.000, a recomendação
   da Unipile para a busca clássica por conta). Conta os perfis trazidos (não as
   chamadas) pelo evento `busca_linkedin` do perfil, em janela móvel de
   24 horas, sem depender de fuso. É conferido antes de cada página, então pode

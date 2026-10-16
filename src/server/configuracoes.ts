@@ -40,7 +40,7 @@ export const ESQUEMAS_DE_CONFIGURACAO = {
     max_por_dia: z.number().int().min(0),
     proporcao_personalizada: z.number().min(0).max(1),
   }),
-  busca: z.object({ max_perfis_por_dia: z.number().int().min(0) }),
+  busca_leads: z.object({ max_perfis_por_dia: z.number().int().min(0) }),
   rd_station: z.object({
     ativo: z.boolean(),
     pipeline_id: z.string().nullable(),

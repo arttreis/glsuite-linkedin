@@ -140,7 +140,7 @@ export async function buscarLeads(
 ): Promise<PaginaDaBusca> {
   const { db, unipile } = deps;
   const conta = await contaDaCampanha(db, p.campanhaId);
-  const { max_perfis_por_dia: maximo } = await lerConfiguracao(db, "busca");
+  const { max_perfis_por_dia: maximo } = await lerConfiguracao(db, "busca_leads");
   if (maximo === 0) throw new ErroDaBusca("A busca de leads está desligada nas configurações.");
   let usados = await perfisTrazidos(db, conta.perfilId, p.agora);
   if (usados >= maximo) {

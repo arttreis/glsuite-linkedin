@@ -259,7 +259,7 @@ seja pausada.
   regras da importação (opt-out, um dono, régua anterior, cooldown de
   empresa).
 - A busca só roda com a conta do perfil saudável. Teto por perfil:
-  `busca.max_perfis_por_dia` perfis trazidos nas últimas 24 horas, padrão
+  `busca_leads.max_perfis_por_dia` perfis trazidos nas últimas 24 horas, padrão
   1.000 (recomendação da Unipile). Ao bater o teto, a busca para e diz
   quantos já foram. Teto 0 desliga a busca.
 
