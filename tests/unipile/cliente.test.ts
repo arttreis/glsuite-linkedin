@@ -109,3 +109,99 @@ describe("cliente da Unipile", () => {
     expect(classificarErro(new ErroUnipile({ status, tipo, titulo: "x" }))).toBe(classe);
   });
 });
+
+describe("busca de pessoas na Unipile (§4.11)", () => {
+  const filtros = {
+    palavrasChave: "varejo",
+    cargo: "Head de e-commerce",
+    empresa: "",
+    locais: [{ id: "105871508", titulo: "São Paulo" }],
+    setores: [{ id: "27", titulo: "Varejo" }],
+    graus: [2, 3] as (1 | 2 | 3)[],
+    idiomas: ["pt" as const],
+  };
+
+  it("monta a busca clássica só com os filtros preenchidos e manda o cursor na query", async () => {
+    const { cliente, requisicoes } = clienteComFetch([
+      { status: 200, corpo: { items: [], cursor: "c2" } },
+      { status: 200, corpo: { items: [] } },
+    ]);
+    expect((await cliente.buscarPessoas("acc", { filtros })).cursor).toBe("c2");
+    await cliente.buscarPessoas("acc", { filtros }, "c2");
+
+    const [primeira, segunda] = requisicoes;
+    expect(primeira!.url.pathname).toBe("/api/v1/linkedin/search");
+    expect(primeira!.url.searchParams.get("account_id")).toBe("acc");
+    expect(primeira!.url.searchParams.has("cursor")).toBe(false);
+    expect(JSON.parse(String(primeira!.corpo))).toEqual({
+      api: "classic",
+      category: "people",
+      keywords: "varejo",
+      advanced_keywords: { title: "Head de e-commerce" },
+      location: ["105871508"],
+      industry: ["27"],
+      network_distance: [2, 3],
+      profile_language: ["pt"],
+    });
+    expect(segunda!.url.searchParams.get("cursor")).toBe("c2");
+    expect(JSON.parse(String(segunda!.corpo))).toEqual(JSON.parse(String(primeira!.corpo)));
+  });
+
+  it("busca pela URL colada e lê distância e convite pendente de cada pessoa", async () => {
+    const { cliente, requisicoes } = clienteComFetch([
+      {
+        status: 200,
+        corpo: {
+          items: [
+            {
+              type: "PEOPLE",
+              id: "ACoAna",
+              name: "Ana Lima",
+              headline: "CMO na Loja",
+              network_distance: "DISTANCE_1",
+              pending_invitation: true,
+              current_positions: [{ company: "Loja", role: "CMO" }],
+            },
+            { type: "PEOPLE", id: "ACoBia", name: "Bia", network_distance: "OUT_OF_NETWORK" },
+            { type: "COMPANY", id: "123", name: "Empresa" },
+          ],
+        },
+      },
+    ]);
+    const url = "https://www.linkedin.com/search/results/people/?keywords=cmo";
+    const { itens } = await cliente.buscarPessoas("acc", { url });
+
+    expect(JSON.parse(String(requisicoes[0]!.corpo))).toEqual({ url });
+    expect(itens).toEqual([
+      expect.objectContaining({ providerId: "ACoAna", distancia: "FIRST_DEGREE", convitePendente: true, cargoAtual: "CMO" }),
+      expect.objectContaining({ providerId: "ACoBia", distancia: "OUT_OF_NETWORK", convitePendente: false }),
+    ]);
+  });
+
+  it("traduz texto em id de local ou setor", async () => {
+    const { cliente, requisicoes } = clienteComFetch([
+      {
+        status: 200,
+        corpo: {
+          object: "LinkedinSearchParametersList",
+          items: [
+            { object: "LinkedinSearchParameter", id: "105871508", title: "São Paulo, Brasil" },
+            { object: "LinkedinSearchParameter", id: "", title: "sem id" },
+          ],
+        },
+      },
+    ]);
+    expect(await cliente.buscarParametros("acc", "LOCATION", "são paulo")).toEqual([
+      { id: "105871508", titulo: "São Paulo, Brasil" },
+    ]);
+    const req = requisicoes[0]!;
+    expect(req.metodo).toBe("GET");
+    expect(req.url.pathname).toBe("/api/v1/linkedin/search/parameters");
+    expect(Object.fromEntries(req.url.searchParams)).toEqual({
+      account_id: "acc",
+      type: "LOCATION",
+      keywords: "são paulo",
+      limit: "8",
+    });
+  });
+});

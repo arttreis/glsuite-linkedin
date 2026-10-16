@@ -12,6 +12,7 @@ import {
   Megaphone,
   PenLine,
   Plug,
+  UserSearch,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -36,8 +37,9 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
     titulo: "Prospecção",
     itens: [
       { href: "/campanhas", rotulo: "Campanhas", icone: Megaphone, guiado: true },
-      { href: "/triagem", rotulo: "Triagem", icone: ListFilter, guiado: true },
+      { href: "/buscar", rotulo: "Buscar leads", icone: UserSearch, guiado: true },
       { href: "/importar", rotulo: "Importar", icone: FileUp, guiado: true },
+      { href: "/triagem", rotulo: "Triagem", icone: ListFilter, guiado: true },
     ],
   },
   {

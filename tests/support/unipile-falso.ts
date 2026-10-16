@@ -1,3 +1,4 @@
+import type { OpcaoDeFiltro } from "@/domain/busca";
 import type {
   ClienteUnipile,
   ContaUnipile,
@@ -11,6 +12,7 @@ import type {
   PerfilLinkedIn,
   PostLinkedIn,
   ResultadoDeBusca,
+  TipoDeParametro,
   WebhookUnipile,
 } from "@/server/unipile/cliente";
 
@@ -32,6 +34,9 @@ export class UnipileFalso implements ClienteUnipile {
   conversasDaConta: ConversaDaConta[] = [];
   participantesPorChat = new Map<string, ParticipanteDaConversa[]>();
   resultadosDeBusca: ResultadoDeBusca[] = [];
+  /** A busca devolve `resultadosDeBusca` em páginas deste tamanho, com cursor. */
+  paginaDaBusca = 10;
+  parametros = new Map<TipoDeParametro, OpcaoDeFiltro[]>();
   convitesPendentes: ConviteEnviado[] = [];
   webhooks: WebhookUnipile[] = [];
   private falhas = new Map<Metodo, unknown[]>();
@@ -140,7 +145,18 @@ export class UnipileFalso implements ClienteUnipile {
 
   async buscarPessoas(accountId: string, busca: unknown, cursor?: string) {
     this.registrar("buscarPessoas", { accountId, busca, cursor });
-    return { itens: this.resultadosDeBusca, cursor: null };
+    const inicio = cursor ? Number(cursor) : 0;
+    const fim = inicio + this.paginaDaBusca;
+    return {
+      itens: this.resultadosDeBusca.slice(inicio, fim),
+      cursor: fim < this.resultadosDeBusca.length ? String(fim) : null,
+    };
+  }
+
+  async buscarParametros(accountId: string, tipo: TipoDeParametro, texto: string, limite?: number) {
+    this.registrar("buscarParametros", { accountId, tipo, texto, limite });
+    const termo = texto.toLowerCase();
+    return (this.parametros.get(tipo) ?? []).filter((o) => o.titulo.toLowerCase().includes(termo));
   }
 
   async criarWebhook(p: { url: string; fonte: "messaging" | "users" | "account_status"; nome: string; headers: Record<string, string>; eventos?: string[] }) {

@@ -1,3 +1,4 @@
+import type { FiltrosDeBusca, OpcaoDeFiltro } from "@/domain/busca";
 import { ErroUnipile } from "./erros";
 
 // Referência dos endpoints: docs/pesquisa/unipile.md
@@ -69,7 +70,12 @@ export type ResultadoDeBusca = {
   urlPublica: string | null;
   empresaAtual: string | null;
   cargoAtual: string | null;
+  distancia: DistanciaDeRede | null;
+  convitePendente: boolean;
 };
+
+/** Listas da busca do LinkedIn em que o filtro vai por id. */
+export type TipoDeParametro = "LOCATION" | "INDUSTRY";
 
 export type ConviteEnviado = { id: string; providerId: string | null; data: string | null };
 
@@ -102,11 +108,14 @@ export interface ClienteUnipile {
   /** Chats da conta, mais recentes primeiro. */
   listarConversas(accountId: string, p?: { cursor?: string; limite?: number }): Promise<{ itens: ConversaDaConta[]; cursor: string | null }>;
   listarParticipantes(chatId: string): Promise<ParticipanteDaConversa[]>;
+  /** Busca clássica de pessoas (sem Sales Navigator), por filtros ou pela URL de uma busca do LinkedIn. */
   buscarPessoas(
     accountId: string,
-    busca: { url: string } | { keywords: string; api?: "classic" | "sales_navigator" },
+    busca: { url: string } | { filtros: FiltrosDeBusca },
     cursor?: string,
   ): Promise<{ itens: ResultadoDeBusca[]; cursor: string | null }>;
+  /** Ids de local ou setor a partir de um texto ("São Paulo" vira o id que a busca aceita). */
+  buscarParametros(accountId: string, tipo: TipoDeParametro, texto: string, limite?: number): Promise<OpcaoDeFiltro[]>;
   criarWebhook(p: { url: string; fonte: "messaging" | "users" | "account_status"; nome: string; headers: Record<string, string>; eventos?: string[] }): Promise<string>;
   listarWebhooks(): Promise<WebhookUnipile[]>;
 }
@@ -123,6 +132,29 @@ type Query = Record<string, string | number | boolean | undefined>;
 type Json = Record<string, unknown>;
 
 const texto = (valor: unknown): string | null => (typeof valor === "string" && valor.length > 0 ? valor : null);
+
+// Na busca a distância vem como DISTANCE_n; no perfil, como FIRST_DEGREE etc.
+const DISTANCIA_NA_BUSCA: Record<string, DistanciaDeRede> = {
+  DISTANCE_1: "FIRST_DEGREE",
+  DISTANCE_2: "SECOND_DEGREE",
+  DISTANCE_3: "THIRD_DEGREE",
+  OUT_OF_NETWORK: "OUT_OF_NETWORK",
+};
+
+/** Corpo da busca clássica de pessoas. Filtro vazio não vai: a Unipile recusa lista vazia. */
+function corpoDaBuscaClassica(f: FiltrosDeBusca): Json {
+  const corpo: Json = { api: "classic", category: "people" };
+  const avancadas: Json = {};
+  if (f.cargo) avancadas.title = f.cargo;
+  if (f.empresa) avancadas.company = f.empresa;
+  if (f.palavrasChave) corpo.keywords = f.palavrasChave;
+  if (Object.keys(avancadas).length > 0) corpo.advanced_keywords = avancadas;
+  if (f.locais.length > 0) corpo.location = f.locais.map((o) => o.id);
+  if (f.setores.length > 0) corpo.industry = f.setores.map((o) => o.id);
+  if (f.graus.length > 0) corpo.network_distance = f.graus;
+  if (f.idiomas.length > 0) corpo.profile_language = f.idiomas;
+  return corpo;
+}
 
 export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
   const host = config.dsn.replace(/^https?:\/\//, "").replace(/\/+$/, "");
@@ -342,12 +374,12 @@ export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
     },
 
     async buscarPessoas(accountId, busca, cursor) {
-      const corpo = cursor
-        ? { cursor }
-        : "url" in busca
-          ? { url: busca.url }
-          : { api: busca.api ?? "classic", category: "people", keywords: busca.keywords };
-      const dados = await chamar<Json>("POST", "/linkedin/search", { query: { account_id: accountId }, json: corpo });
+      // O cursor vai na query; o corpo é repetido a cada página.
+      const corpo = "url" in busca ? { url: busca.url } : corpoDaBuscaClassica(busca.filtros);
+      const dados = await chamar<Json>("POST", "/linkedin/search", {
+        query: { account_id: accountId, cursor },
+        json: corpo,
+      });
       const itens = Array.isArray(dados.items) ? (dados.items as Json[]) : [];
       return {
         itens: itens
@@ -365,10 +397,22 @@ export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
               urlPublica: texto(item.public_profile_url) ?? texto(item.profile_url),
               empresaAtual: posicao ? texto(posicao.company) : null,
               cargoAtual: posicao ? texto(posicao.role) : null,
+              distancia: DISTANCIA_NA_BUSCA[String(item.network_distance)] ?? null,
+              convitePendente: item.pending_invitation === true,
             };
           }),
         cursor: texto(dados.cursor),
       };
+    },
+
+    async buscarParametros(accountId, tipo, busca, limite = 8) {
+      const dados = await chamar<Json>("GET", "/linkedin/search/parameters", {
+        query: { account_id: accountId, type: tipo, keywords: busca, limit: limite },
+      });
+      const itens = Array.isArray(dados.items) ? (dados.items as Json[]) : [];
+      return itens
+        .map((item) => ({ id: String(item.id ?? ""), titulo: texto(item.title) ?? "" }))
+        .filter((opcao) => opcao.id && opcao.titulo);
     },
 
     async criarWebhook({ url, fonte, nome, headers, eventos }) {

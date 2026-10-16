@@ -766,3 +766,51 @@ Anotadas durante a execução, por ticket.
 - Editor visual com React Flow (`@xyflow/react`): blocos, setas com saída
   "sim"/"não" nas condições, painel do bloco com prévia e violações, e a
   lista de problemas do fluxo.
+
+### SDR-28 · Busca de leads com filtros (§4.11)
+
+Pedido do Arthur em 09/10/2026, adiantado na ordem do Kakou (é o "28 busca").
+Feito antes dos públicos (23 e 27): a busca é por campanha. Quando o público
+existir, ele só preenche os filtros.
+
+- Tela `/buscar` (Prospecção › Buscar leads), liberada nos primeiros passos:
+  importar pela busca cumpre o passo 4. O bloco "Busca na Unipile" do
+  `/importar`, que importava às cegas até 500 pessoas, saiu. No lugar ficou um
+  atalho para a busca. `importarDaBusca` foi removida.
+- Filtros da busca clássica da Unipile (`POST /linkedin/search`, `api:
+  classic`): `keywords`, `advanced_keywords.title` (cargo) e `.company`
+  (empresa atual, em texto, sem id), `location` e `industry` (ids),
+  `network_distance` e `profile_language`. Os ids de local e setor vêm de
+  `GET /linkedin/search/parameters` (`LOCATION`, `INDUSTRY`), num autocompletar
+  com espera de 300 ms. Filtros de Sales Navigator ficam de fora, como decidido
+  no Kakou. A URL colada é aceita se for de busca de pessoas
+  (`/search/results/people` ou `/sales/search/people`). A do Sales Navigator
+  só funciona se a conta tiver o plano.
+- O `cursor` vai na query, e o corpo é repetido a cada página, como diz a
+  referência da Unipile. O código anterior mandava `{ cursor }` no corpo.
+- Por clique: até 50 pessoas (5 páginas de 10, o padrão da busca clássica).
+  "Carregar mais" continua do cursor da última página.
+- Situação na prévia (`situacoesNaBase`): uma consulta em lote, com a mesma
+  leitura da triagem (opt-out na tabela ou na pessoa, lead nesta campanha, dono
+  de outro perfil com lead vivo, já na base). É aviso. A importação passa por
+  `importarPessoas`, que confere tudo de novo. Opt-out, já na campanha e de
+  outro perfil não são selecionáveis. Nova e já na base vêm pré-marcadas.
+  Por padrão, a prévia esconde quem não pode entrar. O filtro "nesta lista"
+  roda no navegador e não gasta busca.
+- Teto: configuração `busca.max_perfis_por_dia` (padrão 1.000, a recomendação
+  da Unipile para a busca clássica por conta). Conta os perfis trazidos (não as
+  chamadas) pelo evento `busca_linkedin` do perfil, em janela móvel de
+  24 horas, sem depender de fuso. É conferido antes de cada página, então pode
+  passar do teto em até uma página. 0 desliga. O autocompletar não conta.
+- Erro do LinkedIn na primeira página vira mensagem (limite, conta, fora do ar
+  ou recusa). Erro no meio devolve o que já veio, com aviso e o cursor da última
+  página boa. A busca não pausa o perfil: quem cuida da conta é o webhook de
+  status (SDR-03 e SDR-08).
+- Espanha: sem DPA, a busca também é recusada, não só a importação. Ler e
+  mostrar dados de pessoa já é tratamento.
+- A importação grava `fonte = unipile_busca` e, em `importacoes.arquivo_nome`,
+  a descrição dos filtros (`descreverFiltros`) ou a URL.
+- Com a organização (SDR-22 do Kakou), a situação na prévia precisa respeitar
+  a organização, como a `motivoDeBloqueio`. Hoje só existe uma.
+- Aplicar no GL Suite por SQL: `20261011120000_busca_de_leads.sql` (insere a
+  configuração `busca` e um índice parcial em `eventos`).

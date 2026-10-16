@@ -225,7 +225,7 @@ mais os ângulos das campanhas de indústria e parceria. É configuração, não
 
 Enquanto o operador não tem uma campanha pronta, o Início vira a página de
 primeiros passos, e só ficam abertas as telas necessárias para cumpri-los
-(Início, Perfis, Campanhas, Importar, Triagem). As outras aparecem trancadas
+(Início, Perfis, Campanhas, Buscar leads, Importar, Triagem). As outras aparecem trancadas
 no menu e redirecionam para o Início. Depois, o mesmo espaço do Início mostra
 o que está esperando alguém agora (conversas, aprovação, leads parados,
 tarefas, triagem). Os passos, nesta ordem:
@@ -233,7 +233,7 @@ tarefas, triagem). Os passos, nesta ordem:
 1. Conectar o LinkedIn de um perfil que o operador opera.
 2. Ativar esse perfil (checklist da §8).
 3. Criar uma campanha com fluxo válido (§4.1).
-4. Importar uma lista para a campanha.
+4. Importar uma lista para a campanha (arquivo ou busca de leads, §4.11).
 5. Aprovar pelo menos um lead na triagem.
 6. Ativar a campanha.
 
@@ -241,6 +241,27 @@ tarefas, triagem). Os passos, nesta ordem:
 pelo menos um lead aprovado. O admin vale para qualquer perfil. Depois que o
 operador tem uma campanha pronta, o bloqueio não volta, mesmo que a campanha
 seja pausada.
+
+### 4.11 · Busca de leads com filtros
+
+- O operador busca pessoas no LinkedIn de dentro do painel, sempre para uma
+  campanha e com a conta do perfil dela. Filtros: palavras-chave, cargo,
+  empresa atual, local, setor, grau de conexão e idioma do perfil. Ou cola a
+  URL de uma busca feita no LinkedIn. Busca sem palavra-chave, cargo, empresa,
+  local ou setor é recusada: grau e idioma só estreitam. Sem Sales Navigator
+  nesta versão.
+- O resultado aparece numa prévia antes de entrar na base. Cada pessoa vem
+  marcada pela situação: nova, já está na base, já está nesta campanha, é de
+  outro perfil com lead vivo (§4.7) ou tem opt-out (§4.6). As três últimas não
+  podem ser selecionadas. Conexão de 1º grau e convite pendente aparecem
+  marcados. A marca da prévia é aviso: quem decide é a triagem.
+- Só os selecionados entram, direto na triagem da campanha, pelas mesmas
+  regras da importação (opt-out, um dono, régua anterior, cooldown de
+  empresa).
+- A busca só roda com a conta do perfil saudável. Teto por perfil:
+  `busca.max_perfis_por_dia` perfis trazidos nas últimas 24 horas, padrão
+  1.000 (recomendação da Unipile). Ao bater o teto, a busca para e diz
+  quantos já foram. Teto 0 desliga a busca.
 
 ## 5 · Arquitetura
 

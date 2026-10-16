@@ -1,9 +1,10 @@
 "use client";
 
-import { FileUp, Plus, Search } from "lucide-react";
+import { ArrowRight, FileUp, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Aviso } from "@/components/aviso";
+import { ResultadoDaImportacao, type RespostaDaImportacao } from "@/components/resultado-da-importacao";
 import {
   ehLinhaInvalida,
   lerArquivoDeImportacao,
@@ -11,49 +12,17 @@ import {
   type LinhaInvalida,
   type PessoaImportada,
 } from "@/domain/importacao";
-import { importarArquivo, importarBuscaDaUnipile, type RespostaDaImportacao } from "./acoes";
+import { importarArquivo } from "./acoes";
 
 export type OpcaoDeCampanha = { id: string; nome: string; perfil: string };
 
 type Previa = { arquivoNome: string; pessoas: PessoaImportada[]; invalidas: LinhaInvalida[] };
-
-function Resultado({ resposta, campanhaId }: { resposta: RespostaDaImportacao; campanhaId: string }) {
-  if (!resposta.ok) return <Aviso tom="erro">{resposta.erro}</Aviso>;
-  const r = resposta.resumo;
-  const numeros: [string, number][] = [
-    ["Novos na triagem", r.novos],
-    ["Bloqueados", r.bloqueados],
-    ["Duplicados", r.duplicados],
-    ["Com opt-out (não entraram)", r.optouts],
-    ["Sem provider_id", r.semProviderId],
-    ["Linhas inválidas", r.invalidas.length],
-    ...(r.comAlerta > 0 ? ([["Com alerta de cooldown", r.comAlerta]] as [string, number][]) : []),
-  ];
-  return (
-    <Aviso tom="ok">
-      <p className="font-medium">Importação concluída.</p>
-      <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">
-        {numeros.map(([rotulo, valor]) => (
-          <div key={rotulo} className="flex justify-between gap-3">
-            <dt className="text-tinta-suave">{rotulo}</dt>
-            <dd className="tabular-nums">{valor}</dd>
-          </div>
-        ))}
-      </dl>
-      <Link href={`/triagem?campanha=${campanhaId}`} className="link mt-3 inline-block">
-        Ir para a triagem
-      </Link>
-    </Aviso>
-  );
-}
 
 export function FormularioImportacao({ campanhas }: { campanhas: OpcaoDeCampanha[] }) {
   const [campanhaId, setCampanhaId] = useState(campanhas[0]?.id ?? "");
   const [previa, setPrevia] = useState<Previa | null>(null);
   const [erroArquivo, setErroArquivo] = useState<string | null>(null);
   const [resposta, setResposta] = useState<RespostaDaImportacao | null>(null);
-  const [consulta, setConsulta] = useState("");
-  const [limite, setLimite] = useState(50);
   const [pendente, iniciar] = useTransition();
 
   async function lerArquivo(arquivo: File | undefined) {
@@ -172,45 +141,19 @@ export function FormularioImportacao({ campanhas }: { campanhas: OpcaoDeCampanha
       <section className="cartao p-5">
         <h2 className="flex items-center gap-2 text-[15px] font-semibold">
           <Search className="size-4 text-tinta-fraca" aria-hidden />
-          Busca na Unipile
+          Busca no LinkedIn
         </h2>
         <p className="mt-1.5 text-[13px] text-tinta-suave">
-          Cole a URL de uma busca do LinkedIn (ou Sales Navigator) ou digite palavras-chave. A busca usa a conta do perfil da
-          campanha.
+          Busque por cargo, empresa, local e setor (ou cole a URL de uma busca), confira a prévia e leve para a triagem só quem
+          fizer sentido.
         </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <input
-            value={consulta}
-            onChange={(e) => setConsulta(e.target.value)}
-            aria-label="Busca do LinkedIn ou palavras-chave"
-            placeholder="https://www.linkedin.com/search/results/people/?keywords=..."
-            className="campo min-w-0 flex-1 basis-72"
-          />
-          <input
-            type="number"
-            min={1}
-            max={500}
-            value={limite}
-            onChange={(e) => setLimite(Number(e.target.value))}
-            className="campo w-24 tabular-nums"
-            aria-label="Máximo de resultados"
-          />
-          <button
-            type="button"
-            disabled={pendente || consulta.trim().length < 2}
-            onClick={() =>
-              iniciar(async () => {
-                setResposta(await importarBuscaDaUnipile({ campanhaId, consulta, limite }));
-              })
-            }
-            className="botao"
-          >
-            Buscar e importar
-          </button>
-        </div>
+        <Link href={`/buscar?campanha=${campanhaId}`} className="botao mt-4">
+          Buscar leads
+          <ArrowRight aria-hidden />
+        </Link>
       </section>
 
-      {resposta && <Resultado resposta={resposta} campanhaId={campanhaId} />}
+      {resposta && <ResultadoDaImportacao resposta={resposta} campanhaId={campanhaId} />}
     </div>
   );
 }
