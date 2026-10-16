@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Aviso } from "@/components/aviso";
 import type { Sdr } from "@/domain/sdr";
+import { canaisDoTeste } from "@/domain/teste-do-sdr";
 import { obterDb } from "@/server/db";
 import type { Operador } from "@/server/db/operador";
 import { obterGeradorDeSdr, obterModeloDeLinguagem } from "@/server/dependencias";
@@ -113,7 +114,7 @@ async function Chat({ operador }: { operador: Operador }) {
   }
   return (
     <>
-      <ChatDoSdr inicial={teste} nome={operador.nome} />
+      <ChatDoSdr inicial={teste} nome={operador.nome} canais={canaisDoTeste(operador.modulos)} />
       <SdrCompleto sdr={sdr.sdr.sdr} />
     </>
   );

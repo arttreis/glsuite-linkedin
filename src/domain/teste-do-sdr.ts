@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { sdrDaIa } from "./sdr";
+import { CANAIS_DO_SDR, NOME_DO_CANAL_DO_SDR, sdrDaIa, type CanalDoSdr } from "./sdr";
 
 /** As ações do agente (§7), como aparecem no chat de teste. */
 export type AcaoDoSdr = "responder" | "propor_reuniao" | "encerrar" | "registrar_optout" | "escalar_humano";
@@ -70,4 +70,27 @@ export function notaDoDesfecho(
 /** O nome do lead que a pessoa faz no teste, no idioma da análise. */
 export function nomeDoLeadDeTeste(idioma: "pt" | "en" | "es"): string {
   return { pt: "Marina", en: "Sarah", es: "Lucía" }[idioma];
+}
+
+/** Os módulos que levam cada canal ao chat de teste (§4.14, §4.26). */
+const MODULOS_DO_CANAL: Record<CanalDoSdr, readonly string[]> = {
+  linkedin: ["linkedin"],
+  instagram: ["instagram"],
+  facebook: ["facebook"],
+  telegram: ["telegram", "comunidades"],
+};
+
+/**
+ * Os canais do chat de teste pelos módulos da organização (§4.3), na ordem de
+ * `CANAIS_DO_SDR`. Sem nenhum, o LinkedIn: a lista nunca volta vazia. Aceita
+ * `string[]` para não depender da lista de módulos do SDR-74 (#63).
+ */
+export function canaisDoTeste(modulos: readonly string[]): CanalDoSdr[] {
+  const canais = CANAIS_DO_SDR.filter((canal) => MODULOS_DO_CANAL[canal].some((modulo) => modulos.includes(modulo)));
+  return canais.length > 0 ? canais : ["linkedin"];
+}
+
+/** A nota que abre o teste fora do LinkedIn: lá, quem começa a conversa é a pessoa (§4.3). */
+export function notaDoComecoForaDoLinkedIn(canal: Exclude<CanalDoSdr, "linkedin">, lead: string): string {
+  return `No ${NOME_DO_CANAL_DO_SDR[canal]}, quem começa a conversa é a pessoa. Escreva a primeira mensagem como ${lead}.`;
 }

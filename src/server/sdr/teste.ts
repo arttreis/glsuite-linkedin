@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { dossie as esquemaDoDossie, resumoDaOferta, type Dossie } from "@/domain/dossie";
-import { sdr as esquemaDoSdr, sdrDaIa, soDaPessoa, type Sdr } from "@/domain/sdr";
+import { sdr as esquemaDoSdr, sdrDaIa, soDaPessoa, type CanalDoSdr, type Sdr } from "@/domain/sdr";
 import {
   nomeDoLeadDeTeste,
+  notaDoComecoForaDoLinkedIn,
   notaDoDesfecho,
   SEGMENTO_PADRAO,
   type AjusteDoSdr,
@@ -22,6 +23,8 @@ export interface AjustadorDeSdr {
 }
 
 export type TesteDoSdr = {
+  /** Onde a conversa do teste acontece (§4.3, §4.26). */
+  canal: CanalDoSdr;
   segmento: string;
   /** Os segmentos do Mercado da análise, para a pessoa escolher quem faz. */
   segmentos: string[];
@@ -59,10 +62,11 @@ const segmentosDa = (analise: Dossie) =>
 
 /**
  * A entrada do agente para o teste: o mesmo formato da produção (§7), com o
- * SDR e a análise da organização e um lead fictício do segmento escolhido.
- * Sem palavras proibidas de perfil: a conta ainda não existe.
+ * SDR e a análise da organização, o canal escolhido e um lead fictício do
+ * segmento escolhido. Sem palavras proibidas de perfil: a conta ainda não
+ * existe. Sem lançamento: os links e o contexto dele entram no SDR-88 (#77).
  */
-function entradaDoTeste(ctx: Contexto, segmento: string, itens: readonly ItemDoTeste[]): EntradaDoAgente {
+function entradaDoTeste(ctx: Contexto, canal: CanalDoSdr, segmento: string, itens: readonly ItemDoTeste[]): EntradaDoAgente {
   return {
     perfil: {
       nome: ctx.nome,
@@ -97,6 +101,9 @@ function entradaDoTeste(ctx: Contexto, segmento: string, itens: readonly ItemDoT
               : { direcao: "saida" as const, autor: "ia", texto: item.texto, em: new Date(item.em) },
           ],
     ),
+    canal,
+    linksPermitidos: [],
+    contextoDoLancamento: null,
   };
 }
 
@@ -109,19 +116,33 @@ const nota = (tipo: Extract<ItemDoTeste, { tipo: "nota" }>["nota"], texto: strin
   ...(versao === undefined ? {} : { versao }),
 });
 
-/** A primeira mensagem do SDR, como depois de um convite aceito. */
+/** A primeira mensagem do SDR, como depois de um convite aceito (só no LinkedIn). */
 async function abrir(deps: DependenciasDoTeste, ctx: Contexto, segmento: string): Promise<ItemDoTeste> {
   const consumo: Consumo = { modelos: {}, uso: {} };
-  const aberta = await abrirConversa({ entrada: entradaDoTeste(ctx, segmento, []), modelo: deps.modelo, consumo });
+  const aberta = await abrirConversa({ entrada: entradaDoTeste(ctx, "linkedin", segmento, []), modelo: deps.modelo, consumo });
   if (!aberta.texto) return nota("desfecho", "O SDR não conseguiu escrever a abertura. Recomece a conversa.", deps.agora);
   return { id: randomUUID(), tipo: "sdr", texto: aberta.texto, em: deps.agora.toISOString(), acao: "responder", aviso: aberta.excecao };
 }
 
+/**
+ * O começo da conversa: no LinkedIn, o SDR abre; nos outros canais, quem
+ * escreve primeiro é a pessoa, e o chat começa só com a nota que diz isso (§4.3).
+ */
+async function comeco(deps: DependenciasDoTeste, ctx: Contexto, canal: CanalDoSdr, segmento: string): Promise<ItemDoTeste> {
+  if (canal === "linkedin") return abrir(deps, ctx, segmento);
+  return nota("desfecho", notaDoComecoForaDoLinkedIn(canal, nomeDoLeadDeTeste(ctx.analise.idioma)), deps.agora);
+}
+
 /** A resposta do SDR à última mensagem do lead: a mesma decisão da produção (`decidirResposta`). */
-async function responder(deps: DependenciasDoTeste, ctx: Contexto, segmento: string, itens: readonly ItemDoTeste[]): Promise<ItemDoTeste[]> {
+async function responder(
+  deps: DependenciasDoTeste,
+  ctx: Contexto,
+  t: { canal: CanalDoSdr; segmento: string },
+  itens: readonly ItemDoTeste[],
+): Promise<ItemDoTeste[]> {
   const consumo: Consumo = { modelos: {}, uso: {} };
   const desfecho = await decidirResposta({
-    entrada: entradaDoTeste(ctx, segmento, itens),
+    entrada: entradaDoTeste(ctx, t.canal, t.segmento, itens),
     modelo: deps.modelo,
     configuracao: await lerConfiguracao(deps.db, "agente"),
     consumo,
@@ -159,22 +180,28 @@ function semUltimaResposta(itens: readonly ItemDoTeste[]): { itens: ItemDoTeste[
   };
 }
 
-async function gravar(db: Db, organizacaoId: string, t: { segmento: string; mensagens: ItemDoTeste[]; sdrVersao: number }, agora: Date) {
+async function gravar(
+  db: Db,
+  organizacaoId: string,
+  t: { canal: CanalDoSdr; segmento: string; mensagens: ItemDoTeste[]; sdrVersao: number },
+  agora: Date,
+) {
   await db.query(
-    `insert into public.sdr_testes (organizacao_id, segmento, mensagens, sdr_versao, criado_em, atualizado_em)
-     values ($1::uuid, $2, $3::jsonb, $4, $5, $5)
+    `insert into public.sdr_testes (organizacao_id, canal, segmento, mensagens, sdr_versao, criado_em, atualizado_em)
+     values ($1::uuid, $2, $3, $4::jsonb, $5, $6, $6)
      on conflict (organizacao_id) do update
-       set segmento = excluded.segmento, mensagens = excluded.mensagens, sdr_versao = excluded.sdr_versao,
-           atualizado_em = excluded.atualizado_em`,
-    [organizacaoId, t.segmento, JSON.stringify(t.mensagens), t.sdrVersao, agora],
+       set canal = excluded.canal, segmento = excluded.segmento, mensagens = excluded.mensagens,
+           sdr_versao = excluded.sdr_versao, atualizado_em = excluded.atualizado_em`,
+    [organizacaoId, t.canal, t.segmento, JSON.stringify(t.mensagens), t.sdrVersao, agora],
   );
 }
 
-async function montar(db: Db, ctx: Contexto, t: { segmento: string; mensagens: ItemDoTeste[] }): Promise<TesteDoSdr> {
+async function montar(db: Db, ctx: Contexto, t: { canal: CanalDoSdr; segmento: string; mensagens: ItemDoTeste[] }): Promise<TesteDoSdr> {
   const [versoes] = await db.query<{ n: number }>("select count(*)::int as n from public.sdr_versoes where sdr_id = $1::uuid", [
     ctx.sdr.id,
   ]);
   return {
+    canal: t.canal,
     segmento: t.segmento,
     segmentos: segmentosDa(ctx.analise),
     idioma: ctx.analise.idioma,
@@ -191,29 +218,31 @@ const SEM_SDR = "Confirme a análise e espere o SDR ficar pronto antes de testar
 export async function obterTeste(db: Db, p: { organizacaoId: string; nome: string }): Promise<TesteDoSdr | null> {
   const ctx = await carregarContexto(db, p.organizacaoId, p.nome);
   if (!ctx) return null;
-  const [linha] = await db.query<{ segmento: string; mensagens: ItemDoTeste[] }>(
-    "select segmento, mensagens from public.sdr_testes where organizacao_id = $1::uuid",
+  const [linha] = await db.query<{ canal: CanalDoSdr; segmento: string; mensagens: ItemDoTeste[] }>(
+    "select canal, segmento, mensagens from public.sdr_testes where organizacao_id = $1::uuid",
     [p.organizacaoId],
   );
   return linha ? montar(db, ctx, linha) : null;
 }
 
 /**
- * Começa (ou recomeça) o teste: limpa a conversa, sem mexer no SDR, e o SDR
- * abre como faria depois de um convite aceito.
+ * Começa (ou recomeça) o teste: limpa a conversa, sem mexer no SDR. No
+ * LinkedIn, o SDR abre como faria depois de um convite aceito; nos outros
+ * canais, a conversa começa vazia, com a nota, sem chamar o modelo.
  */
 export async function comecarTeste(
   deps: DependenciasDoTeste,
-  p: { organizacaoId: string; nome: string; segmento?: string | null },
+  p: { organizacaoId: string; nome: string; segmento?: string | null; canal?: CanalDoSdr | null },
 ): Promise<ResultadoDoTeste> {
   const ctx = await carregarContexto(deps.db, p.organizacaoId, p.nome);
   if (!ctx) return { ok: false, erro: SEM_SDR };
   const segmentos = segmentosDa(ctx.analise);
   const segmento = p.segmento && segmentos.includes(p.segmento) ? p.segmento : segmentos[0]!;
+  const canal = p.canal ?? "linkedin";
   try {
-    const mensagens = [await abrir(deps, ctx, segmento)];
-    await gravar(deps.db, p.organizacaoId, { segmento, mensagens, sdrVersao: ctx.sdr.versao }, deps.agora);
-    return { ok: true, teste: await montar(deps.db, ctx, { segmento, mensagens }) };
+    const mensagens = [await comeco(deps, ctx, canal, segmento)];
+    await gravar(deps.db, p.organizacaoId, { canal, segmento, mensagens, sdrVersao: ctx.sdr.versao }, deps.agora);
+    return { ok: true, teste: await montar(deps.db, ctx, { canal, segmento, mensagens }) };
   } catch (erro) {
     if (!(erro instanceof ErroDoModelo)) throw erro;
     return { ok: false, erro: ERRO_DO_MODELO };
@@ -235,20 +264,24 @@ export async function responderComoLead(
 
   const comLead: ItemDoTeste[] = [...atual.mensagens, { id: randomUUID(), tipo: "lead", texto, em: deps.agora.toISOString() }];
   try {
-    const mensagens = [...comLead, ...(await responder(deps, ctx, atual.segmento, comLead))];
-    await gravar(deps.db, p.organizacaoId, { segmento: atual.segmento, mensagens, sdrVersao: ctx.sdr.versao }, deps.agora);
-    return { ok: true, teste: await montar(deps.db, ctx, { segmento: atual.segmento, mensagens }) };
+    const mensagens = [...comLead, ...(await responder(deps, ctx, atual, comLead))];
+    await gravar(deps.db, p.organizacaoId, { canal: atual.canal, segmento: atual.segmento, mensagens, sdrVersao: ctx.sdr.versao }, deps.agora);
+    return { ok: true, teste: await montar(deps.db, ctx, { canal: atual.canal, segmento: atual.segmento, mensagens }) };
   } catch (erro) {
     if (!(erro instanceof ErroDoModelo)) throw erro;
     return { ok: false, erro: ERRO_DO_MODELO };
   }
 }
 
-/** Escreve de novo a última resposta (ou a abertura) com o SDR atual e grava. */
+/**
+ * Escreve de novo a última resposta (ou a abertura) com o SDR atual e grava.
+ * Fora do LinkedIn, antes de a pessoa escrever não há o que refazer: o SDR não
+ * abre a conversa, e fica o aviso, depois da nota do começo.
+ */
 async function refazerUltimaResposta(
   deps: DependenciasDoTeste,
   p: { organizacaoId: string; nome: string },
-  t: { segmento: string; mensagens: ItemDoTeste[] },
+  t: { canal: CanalDoSdr; segmento: string; mensagens: ItemDoTeste[] },
   aviso: ItemDoTeste,
 ): Promise<ResultadoDoTeste> {
   const ctx = await carregarContexto(deps.db, p.organizacaoId, p.nome);
@@ -258,15 +291,17 @@ async function refazerUltimaResposta(
   let mensagens: ItemDoTeste[];
   try {
     mensagens = temLead
-      ? [...comAviso, ...(await responder(deps, ctx, t.segmento, comAviso))]
-      : [...comAviso, await abrir(deps, ctx, t.segmento)];
+      ? [...comAviso, ...(await responder(deps, ctx, t, comAviso))]
+      : t.canal === "linkedin"
+        ? [...comAviso, await abrir(deps, ctx, t.segmento)]
+        : [...t.mensagens, aviso];
   } catch (erro) {
     if (!(erro instanceof ErroDoModelo)) throw erro;
     // O ajuste já valeu; só a resposta nova não saiu. Fica o aviso, e a pessoa responde de novo.
     mensagens = comAviso;
   }
-  await gravar(deps.db, p.organizacaoId, { segmento: t.segmento, mensagens, sdrVersao: ctx.sdr.versao }, deps.agora);
-  return { ok: true, teste: await montar(deps.db, ctx, { segmento: t.segmento, mensagens }) };
+  await gravar(deps.db, p.organizacaoId, { canal: t.canal, segmento: t.segmento, mensagens, sdrVersao: ctx.sdr.versao }, deps.agora);
+  return { ok: true, teste: await montar(deps.db, ctx, { canal: t.canal, segmento: t.segmento, mensagens }) };
 }
 
 /** A conversa do teste em texto, para o ajuste entender o contexto do pedido. */
@@ -315,7 +350,7 @@ export async function ajustarNoTeste(
 
   if (ajuste.saida.recusa) {
     const mensagens = [...atual.mensagens, nota("recusa", ajuste.saida.recusa, deps.agora)];
-    await gravar(deps.db, p.organizacaoId, { segmento: atual.segmento, mensagens, sdrVersao: ctx.sdr.versao }, deps.agora);
+    await gravar(deps.db, p.organizacaoId, { canal: atual.canal, segmento: atual.segmento, mensagens, sdrVersao: ctx.sdr.versao }, deps.agora);
     return { ok: true, teste: { ...atual, mensagens } };
   }
 
