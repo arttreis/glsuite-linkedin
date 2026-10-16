@@ -2538,3 +2538,20 @@ dentro da organização; o SDR-105 é a fundação e os tickets seguintes põem
 - **Evento `marca_trocada`** em `eventos`, com `entidade = 'operador'`, o id do
   operador e `{ de, para }` (só ids). Trocar para a marca em que já está não
   grava evento.
+
+### SDR-124 (#117) · Ligar pela Plataforma uma conta que já está na Unipile
+
+- **`ligarContaAoPerfil`** é o miolo que era do callback: confere a conta na
+  Unipile, lê o dono, recusa conta de outro perfil e grava. O callback passa
+  `ator = "unipile"` e o evento pelo status; a Plataforma passa o e-mail do
+  login e sempre `conta_conectada`.
+- **A recusa de conta já ligada vem antes de criar a conta nova**
+  (`ligarContaPelaPlataforma`), para não deixar perfil vazio na organização.
+  A checagem dentro da transação continua valendo para corrida.
+- **Conta nova** usa `contaNovaDoLinkedin`, que pede um operador: fica com o
+  admin ativo mais antigo da organização (ou, sem admin, o operador ativo mais
+  antigo). Organização sem ninguém ativo é recusada com aviso.
+- **Unipile fora ao abrir a Plataforma** vira aviso dentro da seção
+  (`mensagemDaRecusa`), não página de erro: as organizações continuam na tela.
+- O histórico de conversas é importado em `after()`, como no callback. O
+  primeiro acesso não é concluído por aqui: o ticket pede só o histórico.

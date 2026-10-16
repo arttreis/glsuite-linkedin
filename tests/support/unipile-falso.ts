@@ -74,6 +74,12 @@ export class UnipileFalso implements ClienteUnipile {
     return this.contas.get(accountId) ?? { id: accountId, tipo: "LINKEDIN", nome: null, status: ["OK"] };
   }
 
+  /** As contas do workspace são as de `contas`, na ordem em que entraram. */
+  async listarContas() {
+    this.registrar("listarContas", {});
+    return [...this.contas.values()];
+  }
+
   async obterDonoDaConta(accountId: string) {
     this.registrar("obterDonoDaConta", { accountId });
     return (

@@ -2,14 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 import { MODULOS, motivoDaMudanca, NOME_DO_MODULO } from "@/domain/modulos";
 import { urlPublicaDoApp } from "@/lib/env";
+import { importarHistorico } from "@/server/conversas/externas";
 import { obterDb } from "@/server/db";
 import { obterUnipile, segredoDaUnipile } from "@/server/dependencias";
 import { alterarModulo, exigirContaDaCasa } from "@/server/modulos/modulos";
-import { gerarLinkDeConexao, mensagemDaFalhaDoLink } from "@/server/perfis/conexao";
+import { gerarLinkDeConexao, ligarContaPelaPlataforma, mensagemDaFalhaDoLink } from "@/server/perfis/conexao";
 import { exigirAdminDaPlataforma } from "@/server/plataforma";
+import { mensagemDaRecusa } from "@/server/unipile/erros";
 
 function voltar(mensagem: string): never {
   revalidatePath("/", "layout");
@@ -61,4 +64,47 @@ export async function reconectarContaDaCasa(formData: FormData): Promise<never> 
     voltar(mensagemDaFalhaDoLink(erro));
   }
   redirect(link);
+}
+
+/**
+ * Liga a um perfil uma conta que já está na Unipile, conectada direto no
+ * dashboard dela (§4.14): num perfil livre da organização ou numa conta nova.
+ * Só quem está em `PLATAFORMA_ADMINS`; o evento leva o e-mail do login. O
+ * perfil segue pausado; o histórico de conversas vem depois, como no callback.
+ * Se a Unipile recusar, volta com a mensagem em vez da página de erro.
+ */
+export async function ligarContaDaUnipile(formData: FormData): Promise<never> {
+  const operador = await exigirAdminDaPlataforma();
+  const accountId = z.string().trim().min(1).max(200).parse(formData.get("accountId"));
+  // O destino é `perfil:<id>` (um perfil livre) ou `nova:<id da organização>` (conta nova nela).
+  const [tipo, valor] = String(formData.get("destino") ?? "").split(":");
+  const id = z.uuid().parse(valor);
+  if (tipo !== "perfil" && tipo !== "nova") voltar("Escolha o perfil que recebe a conta.");
+  const nomeDaConta = String(formData.get("nomeDaConta") ?? "").trim().slice(0, 120) || "Conta do LinkedIn";
+
+  let resultado: Awaited<ReturnType<typeof ligarContaPelaPlataforma>>;
+  try {
+    resultado = await ligarContaPelaPlataforma(
+      { db: obterDb(), unipile: obterUnipile() },
+      {
+        accountId,
+        destino: tipo === "nova" ? { organizacaoId: id } : { perfilId: id },
+        nomeDaConta,
+        ator: operador.emailDoLogin,
+        agora: new Date(),
+      },
+    );
+  } catch (erro) {
+    voltar(mensagemDaRecusa(erro));
+  }
+  if (!resultado.ok) voltar(resultado.erro);
+  const { perfilId } = resultado;
+  after(async () => {
+    try {
+      await importarHistorico({ db: obterDb(), unipile: obterUnipile(), agora: new Date() }, { perfilId });
+    } catch (erro) {
+      console.error("histórico da Unipile não importado", erro);
+    }
+  });
+  voltar(resultado.mensagem);
 }

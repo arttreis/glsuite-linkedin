@@ -3,9 +3,12 @@ import { Cabecalho } from "@/components/cabecalho";
 import { STATUS_SAUDAVEIS } from "@/domain/conta";
 import { NOME_DO_MODULO } from "@/domain/modulos";
 import { obterDb } from "@/server/db";
+import { obterUnipile } from "@/server/dependencias";
 import { organizacoesNaPlataforma, type ContaDaCasaNaPlataforma, type SituacaoDoModulo } from "@/server/modulos/modulos";
+import { contasSemPerfil, destinosDaLigacao, type ContaSemPerfil, type DestinoDaLigacao } from "@/server/perfis/conexao";
 import { exigirAdminDaPlataforma } from "@/server/plataforma";
-import { alterarModuloDaPlataforma, reconectarContaDaCasa } from "./acoes";
+import { mensagemDaRecusa } from "@/server/unipile/erros";
+import { alterarModuloDaPlataforma, ligarContaDaUnipile, reconectarContaDaCasa } from "./acoes";
 
 const FUSO = "America/Sao_Paulo";
 const data = (valor: Date) => new Date(valor).toLocaleDateString("pt-BR", { timeZone: FUSO, day: "2-digit", month: "2-digit", year: "numeric" });
@@ -86,11 +89,83 @@ function LinhaDoModulo({ organizacao, situacao }: { organizacao: { id: string; n
   );
 }
 
-/** Plataforma (§4.14): as organizações do Kakou e os módulos de cada uma. Só para `PLATAFORMA_ADMINS`. */
+/**
+ * Contas do LinkedIn conectadas direto no dashboard da Unipile, que nenhum
+ * perfil tem (§4.14). Cada uma liga num perfil livre ou numa conta nova da
+ * organização escolhida. O workspace da Unipile é de todas as organizações:
+ * a lista só existe aqui.
+ */
+function ContasSemPerfil({ contas, destinos }: { contas: ContaSemPerfil[] | string; destinos: DestinoDaLigacao[] }) {
+  return (
+    <section className="cartao flex flex-col gap-4 p-5" aria-labelledby="contas-sem-perfil">
+      <h2 id="contas-sem-perfil" className="text-[15px] font-semibold">
+        Contas na Unipile sem perfil
+      </h2>
+      {typeof contas === "string" ? (
+        <Aviso tom="erro">{contas}</Aviso>
+      ) : contas.length === 0 ? (
+        <p className="text-[13px] text-tinta-suave">Toda conta do LinkedIn na Unipile já está ligada a um perfil.</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {contas.map((conta) => {
+            const nome = conta.nome ?? "Conta sem nome";
+            return (
+              <li key={conta.id} className="flex flex-col gap-2 rounded-xl bg-superficie-alta px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium">{nome}</p>
+                  <span className={`etiqueta etiqueta-ponto ${STATUS_SAUDAVEIS.has(conta.status) ? "etiqueta-ok" : "etiqueta-erro"}`}>
+                    {conta.status}
+                    {conta.criadaEm ? ` · criada em ${data(conta.criadaEm)}` : ""}
+                  </span>
+                </div>
+                <form action={ligarContaDaUnipile} className="flex flex-wrap items-center gap-2">
+                  <input type="hidden" name="accountId" value={conta.id} />
+                  <input type="hidden" name="nomeDaConta" value={nome} />
+                  <select
+                    name="destino"
+                    required
+                    defaultValue=""
+                    aria-label={`Perfil que recebe a conta de ${nome}`}
+                    className="campo campo-pequeno min-w-0 flex-1 basis-56"
+                  >
+                    <option value="" disabled>
+                      Escolha a organização e o perfil
+                    </option>
+                    {destinos.map((destino) => (
+                      <optgroup key={destino.organizacaoId} label={destino.organizacaoNome}>
+                        {destino.perfis.map((perfil) => (
+                          <option key={perfil.id} value={`perfil:${perfil.id}`}>
+                            {perfil.nome}
+                            {perfil.casa ? " (conta da casa)" : ""}
+                            {perfil.contaApagada ? " (conta apagada na Unipile)" : ""}
+                          </option>
+                        ))}
+                        <option value={`nova:${destino.organizacaoId}`}>Conta nova em {destino.organizacaoNome}</option>
+                      </optgroup>
+                    ))}
+                  </select>
+                  <button type="submit" className="botao botao-pequeno botao-primario">
+                    Ligar a este perfil
+                  </button>
+                </form>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <p className="text-xs text-tinta-fraca">Ligar não ativa o perfil: ele segue pausado até alguém da organização ativar.</p>
+    </section>
+  );
+}
+
+/** Plataforma (§4.14): as organizações do Kakou, os módulos de cada uma e as contas soltas na Unipile. Só para `PLATAFORMA_ADMINS`. */
 export default async function PlataformaPage({ searchParams }: PageProps<"/platform">) {
   await exigirAdminDaPlataforma();
   const { msg, conexao } = await searchParams;
   const organizacoes = await organizacoesNaPlataforma(obterDb());
+  const destinos = await destinosDaLigacao(obterDb());
+  // Unipile fora ou chave recusada vira aviso na seção, não página de erro.
+  const contas = await contasSemPerfil({ db: obterDb(), unipile: obterUnipile() }).catch((erro: unknown) => mensagemDaRecusa(erro));
   const aviso = typeof conexao === "string" ? CONEXAO[conexao] : undefined;
 
   return (
@@ -102,6 +177,7 @@ export default async function PlataformaPage({ searchParams }: PageProps<"/platf
       <div className="flex max-w-5xl flex-col gap-5">
         {typeof msg === "string" && <Aviso>{msg}</Aviso>}
         {aviso && <Aviso tom={aviso.tom}>{aviso.texto}</Aviso>}
+        <ContasSemPerfil contas={contas} destinos={destinos} />
         {organizacoes.length === 0 && <p className="vazio">Nenhuma organização ainda.</p>}
         {organizacoes.map((organizacao) => (
           <section key={organizacao.id} className="cartao flex flex-col gap-4 p-5" aria-labelledby={`org-${organizacao.id}`}>

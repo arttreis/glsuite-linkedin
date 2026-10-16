@@ -241,3 +241,39 @@ describe("mensagem da recusa nos botões da Administração (SDR-122)", () => {
     expect(() => mensagemDaRecusa(new Error("Perfil não encontrado"))).toThrow("Perfil não encontrado");
   });
 });
+
+describe("contas do workspace da Unipile (SDR-124)", () => {
+  it("lista as contas seguindo o cursor até a última página", async () => {
+    const { cliente, requisicoes } = clienteComFetch([
+      {
+        status: 200,
+        corpo: {
+          object: "AccountList",
+          items: [
+            { id: "acc-1", type: "LINKEDIN", name: "Juliano Unti", created_at: "2026-10-09T12:00:00.000Z", sources: [{ id: "s1", status: "OK" }] },
+            { id: "acc-2", type: "INSTAGRAM", name: "guessless", sources: [] },
+          ],
+          cursor: "pagina-2",
+        },
+      },
+      {
+        status: 200,
+        corpo: {
+          object: "AccountList",
+          items: [{ id: "acc-3", type: "LINKEDIN", name: "Luiz Seigo", created_at: "2026-10-16T09:00:00.000Z", sources: [{ id: "s3", status: "CREDENTIALS" }] }],
+          cursor: null,
+        },
+      },
+    ]);
+
+    expect(await cliente.listarContas()).toEqual([
+      { id: "acc-1", tipo: "LINKEDIN", nome: "Juliano Unti", status: ["OK"], criadaEm: "2026-10-09T12:00:00.000Z" },
+      { id: "acc-2", tipo: "INSTAGRAM", nome: "guessless", status: [], criadaEm: null },
+      { id: "acc-3", tipo: "LINKEDIN", nome: "Luiz Seigo", status: ["CREDENTIALS"], criadaEm: "2026-10-16T09:00:00.000Z" },
+    ]);
+    expect(requisicoes).toHaveLength(2);
+    expect(requisicoes[0]!.url.pathname).toBe("/api/v1/accounts");
+    expect(requisicoes[0]!.url.searchParams.get("cursor")).toBeNull();
+    expect(requisicoes[1]!.url.searchParams.get("cursor")).toBe("pagina-2");
+  });
+});

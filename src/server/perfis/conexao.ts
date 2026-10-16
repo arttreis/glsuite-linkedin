@@ -1,8 +1,10 @@
 import { z } from "zod";
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
+import type { Resultado } from "@/server/publicos/publicos";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
 import { ErroUnipile, PECA_A_CHAVE } from "@/server/unipile/erros";
+import { contaNovaDoLinkedin } from "./nova-conta";
 import { statusMaisGrave } from "./status-conta";
 
 type Dependencias = { db: Db; unipile: ClienteUnipile };
@@ -70,7 +72,26 @@ export async function registrarContaConectada(
   const notificacao = esquemaNotificacao.safeParse(corpo);
   if (!notificacao.success) return { ok: false, motivo: "payload inválido" };
   const { account_id: accountId, name: perfilId, status } = notificacao.data;
+  return ligarContaAoPerfil(deps, {
+    perfilId,
+    accountId,
+    evento: status === "RECONNECTED" ? "conta_reconectada" : "conta_conectada",
+    ator: "unipile",
+    agora,
+  });
+}
 
+/**
+ * Liga uma conta da Unipile a um perfil: confere na Unipile que a conta é do
+ * LinkedIn, lê o dono, recusa conta que já está em outro perfil (de qualquer
+ * organização) e grava provider, tipo, limite da nota e status. Usada pelo
+ * callback do hosted auth e pela Plataforma. O perfil continua pausado (§4.4).
+ */
+export async function ligarContaAoPerfil(
+  deps: Dependencias,
+  p: { perfilId: string; accountId: string; evento: "conta_conectada" | "conta_reconectada"; ator: string; agora: Date },
+): Promise<ResultadoConexao> {
+  const { perfilId, accountId } = p;
   const [perfil] = await deps.db.query<{ id: string }>("select id from public.perfis where id = $1::uuid", [perfilId]);
   if (!perfil) return { ok: false, motivo: "perfil desconhecido" };
 
@@ -94,19 +115,145 @@ export async function registrarContaConectada(
               limite_nota_convite = $5, unipile_status = $6, unipile_status_em = $7,
               nome = case when unipile_account_id is distinct from $2 and $8 <> '' then $8 else nome end
         where id = $1::uuid`,
-      [perfilId, accountId, dono.providerId, tipoConta, tipoConta === "gratuita" ? 200 : 300, statusMaisGrave(conta.status), agora, dono.nome.trim()],
+      [perfilId, accountId, dono.providerId, tipoConta, tipoConta === "gratuita" ? 200 : 300, statusMaisGrave(conta.status), p.agora, dono.nome.trim()],
     );
     await registrarEvento(tx, {
-      tipo: status === "RECONNECTED" ? "conta_reconectada" : "conta_conectada",
+      tipo: p.evento,
       entidade: "perfil",
       entidadeId: perfilId,
       perfilId,
       payload: { account_id: accountId, tipo_conta: tipoConta, provider_id: dono.providerId },
-      ator: "unipile",
-      em: agora,
+      ator: p.ator,
+      em: p.agora,
     });
     return { ok: true as const, perfilId };
   });
+}
+
+/** Uma conta do LinkedIn na Unipile que nenhum perfil tem (§4.14). */
+export type ContaSemPerfil = { id: string; nome: string | null; status: string; criadaEm: Date | null };
+
+/**
+ * As contas `LINKEDIN` do workspace da Unipile cujo id não está em nenhum
+ * perfil, de nenhuma organização: as que foram conectadas direto no dashboard
+ * da Unipile. O workspace é um só para todas as organizações, então só a
+ * Plataforma chama, pela conexão do sistema, depois de `PLATAFORMA_ADMINS`.
+ */
+export async function contasSemPerfil(deps: Dependencias): Promise<ContaSemPerfil[]> {
+  const contas = await deps.unipile.listarContas();
+  const ligadas = await deps.db.query<{ id: string }>(
+    "select unipile_account_id as id from public.perfis where unipile_account_id is not null",
+  );
+  const ids = new Set(ligadas.map((linha) => linha.id));
+  return contas
+    .filter((conta) => conta.tipo === "LINKEDIN" && !ids.has(conta.id))
+    .map((conta) => ({
+      id: conta.id,
+      nome: conta.nome,
+      status: statusMaisGrave(conta.status),
+      criadaEm: conta.criadaEm ? new Date(conta.criadaEm) : null,
+    }));
+}
+
+/** Para onde a Plataforma pode ligar uma conta solta: os perfis livres de cada organização. */
+export type DestinoDaLigacao = {
+  organizacaoId: string;
+  organizacaoNome: string;
+  perfis: { id: string; nome: string; casa: boolean; contaApagada: boolean }[];
+};
+
+/**
+ * Cada organização com os perfis que podem receber uma conta: sem conta ou
+ * com a conta apagada na Unipile (`DELETED`). A organização entra mesmo sem
+ * perfil livre, porque dá para ligar numa conta nova. Só pela conexão do sistema.
+ */
+export async function destinosDaLigacao(db: Db): Promise<DestinoDaLigacao[]> {
+  const organizacoes = await db.query<{ id: string; nome: string }>("select id, nome from public.organizacoes order by criado_em");
+  const perfis = await db.query<{ id: string; nome: string; casa: boolean; contaApagada: boolean; organizacaoId: string }>(
+    `select id, nome, casa, unipile_account_id is not null as "contaApagada", organizacao_id as "organizacaoId"
+       from public.perfis
+      where unipile_account_id is null or unipile_status = 'DELETED'
+      order by casa desc, nome`,
+  );
+  return organizacoes.map((organizacao) => ({
+    organizacaoId: organizacao.id,
+    organizacaoNome: organizacao.nome,
+    perfis: perfis
+      .filter((perfil) => perfil.organizacaoId === organizacao.id)
+      .map(({ id, nome, casa, contaApagada }) => ({ id, nome, casa, contaApagada })),
+  }));
+}
+
+/**
+ * Liga pela Plataforma uma conta que já está na Unipile (§4.14): num perfil
+ * livre da organização ou numa conta nova dela. A conta nova fica com quem é
+ * admin da organização há mais tempo, que é quem a opera. A recusa de conta
+ * já ligada vem antes de criar a conta nova, para não deixar perfil vazio.
+ * O perfil segue pausado. Só pela conexão do sistema, depois de `PLATAFORMA_ADMINS`.
+ */
+export async function ligarContaPelaPlataforma(
+  deps: Dependencias,
+  p: {
+    accountId: string;
+    destino: { perfilId: string } | { organizacaoId: string };
+    nomeDaConta: string;
+    /** E-mail de quem é da plataforma. */
+    ator: string;
+    agora: Date;
+  },
+): Promise<Resultado<{ perfilId: string; mensagem: string }>> {
+  const [outro] = await deps.db.query<{ slug: string }>("select slug from public.perfis where unipile_account_id = $1", [p.accountId]);
+  if (outro) return { ok: false, erro: `A conta já está ligada ao perfil ${outro.slug}.` };
+
+  let perfilId: string;
+  if ("perfilId" in p.destino) {
+    const [perfil] = await deps.db.query<{ id: string; nome: string; livre: boolean }>(
+      `select id, nome, unipile_account_id is null or unipile_status = 'DELETED' as livre
+         from public.perfis where id = $1::uuid`,
+      [p.destino.perfilId],
+    );
+    if (!perfil) return { ok: false, erro: "Perfil não encontrado." };
+    if (!perfil.livre) return { ok: false, erro: `O perfil ${perfil.nome} já tem uma conta do LinkedIn.` };
+    perfilId = perfil.id;
+  } else {
+    const [organizacao] = await deps.db.query<{ nome: string; operadorId: string | null }>(
+      `select g.nome,
+              (select o.id from public.operadores o
+                where o.organizacao_id = g.id and o.ativo
+                order by o.papel = 'admin' desc, o.criado_em limit 1) as "operadorId"
+         from public.organizacoes g where g.id = $1::uuid`,
+      [p.destino.organizacaoId],
+    );
+    if (!organizacao) return { ok: false, erro: "Organização não encontrada." };
+    if (!organizacao.operadorId) return { ok: false, erro: `${organizacao.nome} não tem ninguém ativo na equipe para operar a conta nova.` };
+    perfilId = await contaNovaDoLinkedin(deps.db, {
+      organizacaoId: p.destino.organizacaoId,
+      operadorId: organizacao.operadorId,
+      nome: p.nomeDaConta,
+      agora: p.agora,
+    });
+  }
+
+  // O nome do perfil antes de ligar: ligar troca o nome pelo do dono no LinkedIn.
+  const [antes] = await deps.db.query<{ nome: string; organizacao: string }>(
+    `select p.nome, g.nome as organizacao
+       from public.perfis p join public.organizacoes g on g.id = p.organizacao_id
+      where p.id = $1::uuid`,
+    [perfilId],
+  );
+  const resultado = await ligarContaAoPerfil(deps, {
+    perfilId,
+    accountId: p.accountId,
+    evento: "conta_conectada",
+    ator: p.ator,
+    agora: p.agora,
+  });
+  if (!resultado.ok) return { ok: false, erro: `A conta não foi ligada: ${resultado.motivo}.` };
+  return {
+    ok: true,
+    perfilId,
+    mensagem: `Conta de ${p.nomeDaConta} ligada ao perfil ${antes!.nome} (${antes!.organizacao}). O perfil segue pausado.`,
+  };
 }
 
 const FONTES_DE_WEBHOOK = ["messaging", "users", "account_status"] as const;

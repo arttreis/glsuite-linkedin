@@ -10,6 +10,8 @@ export type ContaUnipile = {
   nome: string | null;
   /** Status de cada fonte da conta (`OK`, `CREDENTIALS`, `ERROR`...). */
   status: string[];
+  /** `created_at` da conta na Unipile, quando vem. */
+  criadaEm?: string | null;
 };
 
 export type DonoDaConta = {
@@ -110,6 +112,8 @@ export type LinkDeConexao = {
 export interface ClienteUnipile {
   gerarLinkDeConexao(link: LinkDeConexao): Promise<string>;
   obterConta(accountId: string): Promise<ContaUnipile>;
+  /** Todas as contas do workspace da Unipile (de todas as organizações), seguindo o cursor até o fim. */
+  listarContas(): Promise<ContaUnipile[]>;
   obterDonoDaConta(accountId: string): Promise<DonoDaConta>;
   enviarConvite(p: { accountId: string; providerId: string; mensagem?: string }): Promise<{ invitationId: string }>;
   listarConvitesEnviados(accountId: string, cursor?: string): Promise<{ itens: ConviteEnviado[]; cursor: string | null }>;
@@ -275,6 +279,17 @@ export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
     };
   };
 
+  const paraConta = (dados: Json): ContaUnipile => {
+    const fontes = Array.isArray(dados.sources) ? (dados.sources as Json[]) : [];
+    return {
+      id: String(dados.id),
+      tipo: String(dados.type),
+      nome: texto(dados.name),
+      status: fontes.map((fonte) => String(fonte.status)),
+      criadaEm: texto(dados.created_at),
+    };
+  };
+
   return {
     async gerarLinkDeConexao(link) {
       const resposta = await chamar<{ url: string }>("POST", "/hosted/accounts/link", {
@@ -293,14 +308,19 @@ export function criarClienteUnipile(config: ConfigCliente): ClienteUnipile {
     },
 
     async obterConta(accountId) {
-      const dados = await chamar<Json>("GET", `/accounts/${encodeURIComponent(accountId)}`);
-      const fontes = Array.isArray(dados.sources) ? (dados.sources as Json[]) : [];
-      return {
-        id: String(dados.id),
-        tipo: String(dados.type),
-        nome: texto(dados.name),
-        status: fontes.map((fonte) => String(fonte.status)),
-      };
+      return paraConta(await chamar<Json>("GET", `/accounts/${encodeURIComponent(accountId)}`));
+    },
+
+    async listarContas() {
+      const contas: ContaUnipile[] = [];
+      let cursor: string | undefined;
+      do {
+        const dados = await chamar<Json>("GET", "/accounts", { query: { limit: 250, cursor } });
+        const itens = Array.isArray(dados.items) ? (dados.items as Json[]) : [];
+        contas.push(...itens.map(paraConta));
+        cursor = texto(dados.cursor) ?? undefined;
+      } while (cursor);
+      return contas;
     },
 
     async obterDonoDaConta(accountId) {
