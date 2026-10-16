@@ -2,12 +2,14 @@ import { Check, Link2, X } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { z } from "zod";
 import { AtualizarSozinho } from "@/components/atualizar-sozinho";
 import { Aviso } from "@/components/aviso";
 import { concluirPrimeiroAcesso } from "@/server/acesso/vinculo";
 import { obterDb } from "@/server/db";
 import type { Operador } from "@/server/db/operador";
 import { obterUnipileSeConfigurada } from "@/server/dependencias";
+import { desfechoDaConexao } from "@/server/perfis/conexao";
 import { Pergunta } from "../pergunta";
 import { abrirPasso } from "../portao";
 import { vincularLinkedin } from "./acoes";
@@ -70,7 +72,7 @@ async function Concluir({ operador }: { operador: Operador }) {
 /** Passo 6 (§2.1, §4.6): vincular a conta do LinkedIn e começar. */
 export default async function PassoLinkedin({ searchParams }: PageProps<"/onboarding/linkedin">) {
   const { operador } = await abrirPasso("linkedin");
-  const { conexao, msg } = await searchParams;
+  const { conexao, msg, perfil: perfilDaVolta, desde } = await searchParams;
   const [perfil] = await obterDb().query<{ conectado: boolean }>(
     `select unipile_account_id is not null as conectado from public.perfis
       where organizacao_id = $1::uuid and operador_id = $2::uuid and not casa
@@ -90,13 +92,25 @@ export default async function PassoLinkedin({ searchParams }: PageProps<"/onboar
   }
 
   const semUnipile = !obterUnipileSeConfigurada();
+  // A conta de alguém que já está noutra organização é recusada no callback (§4.30): para de esperar e diz por quê.
+  const idDaVolta = z.uuid().safeParse(perfilDaVolta);
+  const recusada =
+    conexao === "ok" &&
+    idDaVolta.success &&
+    !Number.isNaN(Number(desde)) &&
+    (await desfechoDaConexao(obterDb(), { perfilId: idDaVolta.data, desde: new Date(Number(desde)) })) === "outra_organizacao";
   return (
     <>
       <Pergunta passo="linkedin">
         O SDR conversa em seu nome, pela sua própria conta. Por isso o último passo é vincular o seu LinkedIn.
       </Pergunta>
 
-      {conexao === "ok" && (
+      {recusada && (
+        <Aviso tom="erro" className="mt-6">
+          Essa conta do LinkedIn já está conectada em outra organização do Kakou. Fale com a GuessLess.
+        </Aviso>
+      )}
+      {conexao === "ok" && !recusada && (
         <>
           <Preparando texto="Conectando a sua conta..." />
           <AtualizarSozinho segundos={3} />

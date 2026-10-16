@@ -28,7 +28,7 @@ describe("conexão do perfil pela Unipile (hosted auth)", () => {
 
     expect(url).toMatch(/^https:\/\/account\.unipile\.com\//);
     const [pedido] = unipile.chamadasDe("gerarLinkDeConexao");
-    expect(pedido).toMatchObject({ tipo: "create", nome: perfilId, sucessoUrl: `${URL_APP}/settings/linkedin?conexao=ok` });
+    expect(pedido).toMatchObject({ tipo: "create", nome: perfilId, sucessoUrl: `${URL_APP}/settings/linkedin?conexao=ok&perfil=${perfilId}&desde=${AGORA.getTime()}` });
     expect(new URL(String(pedido!.notifyUrl)).searchParams.get("segredo")).toBe(SEGREDO);
   });
 

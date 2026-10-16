@@ -11,7 +11,7 @@ export type DuasMarcas = {
   admin: string;
   /** Operador com acesso só à marca A, e nela. */
   operadorA: string;
-  /** Um perfil da organização, operado pelo operador da A. */
+  /** Um perfil da organização, operado pelo operador da A e ligado à A (`marcas_dos_perfis`). */
   perfilId: string;
 };
 
@@ -36,5 +36,7 @@ export async function criarDuasMarcas(db: Db, opcoes: { slug?: string } = {}): P
   const operadorA = await criarOperador(db, { nome: "Operador da Alfa", organizacaoId, perfilIds: [perfilId] });
   await db.query("insert into public.acessos_das_marcas (operador_id, marca_id) values ($1::uuid, $2::uuid)", [operadorA, marcaA!.id]);
   await db.query("update public.operadores set marca_atual_id = $2::uuid where id = any($1::uuid[])", [[admin, operadorA], marcaA!.id]);
+  // Sem operador e com duas marcas, a trigger perfis_na_marca não escolhe: a conta vai para a A aqui.
+  await db.query("insert into public.marcas_dos_perfis (perfil_id, marca_id) values ($1::uuid, $2::uuid)", [perfilId, marcaA!.id]);
   return { organizacaoId, marcaA: marcaA!.id, marcaB: marcaB!.id, admin, operadorA, perfilId };
 }

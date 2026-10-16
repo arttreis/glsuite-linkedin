@@ -2538,3 +2538,64 @@ dentro da organização; o SDR-105 é a fundação e os tickets seguintes põem
 - **Evento `marca_trocada`** em `eventos`, com `entidade = 'operador'`, o id do
   operador e `{ de, para }` (só ids). Trocar para a marca em que já está não
   grava evento.
+
+### SDR-108 (#98) · Contas do LinkedIn por marca
+
+- **Migration `20261020130000_marcas_dos_perfis`**, aditiva e idempotente,
+  com a guarda de nome do Marco D. O backfill liga só o perfil sem marca
+  nenhuma à marca 1 (a mais antiga da organização): rodar de novo não devolve
+  a conta à marca de que alguém a tirou. O índice `perfis_um_linkedin` só se
+  cria se não houver duplicata; havendo, a migration para com a lista.
+- **A trigger `perfis_na_marca` usa a marca de quem opera o perfil** quando
+  não há operador logado. `contaNovaDoLinkedin` e `perfilDoPrimeiroAcesso`
+  rodam pela conexão do sistema, onde `marca_atual()` é nula; a marca atual
+  do `operador_id` do perfil novo (conferida como em `pode_ver_marca`) faz o
+  papel dela, e os dois arquivos não mudam. Sem nenhuma das duas e com mais de
+  uma marca, o perfil fica sem marca (não recusa: recusar quebraria quem cria
+  perfil sem contexto). A trigger também roda em `update of casa`: o perfil
+  que vira casa sai das marcas.
+- **`total_de_marcas_do_perfil()` é `security definer`.** O "e mais N" e a
+  trava da última marca precisam contar as marcas que o operador não vê, e o
+  RLS esconde as linhas delas. A função devolve só o número, e zero para conta
+  que ele não vê.
+- **A ordem no callback:** primeiro o `linkedin_provider_id` (outra
+  organização recusa; mesma organização liga ao perfil que existe), depois o
+  `unipile_account_id` repetido, como hoje. Só se liga ao existente o pendente
+  sem conta conectada e sem campanha: um perfil já conectado que reconecta com
+  o LinkedIn de outro perfil é recusado com "conta já ligada ao perfil {slug}",
+  e nunca é apagado. O pendente da casa não passa pelas duas regras.
+- **Ao ligar ao existente**, quem estava em `operador_perfis` do pendente passa
+  a operar o perfil que existe (provou que tem o LinkedIn), e os `eventos` e
+  `alertas` do pendente perdem o `perfil_id` (a trilha fica pelo
+  `entidade_id`) para o pendente poder ser apagado.
+- **Recusa de outra organização grava só o evento `conexao_recusada`** (payload
+  `motivo: 'outra_organizacao'`, sem nada da outra organização). Perfil e
+  marcas não mudam. O callback chega por outro caminho que a volta do
+  navegador, e é esse evento que a tela lê.
+- **A volta do hosted auth leva `perfil` e `desde`** (`?conexao=ok&perfil&desde`,
+  menos na conta da casa). `desfechoDaConexao` olha os eventos gravados depois
+  do link: `conta_ligada_a_marca` com o `pendente_id` dá o aviso "já estava
+  conectada"; `conexao_recusada` dá o erro de outra organização. No primeiro
+  acesso, o erro troca o "Conectando a sua conta..." e para de recarregar. Se o
+  navegador volta antes do callback, a tela segue como hoje.
+- **"Tirar desta marca" lê a marca da campanha por `to_jsonb(c) ->> 'marca_id'`.**
+  `campanhas.marca_id` chega com o SDR-107 (#97), que depende deste ticket.
+  Antes dele nenhuma campanha tem marca e nada pausa (nenhuma organização tem
+  duas marcas ainda: `marcas.criar` desligado); depois, pausa sem mudar código.
+  O teste cria a coluna para fazer o papel do SDR-107. Como a campanha não tem
+  coluna de motivo, o motivo "Conta tirada da marca" vai no evento
+  `campanha_status`.
+- **Ligar, tirar e as listas rodam como o operador** (`comOperador`): o RLS
+  decide o que ele vê. O Dashboard filtra pela conexão do sistema
+  (`soDaMarca`), porque mostra também as contas da marca que o operador não
+  opera (qualquer um pausa, §4.4), e o RLS de `marcas_dos_perfis` as esconderia.
+- **O contrato de `contasParaLigar` ganhou campos**: `status` (a tela mostra),
+  `ocultas` (o "Em:" segue a regra do "Também em") e `podeLigar` (admin ou
+  `operador_id`; sem isso o botão "Usar na {marca}" não aparece). A lista traz
+  só contas já conectadas.
+- **"Também em" sem nenhum nome visível** vira "Também em: outra marca" ou
+  "Também em: outras N marcas". O botão "Usar uma conta já conectada" aparece,
+  com contas na marca, para o admin sempre e para o operador quando há conta
+  que ele pode ligar; sem conta na marca, só quando há conta para ligar.
+- **Evento `conta_ligada_a_marca`** só quando a ligação é nova; ligar de novo
+  não grava nada.
