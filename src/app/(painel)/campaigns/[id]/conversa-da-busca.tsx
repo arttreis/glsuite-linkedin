@@ -76,6 +76,7 @@ export function ConversaDaBusca({
         break;
       }
       feitas += resultado.procuradas;
+      if (resultado.aviso) setErro(resultado.aviso);
       if (resultado.faltam === 0 || resultado.procuradas === 0) {
         setProcura(null);
         break;

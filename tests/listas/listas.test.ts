@@ -143,6 +143,40 @@ describe("listas de empresas (SDR-59)", () => {
     expect(unipile.chamadasDe("listarParametrosDeBusca")[0]).toMatchObject({ accountId: "acc-juliano" });
   });
 
+  it("conta que a Unipile recusa, mesmo com status OK, sai da leva e a próxima assume, com aviso", async () => {
+    const { id } = (await criar(["Acme", "Zeta"])) as { id: string };
+    await banco.db.query("update public.perfis set casa = true where slug = 'arthur'");
+    await ativarPerfil(banco.db, "juliano", { accountId: "acc-juliano" });
+    await banco.db.query("update public.perfis set unipile_status = 'OK'");
+    unipile.falharProxima("listarParametrosDeBusca", new ErroUnipile({ status: 401, tipo: "invalid_credentials", titulo: "Invalid credentials" }));
+
+    const resultado = await procurar(id);
+    expect(resultado).toEqual({
+      ok: true,
+      procuradas: 2,
+      faltam: 0,
+      aviso:
+        "A Unipile recusou a conta do LinkedIn de Juliano (Unipile 401 invalid_credentials: Invalid credentials): ela parece desconectada. Reconecte em Configurações, na aba LinkedIn. A procura seguiu pela conta de Arthur.",
+    });
+    expect(unipile.chamadasDe("listarParametrosDeBusca").map((c) => c.accountId)).toEqual(["acc-juliano", "acc-arthur", "acc-arthur"]);
+    expect(esperas).toEqual([2000]);
+    expect((await lista(id))!.contagem.a_procurar).toBe(0);
+  });
+
+  it("todas as contas recusadas pela Unipile: para a leva e diz quais reconectar", async () => {
+    const { id } = (await criar(["Acme", "Zeta"])) as { id: string };
+    await ativarPerfil(banco.db, "juliano", { accountId: "acc-juliano" });
+    const recusa = () => new ErroUnipile({ status: 401, tipo: "disconnected_account", titulo: "Disconnected" });
+    unipile.falharProxima("listarParametrosDeBusca", recusa()).falharProxima("listarParametrosDeBusca", recusa());
+
+    expect(await procurar(id)).toEqual({
+      ok: false,
+      erro: "A Unipile recusou as contas do LinkedIn de Arthur e Juliano (Unipile 401 disconnected_account: Disconnected): elas parecem desconectadas. Reconecte em Configurações, na aba LinkedIn. 0 empresas foram procuradas; faltam 2.",
+    });
+    expect(unipile.chamadasDe("listarParametrosDeBusca")).toHaveLength(2);
+    expect((await lista(id))!.contagem.a_procurar).toBe(2);
+  });
+
   it("o humano escolhe a página, ou nenhuma destas, e pode trocar depois", async () => {
     const { id } = (await criar(["Beta", "Gama"])) as { id: string };
     unipile.parametrosDeBusca.set("COMPANY:Beta", [

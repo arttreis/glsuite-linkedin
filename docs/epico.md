@@ -349,7 +349,9 @@ confirmada e guardada em versões. Ele tem:
   Não há teto de empresas por lista.
 - Cada empresa é procurada no LinkedIn pela conta conectada e saudável da
   organização (a conta da casa só se não houver outra; sem conta, a tela
-  avisa). Sem nenhuma página, a empresa fica **sem página** e a busca procura
+  avisa). Conta que a Unipile recusa na consulta (desconectada, mesmo com
+  status OK) dá lugar à próxima saudável, e a tela diz qual reconectar; todas
+  recusadas, a procura para e diz quais. Sem nenhuma página, a empresa fica **sem página** e a busca procura
   o nome dela no texto da empresa atual da pessoa. Se, entre as páginas
   achadas, exatamente uma tem a mesma chave do nome, ela é a **achada**. Senão
   a pessoa **escolhe** entre até 5 páginas, ou "nenhuma destas" (vira sem

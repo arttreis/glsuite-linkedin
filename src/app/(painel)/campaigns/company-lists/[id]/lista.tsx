@@ -16,7 +16,7 @@ import {
 } from "../../acoes-das-listas";
 import { emPartes, EntradaDeEmpresas, type EmpresasLidas } from "../entrada-de-empresas";
 
-type Retorno = { tom: "ok" | "erro" | "neutro"; texto: string } | null;
+type Retorno = { tom: "ok" | "erro" | "neutro" | "atencao"; texto: string } | null;
 
 const paginaDaEmpresa = (id: string) => `https://www.linkedin.com/company/${id}/`;
 
@@ -68,6 +68,7 @@ export function TelaDaLista({ lista, limiteNaTela }: { lista: ListaDeEmpresas; l
       setRetorno(null);
       let feitas = 0;
       let faltam = contagem.a_procurar;
+      let aviso: string | undefined;
       setProgresso(`Procurando no LinkedIn… 0 de ${faltam}.`);
       while (!parar.current) {
         const resultado = await procurarEmpresasDoPainel({ listaId: lista.id });
@@ -77,9 +78,11 @@ export function TelaDaLista({ lista, limiteNaTela }: { lista: ListaDeEmpresas; l
         }
         feitas += resultado.procuradas;
         faltam = resultado.faltam;
+        aviso = resultado.aviso ?? aviso;
         setProgresso(`Procurando no LinkedIn… ${feitas} de ${feitas + faltam}.`);
         if (faltam === 0 || resultado.procuradas === 0) {
-          setRetorno({ tom: "ok", texto: `${feitas} ${feitas === 1 ? "empresa procurada" : "empresas procuradas"}. Veja abaixo as que pedem sua escolha.` });
+          const feito = `${feitas} ${feitas === 1 ? "empresa procurada" : "empresas procuradas"}. Veja abaixo as que pedem sua escolha.`;
+          setRetorno(aviso ? { tom: "atencao", texto: `${feito} ${aviso}` } : { tom: "ok", texto: feito });
           break;
         }
       }

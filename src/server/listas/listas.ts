@@ -217,10 +217,17 @@ export async function escolherEmpresa(db: Db, p: { empresaId: string; opcaoId: s
   return { ok: true };
 }
 
-type ContaDaProcura = { account_id: string };
+type ContaDaProcura = { account_id: string; perfil: string };
 
 const SEM_CONTA =
   "Nenhuma conta do LinkedIn conectada e funcionando nesta organização. Vincule uma conta em Configurações, na aba LinkedIn, para procurar as empresas.";
+
+const emLista = (nomes: string[]) => new Intl.ListFormat("pt-BR", { type: "conjunction" }).format(nomes);
+
+const contasRecusadas = (perfis: string[], erro: unknown) =>
+  perfis.length > 1
+    ? `A Unipile recusou as contas do LinkedIn de ${emLista(perfis)} (${(erro as Error).message}): elas parecem desconectadas. Reconecte em Configurações, na aba LinkedIn.`
+    : `A Unipile recusou a conta do LinkedIn de ${perfis[0]} (${(erro as Error).message}): ela parece desconectada. Reconecte em Configurações, na aba LinkedIn.`;
 
 const esperarDeVerdade = (ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms));
 
@@ -228,8 +235,10 @@ const esperarDeVerdade = (ms: number) => new Promise<void>((resolver) => setTime
  * Procura no LinkedIn as empresas da lista que ainda não foram procuradas
  * (§4.11), até 20 por chamada, com uma pausa aleatória de 1 a 3 s entre uma
  * consulta e outra. Usa a conta conectada e saudável da organização; a conta
- * da casa só se não houver outra. Não conta no teto de busca: é consulta de
- * lista, como região e setor. Erro de limite do LinkedIn para a leva.
+ * da casa só se não houver outra. Conta que a Unipile recusa (desconectada,
+ * checkpoint, restrita), mesmo com status OK, sai da leva e a próxima saudável
+ * assume; o `aviso` diz qual precisa reconectar. Não conta no teto de busca: é
+ * consulta de lista, como região e setor. Erro de limite do LinkedIn para a leva.
  *
  * Lê e grava como o operador, cada resultado na hora; as consultas ficam fora
  * da transação.
@@ -237,7 +246,7 @@ const esperarDeVerdade = (ms: number) => new Promise<void>((resolver) => setTime
 export async function procurarEmpresas(
   deps: { db: Db; unipile: ClienteUnipile; esperar?: (ms: number) => Promise<void>; sortear?: () => number; agora: () => Date },
   p: { listaId: string; operadorId: string },
-): Promise<Resultado<{ procuradas: number; faltam: number }>> {
+): Promise<Resultado<{ procuradas: number; faltam: number; aviso?: string }>> {
   const esperar = deps.esperar ?? esperarDeVerdade;
   const sortear = deps.sortear ?? Math.random;
   const entrada = await comOperador(deps.db, p.operadorId, async (tx) => {
@@ -246,18 +255,17 @@ export async function procurarEmpresas(
     ]);
     if (!lista) return null;
     const contas = await tx.query<ContaDaProcura & { unipile_status: string | null }>(
-      `select unipile_account_id as account_id, unipile_status from public.perfis
+      `select unipile_account_id as account_id, nome as perfil, unipile_status from public.perfis
         where organizacao_id = $1::uuid and unipile_account_id is not null
         order by casa, criado_em`,
       [lista.organizacao_id],
     );
-    const conta = contas.find((c) => !c.unipile_status || STATUS_SAUDAVEIS.has(c.unipile_status)) ?? null;
     const empresas = await tx.query<{ id: string; nome: string }>(
       `select id, nome from public.empresas_da_lista where lista_id = $1::uuid and situacao = 'a_procurar'
         order by criado_em, chave limit $2`,
       [p.listaId, PROCURAS_POR_LEVA],
     );
-    return { conta, empresas };
+    return { contas: contas.filter((c) => !c.unipile_status || STATUS_SAUDAVEIS.has(c.unipile_status)), empresas };
   });
   if (!entrada) return { ok: false, erro: "Lista não encontrada." };
   const faltam = async () => {
@@ -269,18 +277,41 @@ export async function procurarEmpresas(
     return linha!.n;
   };
   if (entrada.empresas.length === 0) return { ok: true, procuradas: 0, faltam: await faltam() };
-  if (!entrada.conta) return { ok: false, erro: SEM_CONTA };
+  if (entrada.contas.length === 0) return { ok: false, erro: SEM_CONTA };
+
+  const contas = [...entrada.contas];
+  const recusadas: string[] = [];
+  let ultimaRecusa: unknown = null;
+  /** Consulta pela primeira conta que a Unipile aceita; a recusada sai da leva. */
+  const consultar = async (nome: string): Promise<OpcaoDeEmpresa[]> => {
+    for (;;) {
+      const conta = contas[0]!;
+      try {
+        return await deps.unipile.listarParametrosDeBusca(conta.account_id, "COMPANY", nome.slice(0, 80));
+      } catch (erro) {
+        if (classificarErro(erro) !== "conta") throw erro;
+        recusadas.push(conta.perfil);
+        ultimaRecusa = erro;
+        contas.shift();
+        if (contas.length === 0) throw erro;
+      }
+    }
+  };
 
   let procuradas = 0;
   for (const [indice, empresa] of entrada.empresas.entries()) {
     if (indice > 0) await esperar(1000 + Math.floor(sortear() * 2000));
     let paginas: OpcaoDeEmpresa[];
     try {
-      paginas = await deps.unipile.listarParametrosDeBusca(entrada.conta.account_id, "COMPANY", empresa.nome.slice(0, 80));
+      paginas = await consultar(empresa.nome);
     } catch (erro) {
       const falta = await faltam();
-      if (classificarErro(erro) === "limite") {
+      const classe = classificarErro(erro);
+      if (classe === "limite") {
         return { ok: false, erro: `O LinkedIn limitou as consultas desta conta. ${procuradas} empresas foram procuradas; faltam ${falta}. Tente de novo mais tarde.` };
+      }
+      if (classe === "conta") {
+        return { ok: false, erro: `${contasRecusadas(recusadas, erro)} ${procuradas} empresas foram procuradas; faltam ${falta}.` };
       }
       return { ok: false, erro: `O LinkedIn não respondeu à consulta de "${empresa.nome}": ${(erro as Error).message}. Faltam ${falta}.` };
     }
@@ -298,5 +329,6 @@ export async function procurarEmpresas(
     });
     procuradas += 1;
   }
-  return { ok: true, procuradas, faltam: await faltam() };
+  const aviso = recusadas.length > 0 ? `${contasRecusadas(recusadas, ultimaRecusa)} A procura seguiu pela conta de ${contas[0]!.perfil}.` : null;
+  return { ok: true, procuradas, faltam: await faltam(), ...(aviso ? { aviso } : {}) };
 }
