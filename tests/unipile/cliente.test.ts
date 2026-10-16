@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { corpoDaBuscaClassica, criarClienteUnipile } from "@/server/unipile/cliente";
-import { classificarErro, ErroUnipile } from "@/server/unipile/erros";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { caminhoSemIdentificador, corpoDaBuscaClassica, criarClienteUnipile } from "@/server/unipile/cliente";
+import { classificarErro, ErroUnipile, mensagemDaRecusa, PECA_A_CHAVE } from "@/server/unipile/erros";
 
 type Requisicao = { url: URL; metodo: string; headers: Record<string, string>; corpo: unknown };
 
@@ -142,5 +142,102 @@ describe("busca clássica com empresas (SDR-59)", () => {
     expect(requisicoes[0]!.url.pathname).toBe("/api/v1/linkedin/search/parameters");
     expect(requisicoes[0]!.url.searchParams.get("type")).toBe("COMPANY");
     expect(requisicoes[0]!.url.searchParams.get("keywords")).toBe("Acme");
+  });
+});
+
+describe("recusa da Unipile no log (SDR-122)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("401 missing_credentials lança ErroUnipile e deixa uma linha com status, tipo, método e caminho", async () => {
+    const aviso = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { cliente } = clienteComFetch([
+      { status: 401, corpo: { status: 401, type: "errors/missing_credentials", title: "Missing credentials" } },
+    ]);
+    const erro = await cliente.listarWebhooks().catch((e: unknown) => e);
+
+    expect(erro).toBeInstanceOf(ErroUnipile);
+    expect(erro).toMatchObject({ status: 401, tipo: "missing_credentials" });
+    expect(aviso).toHaveBeenCalledTimes(1);
+    expect(aviso).toHaveBeenCalledWith("Unipile 401 missing_credentials GET /webhooks");
+  });
+
+  it("o log não leva a chave nem a query string", async () => {
+    const aviso = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { cliente } = clienteComFetch([{ status: 401, corpo: { type: "errors/invalid_credentials", title: "Invalid" } }]);
+    await cliente.listarConvitesEnviados("acc-secreta").catch(() => {});
+
+    const linha = aviso.mock.calls.flat().map(String).join(" ");
+    expect(linha).toBe("Unipile 401 invalid_credentials GET /users/invite/sent");
+    expect(linha).not.toContain("chave-secreta");
+    expect(linha).not.toContain("acc-secreta");
+  });
+
+  it("falha de rede deixa a linha com status 0 e tipo rede", async () => {
+    const aviso = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const cliente = criarClienteUnipile({
+      dsn: "api8.unipile.com:13851",
+      apiKey: "chave-secreta",
+      fetch: (async () => {
+        throw new TypeError("fetch failed");
+      }) as typeof fetch,
+    });
+    const erro = await cliente.obterConta("acc").catch((e: unknown) => e);
+
+    expect(erro).toMatchObject({ status: 0, tipo: "rede" });
+    expect(aviso).toHaveBeenCalledTimes(1);
+    expect(aviso).toHaveBeenCalledWith("Unipile 0 rede GET /accounts/:id");
+  });
+
+  it("o log não leva o slug público do perfil (LGPD)", async () => {
+    const aviso = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { cliente } = clienteComFetch([{ status: 404, corpo: { type: "errors/resource_not_found", title: "Not found" } }]);
+    const erro = await cliente.obterPerfil("acc", "joao-silva-123").catch((e: unknown) => e);
+
+    expect(erro).toBeInstanceOf(ErroUnipile);
+    expect(aviso).toHaveBeenCalledTimes(1);
+    const linha = aviso.mock.calls.flat().map(String).join(" ");
+    expect(linha).not.toContain("joao-silva-123");
+    expect(linha).toMatch(/^Unipile 404 \S+ GET \/users\/:id$/);
+  });
+
+  it("mascara os identificadores do caminho e mantém os segmentos fixos", () => {
+    expect(caminhoSemIdentificador("/users/joao-silva-123")).toBe("/users/:id");
+    expect(caminhoSemIdentificador("/users/ACo1/posts")).toBe("/users/:id/posts");
+    expect(caminhoSemIdentificador("/chats/chat-9/messages")).toBe("/chats/:id/messages");
+    expect(caminhoSemIdentificador("/chat_attendees/ACo1/chats")).toBe("/chat_attendees/:id/chats");
+    expect(caminhoSemIdentificador("/users/invite/sent/inv-1")).toBe("/users/invite/sent/:id");
+    expect(caminhoSemIdentificador("/users/me")).toBe("/users/me");
+    expect(caminhoSemIdentificador("/hosted/accounts/link")).toBe("/hosted/accounts/link");
+    expect(caminhoSemIdentificador("/linkedin/search/parameters")).toBe("/linkedin/search/parameters");
+  });
+
+  it("resposta 2xx não deixa log", async () => {
+    const aviso = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { cliente } = clienteComFetch([{ status: 200, corpo: { items: [] } }]);
+    expect(await cliente.listarWebhooks()).toEqual([]);
+    expect(aviso).not.toHaveBeenCalled();
+  });
+});
+
+describe("mensagem da recusa nos botões da Administração (SDR-122)", () => {
+  it("chave recusada aponta a chave da API, não a conta", () => {
+    expect(mensagemDaRecusa(new ErroUnipile({ status: 401, tipo: "missing_credentials", titulo: "Missing credentials" }))).toBe(
+      `A Unipile recusou a chave da API (Unipile 401 missing_credentials: Missing credentials). ${PECA_A_CHAVE}`,
+    );
+  });
+
+  it("Unipile fora pede para tentar de novo", () => {
+    expect(mensagemDaRecusa(new ErroUnipile({ status: 503, tipo: "http_503", titulo: "Service Unavailable" }))).toBe(
+      "A Unipile não respondeu (Unipile 503 http_503: Service Unavailable). Tente de novo em instantes.",
+    );
+    expect(mensagemDaRecusa(new ErroUnipile({ status: 0, tipo: "rede", titulo: "fetch failed" }))).toBe(
+      "A Unipile não respondeu (Unipile 0 rede: fetch failed). Tente de novo em instantes.",
+    );
+  });
+
+  it("erro que não é da Unipile sobe", () => {
+    expect(() => mensagemDaRecusa(new Error("Perfil não encontrado"))).toThrow("Perfil não encontrado");
   });
 });

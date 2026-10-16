@@ -2,7 +2,7 @@ import { motivoDePausaDoStatus, STATUS_SAUDAVEIS, statusMaisGrave } from "@/doma
 import type { Db } from "@/server/db/tipos";
 import { registrarEvento } from "@/server/eventos";
 import type { ClienteUnipile } from "@/server/unipile/cliente";
-import { ErroUnipile } from "@/server/unipile/erros";
+import { chaveRecusada, ErroUnipile } from "@/server/unipile/erros";
 import { pausarPerfil } from "./pausa";
 
 export { motivoDePausaDoStatus, STATUS_SAUDAVEIS, statusMaisGrave };
@@ -50,8 +50,18 @@ export async function aplicarStatusDaConta(
 }
 
 /**
+ * A falha não é de uma conta: a chave foi recusada ou a Unipile está fora
+ * (rede ou 5xx). Vale para todas as contas, então não adianta seguir o laço.
+ */
+function falhaDaUnipile(erro: ErroUnipile): boolean {
+  return chaveRecusada(erro) || erro.status === 0 || erro.status >= 500;
+}
+
+/**
  * Confere na Unipile o status de cada conta conectada. Cobre webhook perdido:
- * roda no tick do cron e pelo botão do painel.
+ * roda no tick do cron e pelo botão do painel. Erro de uma conta só pula a
+ * conta (404 vira DELETED); chave recusada ou Unipile fora sobe, para o painel
+ * avisar em vez de mostrar sucesso.
  */
 export async function sincronizarStatusDasContas(db: Db, unipile: ClienteUnipile, agora: Date): Promise<number> {
   const perfis = await db.query<{ unipile_account_id: string }>(
@@ -63,6 +73,7 @@ export async function sincronizarStatusDasContas(db: Db, unipile: ClienteUnipile
     try {
       status = statusMaisGrave((await unipile.obterConta(accountId)).status);
     } catch (erro) {
+      if (erro instanceof ErroUnipile && falhaDaUnipile(erro)) throw erro;
       if (erro instanceof ErroUnipile && erro.status === 404) status = "DELETED";
       else continue;
     }
