@@ -83,7 +83,7 @@ export default async function SdrPage({ searchParams }: PageProps<"/settings/sdr
     historico: await historicoDoSdr(tx, operador.organizacaoId),
     passagens: await passagensRecentes(tx, { agora: new Date() }),
     contas: await tx.query<{ id: string; nome: string; modo_resposta: "aprovacao" | "automatico" }>(
-      "select id, nome, modo_resposta from public.perfis where not casa and public.pode_ver_perfil(id) order by nome",
+      "select id, nome, modo_resposta from public.perfis where not casa and arquivado_em is null and public.pode_ver_perfil(id) order by nome",
     ),
   }));
 

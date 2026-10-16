@@ -17,7 +17,7 @@ export async function contaNovaDoLinkedin(
     await tx.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [`conta-nova:${p.organizacaoId}:${p.operadorId}`]);
     const [pendente] = await tx.query<{ id: string }>(
       `select id from public.perfis
-        where organizacao_id = $1::uuid and operador_id = $2::uuid and not casa and unipile_account_id is null
+        where organizacao_id = $1::uuid and operador_id = $2::uuid and not casa and unipile_account_id is null and arquivado_em is null
         order by criado_em limit 1`,
       [p.organizacaoId, p.operadorId],
     );

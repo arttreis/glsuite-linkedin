@@ -140,7 +140,7 @@ export async function precisaDeVoce(db: Db): Promise<ItemDoPrecisa[]> {
   const contas = await db.query<Conta>(
     `select id, nome, status, motivo_pausa, unipile_account_id, unipile_status, ativado_em
        from public.perfis
-      where not casa and public.pode_ver_perfil(id)
+      where not casa and arquivado_em is null and public.pode_ver_perfil(id)
       order by nome`,
   );
   for (const conta of contas) {
