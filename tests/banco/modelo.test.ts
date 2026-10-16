@@ -30,8 +30,8 @@ describe("migrations", () => {
         (select count(*) from public.angulos)::int as angulos,
         (select count(*) from public.configuracoes)::int as configuracoes,
         (select count(*) from pg_policies where schemaname = 'public')::int as politicas`);
-    // 18 do épico de 10/10 + disparos e whatsapp (SDR-72).
-    expect(contagem).toMatchObject({ perfis: 4, angulos: 6, configuracoes: 20 });
+    // 18 do épico de 10/10 + disparos e whatsapp (SDR-72) + marcas (SDR-105).
+    expect(contagem).toMatchObject({ perfis: 4, angulos: 6, configuracoes: 21 });
     expect(contagem!.politicas).toBeGreaterThan(20);
     await pg.close();
   });

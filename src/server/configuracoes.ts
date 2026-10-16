@@ -54,6 +54,7 @@ export const ESQUEMAS_DE_CONFIGURACAO = {
     reserva_segundos: z.number().int().positive(),
   }),
   whatsapp: z.object({ precos: z.record(z.string(), z.number().min(0)), moeda: z.string(), tabela_em: z.string() }),
+  marcas: z.object({ ativo: z.boolean(), criar: z.boolean(), max_por_organizacao: z.number().int().min(1).max(200) }),
 } as const;
 
 export type ChaveDeConfiguracao = keyof typeof ESQUEMAS_DE_CONFIGURACAO;
