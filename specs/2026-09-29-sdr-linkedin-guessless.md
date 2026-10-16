@@ -2117,3 +2117,39 @@ interpretações abaixo são minhas e estão para o Arthur confirmar.
   `/contacts/[id]`, `/contacts/import` e `/contacts/tags`. "Contatos" entra
   no menu como base, entre Campanhas e Configurações. O Plano mostra o total
   de contatos, e o Dashboard sem o SDR no LinkedIn também.
+
+### SDR-71 · Segmentos (16/10/2026)
+
+- Tabela `segmentos` (migration `20261016120000_segmentos`): nome, chave (sem
+  caixa e acento, única na organização) e `filtros` (jsonb, no formato de
+  `domain/filtro-de-contatos.ts`). RLS pela organização; grant para
+  `sdr_servidor`.
+- **O segmento é o filtro de Contatos com mais condições**, não uma lista: é
+  recalculado a cada uso. O filtro ganhou `linkedin` (etapas do Pipeline,
+  campanhas e nota mínima) e `desde` (a partir de que dia o contato entrou,
+  meia-noite no horário de Brasília). Quem congela a lista é o disparo, na
+  confirmação (§4.18).
+- **As condições do LinkedIn valem juntas para o mesmo lead** da pessoa (um
+  `exists` só em `leads`): "conversando na campanha X" não casa a pessoa que
+  está encerrada em X e conversando em Y. Etapa usa as colunas do Pipeline
+  (`COLUNAS_DO_PIPELINE`), traduzidas para os estados do lead.
+- **Quem pediu para não ser contatado nunca entra:** `filtroDoSegmento`
+  força a situação "podem" ao ler o filtro salvo, e o filtro guardado não leva
+  a situação.
+- Segmento sem nenhuma condição é recusado: ele seria a base inteira, e quem
+  quer a base inteira usa a lista de Contatos.
+- A prévia do editor chama o servidor 350 ms depois da última mudança e
+  mostra o total, a descrição em português (`descreverFiltro`, agora com as
+  campanhas e a data) e os 12 primeiros. A lista de segmentos conta cada um na
+  hora (uma consulta por segmento; a organização tem poucos).
+- **Tag usada por segmento não se apaga** (`segmentosComATag`, em
+  `server/contatos/tags.ts`, procura o id nas três listas de tags do filtro):
+  o segmento mudaria de gente sem ninguém ver. A tela diz quais segmentos
+  usam.
+- Contatos aceita `?segment=<id>`: com segmento, vale o filtro dele e o
+  formulário dá lugar ao nome do segmento; a tag em massa "todos do filtro"
+  manda o filtro do segmento. Segmento apagado ou de outra organização: a lista
+  volta aos filtros de sempre, com o aviso.
+- Telas: `/contacts/segments`, `/contacts/segments/new` e
+  `/contacts/segments/[id]`. O botão "Segmentos" fica no cabeçalho de
+  Contatos.
