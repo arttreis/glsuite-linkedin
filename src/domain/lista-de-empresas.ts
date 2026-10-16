@@ -21,6 +21,12 @@ export const MAX_OPCOES = 5;
 export const PROCURAS_POR_LEVA = 20;
 /** Páginas de empresa por parte da busca [verificar com conta real o limite do filtro `company`]. */
 export const EMPRESAS_POR_PARTE = 10;
+/**
+ * Sem cargo (todo mundo das empresas), uma página por parte: a busca do
+ * LinkedIn para em mil resultados [verificar com conta real], e dez empresas
+ * grandes juntas passam disso.
+ */
+export const EMPRESAS_POR_PARTE_SEM_CARGO = 1;
 
 export type SituacaoDaEmpresa = "a_procurar" | "achada" | "escolher" | "sem_pagina";
 export type OpcaoDeEmpresa = { id: string; nome: string };
@@ -123,11 +129,11 @@ export type ParteDaBusca = { empresas: string[] } | { empresa: string };
 
 /**
  * As partes da busca com lista: as páginas achadas ou escolhidas em grupos de
- * 10 e uma parte por empresa sem página. Quem ainda não foi procurado ou
- * espera escolha fica de fora. A ordem é estável, para a assinatura só mudar
- * quando a lista muda.
+ * 10 (ou uma a uma, na busca sem cargo) e uma parte por empresa sem página.
+ * Quem ainda não foi procurado ou espera escolha fica de fora. A ordem é
+ * estável, para a assinatura só mudar quando a lista muda.
  */
-export function partesDaBusca(empresas: readonly EmpresaDaBusca[]): ParteDaBusca[] {
+export function partesDaBusca(empresas: readonly EmpresaDaBusca[], porParte = EMPRESAS_POR_PARTE): ParteDaBusca[] {
   const ids = [
     ...new Set(empresas.filter((e) => e.situacao === "achada" && e.linkedinId).map((e) => e.linkedinId!)),
   ].sort();
@@ -135,8 +141,8 @@ export function partesDaBusca(empresas: readonly EmpresaDaBusca[]): ParteDaBusca
     .filter((e) => e.situacao === "sem_pagina")
     .sort((a, b) => (a.chave < b.chave ? -1 : a.chave > b.chave ? 1 : 0));
   const partes: ParteDaBusca[] = [];
-  for (let inicio = 0; inicio < ids.length; inicio += EMPRESAS_POR_PARTE) {
-    partes.push({ empresas: ids.slice(inicio, inicio + EMPRESAS_POR_PARTE) });
+  for (let inicio = 0; inicio < ids.length; inicio += porParte) {
+    partes.push({ empresas: ids.slice(inicio, inicio + porParte) });
   }
   for (const empresa of semPagina) partes.push({ empresa: empresa.nome });
   return partes;

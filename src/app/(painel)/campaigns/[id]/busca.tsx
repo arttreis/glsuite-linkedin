@@ -1,11 +1,11 @@
 "use client";
 
-import { Plus, Save, Search, X } from "lucide-react";
+import { Building2, Plus, Save, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Aviso } from "@/components/aviso";
 import { ListaDeFrases } from "@/components/campos-de-edicao";
-import type { BuscaDoPublico } from "@/domain/busca";
+import { faltaCargo, type BuscaDoPublico } from "@/domain/busca";
 import type { ListaParaBusca } from "@/server/publicos/busca";
 import { procurarParametrosDoPainel, rodarBuscaDoPainel, salvarBuscaDoPainel } from "../acoes-do-publico";
 import { ConversaDaBusca } from "./conversa-da-busca";
@@ -114,16 +114,24 @@ function Escolha({
   );
 }
 
-/** "Só nestas empresas": uma lista de empresas da organização, ou qualquer empresa (§4.11). */
+/**
+ * "Só nestas empresas": uma lista de empresas da organização, ou qualquer
+ * empresa (§4.11). Com lista e outros filtros, "Todo mundo destas empresas"
+ * tira cargos, palavras, regiões e setores de uma vez (SDR-121).
+ */
 function SoNestasEmpresas({
   listas,
   escolhida,
+  comOutrosFiltros,
   aoMudar,
+  aoTirarOsOutrosFiltros,
   desabilitado,
 }: {
   listas: ListaParaBusca[];
   escolhida: BuscaDoPublico["lista"];
+  comOutrosFiltros: boolean;
   aoMudar: (lista: BuscaDoPublico["lista"]) => void;
+  aoTirarOsOutrosFiltros: () => void;
   desabilitado: boolean;
 }) {
   const lista = escolhida ? listas.find((l) => l.id === escolhida.id) : null;
@@ -152,6 +160,18 @@ function SoNestasEmpresas({
       <Link href={lista ? `/campaigns/company-lists/${lista.id}` : "/campaigns/company-lists"} className="link w-fit text-xs">
         Criar ou editar listas de empresas
       </Link>
+      {lista && comOutrosFiltros && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" className="botao botao-pequeno" onClick={aoTirarOsOutrosFiltros} disabled={desabilitado}>
+            <Building2 aria-hidden />
+            Todo mundo destas empresas
+          </button>
+          <span className="text-xs text-tinta-fraca">Tira cargos, palavras-chave, regiões e setores: vem quem trabalha em qualquer empresa da lista.</span>
+        </div>
+      )}
+      {lista && !comOutrosFiltros && (
+        <p className="text-xs text-tinta-fraca">Sem outros filtros: a busca traz todo mundo que trabalha nas empresas da lista.</p>
+      )}
       {escolhida && !lista && (
         <Aviso tom="atencao">A lista &quot;{escolhida.nome}&quot; foi apagada. Escolha outra lista ou volte para qualquer empresa.</Aviso>
       )}
@@ -235,8 +255,9 @@ export function BuscaDaCampanha({
     });
 
   const travado = pendente || Boolean(suspensaAte);
-  // Com lista de empresas, a região é opcional: a lista já limita a busca.
-  const semLimite = busca.regioes.length === 0 && !busca.lista;
+  // Com lista de empresas, cargo e região são opcionais: a lista já limita a busca.
+  const semLimite = (busca.regioes.length === 0 && !busca.lista) || faltaCargo(busca);
+  const comOutrosFiltros = busca.cargos.length > 0 || busca.palavras.trim() !== "" || busca.regioes.length > 0 || busca.setores.length > 0;
 
   return (
     <div className="recuo mt-4 flex flex-col gap-4">
@@ -261,7 +282,8 @@ export function BuscaDaCampanha({
       <ConversaDaBusca campanhaId={campanhaId} busca={busca} aoMudar={mudar} desabilitado={travado} />
 
       <div className="flex flex-col gap-2">
-        <p className="rotulo">Cargos (qualquer um deles)</p>
+        <p className="rotulo">{busca.lista ? "Cargos (opcional com lista de empresas)" : "Cargos (qualquer um deles)"}</p>
+        {faltaCargo(busca) && <p className="text-xs text-tinta-suave">Sem lista de empresas, a busca precisa de pelo menos um cargo.</p>}
         <ListaDeFrases nome="Cargo" itens={busca.cargos} maximo={10} maxCaracteres={80} aoMudar={(cargos) => mudar({ cargos })} desabilitado={travado} />
       </div>
       <label className="rotulo">
@@ -275,7 +297,14 @@ export function BuscaDaCampanha({
           disabled={travado}
         />
       </label>
-      <SoNestasEmpresas listas={listas} escolhida={busca.lista} aoMudar={(lista) => mudar({ lista })} desabilitado={travado} />
+      <SoNestasEmpresas
+        listas={listas}
+        escolhida={busca.lista}
+        comOutrosFiltros={comOutrosFiltros}
+        aoMudar={(lista) => mudar({ lista })}
+        aoTirarOsOutrosFiltros={() => mudar({ cargos: [], palavras: "", regioes: [], setores: [] })}
+        desabilitado={travado}
+      />
       <Escolha
         rotulo={busca.lista ? "Regiões (opcional com lista de empresas)" : "Regiões"}
         tipo="LOCATION"

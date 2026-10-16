@@ -98,6 +98,16 @@ describe("busca a partir do público (SDR-27)", () => {
     expect(unipile.chamadasDe("buscarPessoas")).toEqual([]);
   });
 
+  it("sem lista, a busca sem cargo não salva nem roda (SDR-121)", async () => {
+    const sem = { ok: false, erro: expect.stringContaining("precisa de pelo menos um cargo") };
+    expect(await salvar({ ...(await situacao())!.busca, cargos: [], regioes: [BRASIL] })).toMatchObject(sem);
+    // Busca gravada sem cargo e sem lista (à mão, por exemplo) também não roda.
+    await salvar({ ...(await situacao())!.busca, regioes: [BRASIL] });
+    await banco.db.query("update public.campanhas set busca = jsonb_set(busca, '{cargos}', '[]') where id = $1::uuid", [campanhaId]);
+    expect(await rodar()).toMatchObject(sem);
+    expect(unipile.chamadasDe("buscarPessoas")).toEqual([]);
+  });
+
   it("roda a qualquer hora, também no fim de semana e de madrugada", async () => {
     await salvar({ ...(await situacao())!.busca, regioes: [BRASIL] });
     unipile.paginasDeBusca = [pagina(10), pagina(10), pagina(10)];
@@ -249,6 +259,25 @@ describe("busca só nas empresas de uma lista (SDR-59)", () => {
     // As pendentes ("Nova", "Dúvida") ficaram fora da busca.
     expect(await buscaSalva()).toMatchObject({ parte: 2, cursor: null, esgotada: true });
     expect(await rodar()).toMatchObject({ ok: false, erro: expect.stringContaining("já trouxe todo mundo") });
+  });
+
+  it("com lista e sem nenhum outro filtro, traz todo mundo das empresas, uma página por parte (SDR-121)", async () => {
+    const lista = await criarListaNoBanco(EMPRESAS);
+    expect(await salvar({ ...(await situacao())!.busca, cargos: [], palavras: "", regioes: [], setores: [], lista })).toEqual({ ok: true });
+    for (const id of IDS) porParte.set(id, [pagina(1)]);
+    porParte.set("nome:Acme Judicial", [pagina(1)]);
+
+    expect(await rodar()).toMatchObject({ ok: true, resultados: 13 });
+    expect(chamadas.map((c) => c.filtros.empresas?.join(",") ?? `nome:${c.filtros.empresa}`)).toEqual([...IDS, "nome:Acme Judicial"]);
+    expect(chamadas[0]!.filtros).toEqual({ cargo: "", palavras: "", regioes: [], setores: [], empresas: [IDS[0]] });
+    expect(chamadas[12]!.filtros).toEqual({ cargo: "", palavras: "", regioes: [], setores: [], empresa: "Acme Judicial" });
+    expect(await buscaSalva()).toMatchObject({ esgotada: true });
+
+    // Pôr um cargo de volta muda o filtro: recomeça do início, em grupos de 10.
+    await salvar({ ...(await situacao())!.busca, cargos: ["CEO"] });
+    chamadas = [];
+    await rodar();
+    expect(chamadas[0]!.filtros.empresas).toEqual(IDS.slice(0, 10));
   });
 
   it("página trazida pela metade, já na parte seguinte, recomeça nela", async () => {
