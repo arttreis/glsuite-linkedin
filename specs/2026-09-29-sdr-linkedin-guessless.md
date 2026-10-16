@@ -2248,3 +2248,58 @@ interpretações abaixo são minhas e estão para o Arthur confirmar.
   configuração do webhook no app; o app do cliente precisa estar em modo Live
   para receber webhook de produção; o 9º dígito no `wa_id`; o erro de quando
   passa do limite do portfólio.
+
+### SDR-73 · Disparos no Telegram (16/10/2026)
+
+- Pesquisa em `docs/pesquisa/telegram-bot-api.md` (Bot API 10.3): bot só fala
+  com quem falou primeiro; `secret_token` no header de cada aviso; ~30 msg/s
+  por bot e 1 msg/s por chat; 429 com `retry_after`; bloqueio chega como
+  `my_chat_member` com `kicked`; sem chave de idempotência; código do
+  `?start=` com até 64 caracteres `A-Za-z0-9_-`.
+- **Um bot por organização, um bot numa organização só** (índice único no
+  `botId`). O token fica cifrado; o `secret_token` do webhook é derivado do id
+  do canal (HMAC da `SEGREDOS_CHAVE`), como o verify token do WhatsApp.
+  Conectar confere o `getWebhookInfo`: bot com webhook de outro sistema só
+  conecta com a confirmação na tela (`tomarDoOutro`), porque o
+  `setWebhook` toma o lugar do outro.
+- O contato ganhou `telegram_canal_id`, `telegram_id` (texto: o id pode ter
+  52 bits), `telegram_usuario`, `telegram_entrou_em`, `telegram_saiu_em` e
+  `telegram_motivo` (migration `20261016140000_telegram`), único por
+  organização. O id vale só para o bot em que a pessoa entrou: a lista de
+  quem recebe considera só quem entrou pelo bot conectado agora. Trocar o
+  token do mesmo bot mantém a lista; trocar de bot, não.
+- **Links de entrada** (`links_de_entrada`): nome, tag e um código aleatório
+  de 12 caracteres (base64url), porque nome de tag com acento ou espaço não
+  cabe no link. O /start com o código põe a tag (`por = 'telegram'`).
+- **Webhook** (`/api/webhooks/telegram/[canal]`): segredo comparado em tempo
+  constante, update guardado com a chave `telegram:<canal>:<update_id>` e
+  processado numa transação; as respostas do bot (boas-vindas, confirmação de
+  saída) saem depois de gravar, para a entrada ou a saída valer mesmo se o
+  Telegram falhar. Só chat privado; mensagem de bot é ignorada.
+  - /start: contato novo (origem Telegram, com nome e @usuário) ou de volta
+    (limpa a saída), menos quem pediu para não ser contatado, que continua de
+    fora e não recebe as boas-vindas;
+  - /sair, /stop e as palavras de saída: sai do Telegram, e o bot confirma
+    dizendo como voltar;
+  - `kicked`: sai, com o motivo "Bloqueou o bot."; `member` (desbloqueio)
+    não volta sozinho;
+  - outra mensagem: guardada, e conta como resposta ao último envio em 7 dias.
+- **A fila é a mesma do WhatsApp**, com o `enviadorDoTelegram`: texto sem
+  `parse_mode` (nada de marcação quebrando o envio) e o botão com link como
+  `inline_keyboard`. O id da mensagem é `chat:message_id`. Erros pela tabela
+  da pesquisa (`classificarErroDoTelegram`): bloqueado sai do Telegram; conta
+  apagada, "nunca deu /start" e `chat not found` falham sem nova tentativa;
+  401 pausa o disparo e põe o canal com erro; 429 espera o `retry_after`; 5xx
+  tenta de novo. O código guardado é `telegram_<HTTP>`, e o "Tentar de novo as
+  falhas" volta só 429, 5xx e token.
+- O texto troca `{{first_name}}` e `{{company}}` (`textoDoTelegram`), recusa
+  variável desconhecida e confere os 4.096 caracteres depois da troca; quem não
+  tem o campo fica de fora, com o motivo.
+- O filtro de contatos e os segmentos ganharam o canal "podem receber pelo
+  Telegram". O contato mostra o Telegram; a lista de Contatos também.
+- Telas: Configurações > Telegram (conectar, link do bot, links com tag,
+  boas-vindas, desconectar) e o Telegram no novo disparo (texto, botão,
+  prévia com o contato de exemplo).
+- [verificar] com um bot de verdade: o par `member`/`kicked` do bloqueio, se
+  o "Stop Bot" chega igual ao bloqueio e se o webhook funciona no domínio de
+  produção (o FAQ desconfia de certificado wildcard).

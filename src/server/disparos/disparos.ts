@@ -8,6 +8,7 @@ import {
   motivoParaPular,
   preencherTemplate,
   proximaAbertura,
+  textoDoTelegram,
   type ConteudoDoDisparo,
   type ConteudoDoWhatsapp,
   type JanelaDosDisparos,
@@ -16,7 +17,6 @@ import {
   type TemplateDoWhatsapp,
   type TipoDeCanal,
 } from "@/domain/disparos";
-import { renderizarTemplate } from "@/domain/template";
 import { filtroDoSegmento, sqlDoFiltro, type FiltroDeContatos } from "@/domain/filtro-de-contatos";
 import { lerConfiguracao } from "@/server/configuracoes";
 import type { Db } from "@/server/db/tipos";
@@ -36,7 +36,8 @@ export const esquemaDoConteudo = z.discriminatedUnion("tipo", [
   z.object({
     tipo: z.literal("telegram"),
     texto: z.string().trim().min(1).max(4096),
-    botao: z.object({ texto: z.string().trim().min(1).max(64), url: z.url().max(2000) }).nullable(),
+    // O Telegram só abre link da web no botão; outro protocolo (javascript:, file:) não entra.
+    botao: z.object({ texto: z.string().trim().min(1).max(64), url: z.url({ protocol: /^https?$/ }).max(2000) }).nullable(),
   }),
 ]);
 export type EntradaDoConteudo = z.infer<typeof esquemaDoConteudo>;
@@ -61,6 +62,9 @@ export async function salvarRascunho(
   const nome = typeof p.nome === "string" ? p.nome.replace(/\s+/g, " ").trim().slice(0, MAX_NOME_DO_DISPARO) : "";
   if (!nome) return { ok: false, erro: "Dê um nome ao disparo (só você vê)." };
   const lido = esquemaDoConteudo.safeParse(p.conteudo);
+  if (!lido.success && lido.error.issues.some((issue) => issue.path.join(".") === "botao.url")) {
+    return { ok: false, erro: "O link do botão precisa ser um endereço da web, começando com https://." };
+  }
   if (!lido.success || lido.data.tipo !== p.canal) return { ok: false, erro: "Escolha a mensagem do disparo." };
   const canal = await obterCanal(db, { organizacaoId: p.organizacaoId, tipo: p.canal });
   if (!canal || canal.status === "desconectado") return { ok: false, erro: `Conecte o ${p.canal === "whatsapp" ? "WhatsApp" : "Telegram"} em Configurações antes.` };
@@ -169,8 +173,13 @@ export async function contatosDoSegmento(
   );
 }
 
-/** As colunas do Telegram no contato chegam no SDR-73; até lá, o contato não tem Telegram. */
-const CAMPOS_DO_TELEGRAM = `null::text as "telegramId", null::timestamptz as "telegramSaiuEm",`;
+/**
+ * O Telegram do contato vale só para o bot conectado agora: quem entrou por um
+ * bot antigo não é alcançável pelo novo (§4.20).
+ */
+const CAMPOS_DO_TELEGRAM = `case when c.telegram_canal_id = (select k.id from public.canais k where k.organizacao_id = c.organizacao_id and k.tipo = 'telegram')
+                 then c.telegram_id end as "telegramId",
+            c.telegram_saiu_em as "telegramSaiuEm",`;
 
 export type EnvioPlanejado = {
   contatoId: string;
@@ -185,8 +194,8 @@ export type EnvioPlanejado = {
 /** A mensagem de um contato: no WhatsApp, o template preenchido; no Telegram, o texto com as variáveis. */
 export function mensagemPara(conteudo: ConteudoDoDisparo, contato: Pick<ContatoDoSegmento, "nome" | "primeiroNome" | "empresa" | "cargo">) {
   if (conteudo.tipo === "whatsapp") return preencherTemplate(conteudo as ConteudoDoWhatsapp, contato);
-  const renderizado = renderizarTemplate(conteudo.texto, { first_name: contato.primeiroNome ?? contato.nome.split(" ")[0], company: contato.empresa });
-  return renderizado.ok ? { ok: true as const, componentes: null, texto: renderizado.texto } : { ok: false as const, motivo: renderizado.erro };
+  const pronto = textoDoTelegram(conteudo.texto, contato);
+  return pronto.ok ? { ok: true as const, componentes: null, texto: pronto.texto } : pronto;
 }
 
 /** Quem recebe e quem fica de fora, com o motivo e a mensagem de cada um (§4.18). */
@@ -379,6 +388,8 @@ export async function cancelarDisparo(db: Db, p: { organizacaoId: string; dispar
 export function falhaQueVolta(codigo: string | null): boolean {
   if (codigo === "interrompido") return true;
   if (!codigo) return false;
+  // Do Telegram fica só o código HTTP: 429, 5xx e token (401, 404) podem dar certo depois; 400 e 403 são do contato.
+  if (codigo.startsWith("telegram_")) return /^telegram_(429|5\d\d|401|404)$/.test(codigo);
   return ["ritmo", "esperar", "template", "conta"].includes(classificarErroDaMeta(codigo).classe);
 }
 

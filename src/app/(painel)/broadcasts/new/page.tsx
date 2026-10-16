@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Cabecalho } from "@/components/cabecalho";
-import { NOME_DO_CANAL, type ConteudoDoWhatsapp } from "@/domain/disparos";
+import { NOME_DO_CANAL, TIPOS_DE_CANAL, type ConteudoDoTelegram, type ConteudoDoWhatsapp } from "@/domain/disparos";
 import { obterCanal, type DadosDoWhatsapp } from "@/server/canais/canais";
 import { listarSegmentos } from "@/server/contatos/segmentos";
 import { obterDb } from "@/server/db";
@@ -19,6 +19,10 @@ export default async function NovoDisparoPage({ searchParams }: PageProps<"/broa
       const canal = await obterCanal(tx, { organizacaoId: operador.organizacaoId, tipo: "whatsapp" });
       if (canal && canal.status !== "desconectado") canais.push({ tipo: "whatsapp", nome: NOME_DO_CANAL.whatsapp, templates: (canal.dados as DadosDoWhatsapp).templates ?? [] });
     }
+    if (operador.modulos.includes("telegram")) {
+      const canal = await obterCanal(tx, { organizacaoId: operador.organizacaoId, tipo: "telegram" });
+      if (canal && canal.status !== "desconectado") canais.push({ tipo: "telegram", nome: NOME_DO_CANAL.telegram, templates: [] });
+    }
     const rascunho =
       typeof draft === "string" && /^[0-9a-f-]{36}$/i.test(draft) ? await obterDisparo(tx, { id: draft, organizacaoId: operador.organizacaoId }) : null;
     return { canais, segmentos: await listarSegmentos(tx, operador.organizacaoId), rascunho: rascunho?.status === "rascunho" ? rascunho : null };
@@ -33,13 +37,16 @@ export default async function NovoDisparoPage({ searchParams }: PageProps<"/broa
       />
       <div className="max-w-6xl">
         {dados.canais.length === 0 ? (
-          <p className="vazio">
-            Conecte o WhatsApp em{" "}
-            <Link href="/settings/whatsapp" className="link">
-              Configurações &gt; WhatsApp
-            </Link>{" "}
-            para disparar.
-          </p>
+          <div className="vazio">
+            <p>Para disparar, conecte antes o canal da empresa.</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {TIPOS_DE_CANAL.filter((tipo) => operador.modulos.includes(tipo)).map((tipo) => (
+                <Link key={tipo} href={`/settings/${tipo}`} className="botao botao-primario">
+                  Conectar o {NOME_DO_CANAL[tipo]}
+                </Link>
+              ))}
+            </div>
+          </div>
         ) : (
           <NovoDisparo
             canais={dados.canais}
@@ -53,6 +60,8 @@ export default async function NovoDisparoPage({ searchParams }: PageProps<"/broa
                     segmentoId: dados.rascunho.segmentoId,
                     templateId: dados.rascunho.conteudo.tipo === "whatsapp" ? (dados.rascunho.conteudo as ConteudoDoWhatsapp).template.id : null,
                     variaveis: dados.rascunho.conteudo.tipo === "whatsapp" ? (dados.rascunho.conteudo as ConteudoDoWhatsapp).variaveis : {},
+                    texto: dados.rascunho.conteudo.tipo === "telegram" ? (dados.rascunho.conteudo as ConteudoDoTelegram).texto : null,
+                    botao: dados.rascunho.conteudo.tipo === "telegram" ? (dados.rascunho.conteudo as ConteudoDoTelegram).botao : null,
                   }
                 : null
             }

@@ -218,6 +218,21 @@ segundo e um disparo por contato por canal a cada 24 h (configuração
 `disparos`). Envio que cai sem a resposta da Meta vira falha "pode ter
 chegado" e nunca é repetido sozinho.
 
+## Disparos no Telegram
+
+Com o módulo `telegram` (§4.20). Detalhes da API em
+[`docs/pesquisa/telegram-bot-api.md`](docs/pesquisa/telegram-bot-api.md).
+
+1. A mesma `SEGREDOS_CHAVE` e o mesmo cron dos disparos do WhatsApp.
+2. O admin cria o bot no @BotFather e cola o token em **Configurações >
+   Telegram**. O Kakou liga o webhook `/api/webhooks/telegram/<canal>` com um
+   `secret_token` derivado da `SEGREDOS_CHAVE`. O endereço precisa de HTTPS sem
+   redirect (domínio próprio; o `*.vercel.app` pode não servir, segundo o FAQ
+   do Telegram).
+3. A lista do Telegram é de quem abre `t.me/<bot>` e toca em Começar. Os links
+   com tag (`t.me/<bot>?start=<código>`) põem a tag em quem entra por eles.
+
+
 ## Deploy (Vercel)
 
 Importe o repositório na Vercel (framework Next.js, detectado sozinho) e

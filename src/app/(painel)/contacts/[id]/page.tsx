@@ -114,6 +114,18 @@ export default async function ContatoPage({ params, searchParams }: PageProps<"/
               <p className="text-xs text-tinta-fraca">WhatsApp</p>
               <WhatsappDoContato contato={contato} />
             </div>
+            {(contato.telegram || operador.modulos.includes("telegram")) && (
+              <div>
+                <p className="text-xs text-tinta-fraca">Telegram</p>
+                <p className="text-[13px]">
+                  {!contato.telegram
+                    ? <span className="text-tinta-fraca">Não entrou pelo bot.</span>
+                    : contato.telegram === "saiu"
+                      ? `${contato.telegramUsuario ? `@${contato.telegramUsuario} · ` : ""}saiu do Telegram${contato.telegramSaiuEm ? ` em ${data(contato.telegramSaiuEm)}` : ""}${contato.telegramMotivo ? ` (${contato.telegramMotivo})` : ""}.`
+                      : `${contato.telegramUsuario ? `@${contato.telegramUsuario} · ` : ""}entrou pelo bot e pode receber disparo.`}
+                </p>
+              </div>
+            )}
             <div>
               <p className="text-xs text-tinta-fraca">LinkedIn</p>
               {contato.lead ? (

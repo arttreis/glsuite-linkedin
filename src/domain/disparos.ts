@@ -283,6 +283,74 @@ export function classificarErroDaMeta(codigo: number | string | null | undefined
   return ERROS_DA_META[String(codigo ?? "")] ?? { classe: "ritmo", motivo: `Erro da Meta (${codigo ?? "sem código"}).` };
 }
 
+// --- Telegram ------------------------------------------------------------------------
+
+/**
+ * Como a fila trata cada erro da Bot API (docs/pesquisa/telegram-bot-api.md):
+ * bloqueado sai do Telegram; conta apagada e "nunca deu /start" falham sem
+ * nova tentativa; token inválido é da conta; 429 espera o `retry_after`.
+ */
+export function classificarErroDoTelegram(codigo: string, descricao: string): { classe: ClasseDoErro; motivo: string } {
+  const texto = descricao.toLowerCase();
+  if (codigo === "403" && texto.includes("blocked")) return { classe: "saiu", motivo: "A pessoa bloqueou o bot." };
+  if (codigo === "403" && texto.includes("deactivated")) return { classe: "contato", motivo: "A conta da pessoa no Telegram foi apagada." };
+  if (codigo === "403") return { classe: "contato", motivo: "A pessoa nunca deu /start neste bot." };
+  if (codigo === "400" && texto.includes("chat not found")) return { classe: "contato", motivo: "O bot não conhece esta conversa (a pessoa entrou por outro bot?)." };
+  if (codigo === "400" && (texto.includes("too long") || texto.includes("parse entities") || texto.includes("text is empty"))) {
+    return { classe: "template", motivo: "O Telegram recusou o texto da mensagem." };
+  }
+  if (codigo === "401" || codigo === "404") return { classe: "conta", motivo: "O token do bot não vale mais. Conecte o bot de novo com o token do @BotFather." };
+  if (codigo === "429") return { classe: "ritmo", motivo: "Limite de mensagens por segundo do Telegram." };
+  if (codigo.startsWith("5")) return { classe: "ritmo", motivo: "O Telegram está instável, tentando de novo." };
+  return { classe: "contato", motivo: `O Telegram recusou (${codigo}): ${descricao.slice(0, 120)}` };
+}
+
+export const MAX_TEXTO_DO_TELEGRAM = 4096;
+
+/**
+ * O texto do Telegram para um contato (§4.20): `{{first_name}}` e
+ * `{{company}}`, como os textos do LinkedIn, sem formatação. Contato sem o
+ * campo fica de fora, com o motivo; texto que passa de 4.096 caracteres
+ * depois de trocar as variáveis também.
+ */
+export function textoDoTelegram(texto: string, contato: DadosDoContato): { ok: true; texto: string } | { ok: false; motivo: string } {
+  const desconhecida = [...texto.matchAll(/\{\{\s*([^{}]*?)\s*\}\}/g)].map((achado) => achado[1]!).find((token) => token !== "first_name" && token !== "company");
+  if (desconhecida !== undefined) return { ok: false, motivo: `Variável que o Kakou não conhece: {{${desconhecida}}}. Use {{first_name}} ou {{company}}.` };
+  let faltando: string | null = null;
+  const pronto = texto
+    .replace(/\{\{\s*first_name\s*\}\}/g, () => {
+      const valor = contato.primeiroNome?.trim() || primeiroNome(contato.nome);
+      if (!valor) faltando ??= "primeiro nome";
+      return valor ?? "";
+    })
+    .replace(/\{\{\s*company\s*\}\}/g, () => {
+      const valor = contato.empresa?.trim();
+      if (!valor) faltando ??= "empresa";
+      return valor ?? "";
+    })
+    .trim();
+  if (faltando) return { ok: false, motivo: `Contato sem ${faltando} para a mensagem.` };
+  if (!pronto) return { ok: false, motivo: "A mensagem ficou vazia." };
+  if (pronto.length > MAX_TEXTO_DO_TELEGRAM) return { ok: false, motivo: `A mensagem passa de ${MAX_TEXTO_DO_TELEGRAM} caracteres para este contato.` };
+  return { ok: true, texto: pronto };
+}
+
+/** O código do link de entrada que veio no /start (`/start abc123`), null para /start puro, undefined se não é /start. */
+export function codigoDoStart(texto: string): string | null | undefined {
+  const achado = texto.trim().match(/^\/start(?:@\w+)?(?:\s+([A-Za-z0-9_-]{1,64}))?\s*$/);
+  if (!achado) return undefined;
+  return achado[1] ?? null;
+}
+
+/** /sair e /stop, como comando do bot (com ou sem o @ do bot). */
+export function ehComandoDeSair(texto: string): boolean {
+  return /^\/(sair|stop|parar)(@\w+)?\s*$/i.test(texto.trim());
+}
+
+export function boasVindasPadrao(organizacao: string): string {
+  return `Pronto, {{first_name}}! Você vai receber as novidades da ${organizacao} por aqui. Para sair, mande /sair.`;
+}
+
 // --- Status do envio ---------------------------------------------------------------
 
 const ORDEM: Partial<Record<StatusDoEnvio, number>> = { pendente: 0, enviando: 1, enviado: 2, entregue: 3, lido: 4 };

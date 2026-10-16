@@ -22,6 +22,8 @@ export type ContatoDaLista = {
   telefone: string | null;
   email: string | null;
   whatsapp: SituacaoNoWhatsapp | null;
+  /** No Telegram: pode receber, ou saiu (bloqueou o bot ou mandou /sair). */
+  telegram: "pode" | "saiu" | null;
   linkedin: boolean;
   naoContatar: boolean;
   criadoEm: Date;
@@ -38,6 +40,7 @@ const COLUNAS_DA_LISTA = `
        when c.whatsapp_saiu_em is not null then 'saiu'
        when c.whatsapp_autorizado_em is null then 'sem_autorizacao'
        else 'pode' end as whatsapp,
+  case when c.telegram_id is null then null when c.telegram_saiu_em is not null then 'saiu' else 'pode' end as telegram,
   coalesce((select json_agg(json_build_object('id', t.id, 'nome', t.nome, 'cor', t.cor) order by t.chave)
               from public.contato_tags ct join public.tags t on t.id = ct.tag_id
              where ct.contato_id = c.id), '[]'::json) as tags`;
@@ -83,6 +86,9 @@ export type ContatoCompleto = ContatoDaLista & {
   whatsappAutorizacao: { por?: string; porNome?: string; arquivo?: string | null } | null;
   whatsappSaiuEm: Date | null;
   whatsappMotivo: string | null;
+  telegramUsuario: string | null;
+  telegramSaiuEm: Date | null;
+  telegramMotivo: string | null;
   importacao: { arquivo: string | null; em: Date } | null;
   lead: { id: string; campanha: string; estado: EstadoDoLead; conta: string } | null;
 };
@@ -94,6 +100,7 @@ export async function obterContato(db: Db, id: string): Promise<ContatoCompleto 
             c.primeiro_nome as "primeiroNome", c.nao_contatar_em as "naoContatarEm", c.nao_contatar_motivo as "naoContatarMotivo",
             c.whatsapp_autorizado_em as "whatsappAutorizadoEm", c.whatsapp_autorizacao as "whatsappAutorizacao",
             c.whatsapp_saiu_em as "whatsappSaiuEm", c.whatsapp_motivo as "whatsappMotivo",
+            c.telegram_usuario as "telegramUsuario", c.telegram_saiu_em as "telegramSaiuEm", c.telegram_motivo as "telegramMotivo",
             (select json_build_object('arquivo', i.arquivo_nome, 'em', i.criado_em)
                from public.importacoes_de_contatos i where i.id = c.importacao_id) as importacao,
             (select json_build_object('id', l.id, 'campanha', ca.nome, 'estado', l.estado, 'conta', pf.nome)

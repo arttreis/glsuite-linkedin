@@ -8,11 +8,12 @@ import { COLUNAS_DO_PIPELINE } from "./pipeline";
  * filtro" seja exatamente o que a tela mostrou.
  */
 
-export const CANAIS_DO_FILTRO = ["whatsapp", "linkedin"] as const;
+export const CANAIS_DO_FILTRO = ["whatsapp", "telegram", "linkedin"] as const;
 export type CanalDoFiltro = (typeof CANAIS_DO_FILTRO)[number];
 
 export const ROTULO_DO_CANAL_DO_FILTRO: Record<CanalDoFiltro, string> = {
   whatsapp: "podem receber pelo WhatsApp",
+  telegram: "podem receber pelo Telegram",
   linkedin: "são leads do LinkedIn",
 };
 
@@ -93,6 +94,7 @@ export function sqlDoFiltro(filtro: FiltroDeContatos, primeiro: number): SqlDoFi
     condicoes.push(`not exists (select 1 from public.contato_tags ct where ct.contato_id = c.id and ct.tag_id = any(${p(filtro.tags.nenhuma)}::uuid[]))`);
   }
   if (filtro.canal === "whatsapp") condicoes.push(PODE_RECEBER_PELO_WHATSAPP);
+  if (filtro.canal === "telegram") condicoes.push(PODE_RECEBER_PELO_TELEGRAM);
   if (filtro.canal === "linkedin") condicoes.push("c.pessoa_id is not null");
   if (filtro.origens.length > 0) condicoes.push(`c.origem = any(${p(filtro.origens)}::text[])`);
   const { etapas, campanhas, notaMinima } = filtro.linkedin;
@@ -112,6 +114,9 @@ export function sqlDoFiltro(filtro: FiltroDeContatos, primeiro: number): SqlDoFi
 function estadosDasEtapas(etapas: readonly ColunaId[]): string[] {
   return COLUNAS_DO_PIPELINE.filter((coluna) => etapas.includes(coluna.id)).flatMap((coluna) => [...coluna.estados]);
 }
+
+/** Entrou pelo bot (deu /start) e não saiu do Telegram (§4.20). */
+export const PODE_RECEBER_PELO_TELEGRAM = "(c.telegram_id is not null and c.telegram_saiu_em is null)";
 
 /** Tem telefone, autorizou o WhatsApp e não saiu dele (§4.15 e §4.19). */
 export const PODE_RECEBER_PELO_WHATSAPP = "(c.telefone is not null and c.whatsapp_autorizado_em is not null and c.whatsapp_saiu_em is null)";
