@@ -550,6 +550,11 @@ E três que são do próprio motor:
   mensagens; mensagens enviadas por WhatsApp e por Telegram; contatos). Módulo
   fora do plano tem o botão "Quero contratar", que leva ao comercial da
   GuessLess (`COMERCIAL_URL`).
+- A **Plataforma** mostra também a conta da casa de cada organização (§4.4),
+  com o status da Unipile e desde quando, e o botão "Reconectar a conta da
+  casa" ("Vincular", se ela ainda não tem LinkedIn). O hosted auth volta para
+  a Plataforma. A conta da casa não aparece em Configurações: quando ela cai,
+  é a GuessLess quem reconecta.
 
 ### 4.15 · Contatos
 
@@ -2399,6 +2404,15 @@ do MVP.
 Caminho crítico: 105 → 106 → 107 → 113 → 115. As issues do Marco E que ainda
 não começaram ganham, no próprio corpo, a seção "Multi-marca (Marco F)" com o
 `marca_id` da tabela delas e esperam o SDR-105.
+
+### Contas do LinkedIn na Unipile
+
+O que travou em 16/10/2026 com as contas na Unipile e o que faltava para
+operá-las sem mexer no banco à mão. Os tickets são as sub-issues da #113.
+
+| Onda | Ticket | Issue | Depende de |
+|---|---|---|---|
+| 2 | SDR-123 Reconectar a conta da casa pela Plataforma (§4.14) | #116 | — |
 
 ## 10 · Decisões abertas
 

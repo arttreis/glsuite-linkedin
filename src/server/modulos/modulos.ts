@@ -183,11 +183,23 @@ export type OrganizacaoNaPlataforma = {
   operadores: number;
   contasDoLinkedin: number;
   modulos: SituacaoDoModulo[];
+  /** A conta da casa da organização (§4.4), ou null se ela não tem. */
+  contaDaCasa: ContaDaCasaNaPlataforma | null;
+};
+
+export type ContaDaCasaNaPlataforma = {
+  id: string;
+  nome: string;
+  /** Tem `unipile_account_id`: reconectar em vez de vincular. */
+  conectada: boolean;
+  unipileStatus: string | null;
+  /** Desde quando está saudável ou não saudável (`unipile_status_em`). */
+  unipileStatusEm: Date | null;
 };
 
 /** Todas as organizações, para a Plataforma (§4.14). Só pela conexão do sistema. */
 export async function organizacoesNaPlataforma(db: Db): Promise<OrganizacaoNaPlataforma[]> {
-  const organizacoes = await db.query<Omit<OrganizacaoNaPlataforma, "modulos">>(
+  const organizacoes = await db.query<Omit<OrganizacaoNaPlataforma, "modulos" | "contaDaCasa">>(
     `select g.id, g.nome, g.slug, g.criado_em as "criadoEm", g.primeiro_acesso_em as "primeiroAcessoEm",
             coalesce(array(select o.email from public.operadores o
                             where o.organizacao_id = g.id and o.ativo and o.papel = 'admin' order by o.email), '{}') as admins,
@@ -200,8 +212,31 @@ export async function organizacoesNaPlataforma(db: Db): Promise<OrganizacaoNaPla
   const modulos = await db.query<SituacaoDoModulo & { organizacaoId: string }>(
     `select organizacao_id as "organizacaoId", ${COLUNAS_DA_SITUACAO} from public.modulos_da_organizacao`,
   );
-  return organizacoes.map((organizacao) => ({
-    ...organizacao,
-    modulos: noCatalogo(modulos.filter((linha) => linha.organizacaoId === organizacao.id)),
-  }));
+  const contasDaCasa = await db.query<ContaDaCasaNaPlataforma & { organizacaoId: string }>(
+    `select organizacao_id as "organizacaoId", id, nome, unipile_account_id is not null as conectada,
+            unipile_status as "unipileStatus", unipile_status_em as "unipileStatusEm"
+       from public.perfis where casa
+      order by criado_em`,
+  );
+  return organizacoes.map((organizacao) => {
+    const casa = contasDaCasa.find((conta) => conta.organizacaoId === organizacao.id);
+    return {
+      ...organizacao,
+      modulos: noCatalogo(modulos.filter((linha) => linha.organizacaoId === organizacao.id)),
+      contaDaCasa: casa
+        ? { id: casa.id, nome: casa.nome, conectada: casa.conectada, unipileStatus: casa.unipileStatus, unipileStatusEm: casa.unipileStatusEm }
+        : null,
+    };
+  });
+}
+
+/**
+ * Confere que o perfil é uma conta da casa antes de a Plataforma pedir o link
+ * de reconexão (§4.14). As contas comuns se reconectam em Configurações, por
+ * quem as opera. Só pela conexão do sistema, depois de `PLATAFORMA_ADMINS`.
+ */
+export async function exigirContaDaCasa(db: Db, perfilId: string): Promise<string> {
+  const [perfil] = await db.query<{ id: string }>("select id from public.perfis where id = $1::uuid and casa", [perfilId]);
+  if (!perfil) throw new Error("Este perfil não é a conta da casa.");
+  return perfil.id;
 }

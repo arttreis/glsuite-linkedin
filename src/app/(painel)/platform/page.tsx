@@ -1,13 +1,47 @@
 import { Aviso } from "@/components/aviso";
 import { Cabecalho } from "@/components/cabecalho";
+import { STATUS_SAUDAVEIS } from "@/domain/conta";
 import { NOME_DO_MODULO } from "@/domain/modulos";
 import { obterDb } from "@/server/db";
-import { organizacoesNaPlataforma, type SituacaoDoModulo } from "@/server/modulos/modulos";
+import { organizacoesNaPlataforma, type ContaDaCasaNaPlataforma, type SituacaoDoModulo } from "@/server/modulos/modulos";
 import { exigirAdminDaPlataforma } from "@/server/plataforma";
-import { alterarModuloDaPlataforma } from "./acoes";
+import { alterarModuloDaPlataforma, reconectarContaDaCasa } from "./acoes";
 
 const FUSO = "America/Sao_Paulo";
 const data = (valor: Date) => new Date(valor).toLocaleDateString("pt-BR", { timeZone: FUSO, day: "2-digit", month: "2-digit", year: "numeric" });
+const dataEHora = (valor: Date) =>
+  `${data(valor)} ${new Date(valor).toLocaleTimeString("pt-BR", { timeZone: FUSO, hour: "2-digit", minute: "2-digit" })}`;
+
+const CONEXAO: Record<string, { tom: "ok" | "erro"; texto: string }> = {
+  ok: { tom: "ok", texto: "LinkedIn vinculado." },
+  falhou: { tom: "erro", texto: "A conexão não foi concluída na Unipile. Tente de novo." },
+};
+
+/** A conta da casa da organização (§4.4): status na Unipile, desde quando, e o botão que reconecta. */
+function ContaDaCasa({ conta }: { conta: ContaDaCasaNaPlataforma | null }) {
+  if (!conta) return <p className="text-[13px] text-tinta-suave">Sem conta da casa.</p>;
+  const saudavel = conta.conectada && (conta.unipileStatus === null || STATUS_SAUDAVEIS.has(conta.unipileStatus));
+  const desde = conta.unipileStatusEm ? ` desde ${dataEHora(conta.unipileStatusEm)}` : "";
+  const situacao = !conta.conectada
+    ? "LinkedIn não vinculado"
+    : saudavel
+      ? `${conta.unipileStatus ?? "OK"}${desde}`
+      : `A Unipile informa ${conta.unipileStatus}${desde}`;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-superficie-alta px-4 py-3">
+      <div className="flex min-w-0 flex-col gap-1">
+        <p className="text-sm font-medium">Conta da casa: {conta.nome}</p>
+        <span className={`etiqueta etiqueta-ponto ${saudavel ? "etiqueta-ok" : conta.conectada ? "etiqueta-erro" : ""}`}>{situacao}</span>
+      </div>
+      <form action={reconectarContaDaCasa}>
+        <input type="hidden" name="perfilId" value={conta.id} />
+        <button type="submit" className={`botao botao-pequeno ${saudavel ? "" : "botao-primario"}`}>
+          {conta.conectada ? "Reconectar a conta da casa" : "Vincular a conta da casa"}
+        </button>
+      </form>
+    </div>
+  );
+}
 
 /** Um módulo de uma organização: como está, a última mudança e o botão que troca. */
 function LinhaDoModulo({ organizacao, situacao }: { organizacao: { id: string; nome: string }; situacao: SituacaoDoModulo }) {
@@ -55,17 +89,19 @@ function LinhaDoModulo({ organizacao, situacao }: { organizacao: { id: string; n
 /** Plataforma (§4.14): as organizações do Kakou e os módulos de cada uma. Só para `PLATAFORMA_ADMINS`. */
 export default async function PlataformaPage({ searchParams }: PageProps<"/platform">) {
   await exigirAdminDaPlataforma();
-  const { msg } = await searchParams;
+  const { msg, conexao } = await searchParams;
   const organizacoes = await organizacoesNaPlataforma(obterDb());
+  const aviso = typeof conexao === "string" ? CONEXAO[conexao] : undefined;
 
   return (
     <>
       <Cabecalho
         titulo="Plataforma"
-        descricao="As organizações do Kakou e os módulos de cada uma. Ligar ou desligar vale na hora, para todos da organização, e fica na trilha com o motivo."
+        descricao="As organizações do Kakou, a conta da casa e os módulos de cada uma. Ligar ou desligar vale na hora, para todos da organização, e fica na trilha com o motivo."
       />
       <div className="flex max-w-5xl flex-col gap-5">
         {typeof msg === "string" && <Aviso>{msg}</Aviso>}
+        {aviso && <Aviso tom={aviso.tom}>{aviso.texto}</Aviso>}
         {organizacoes.length === 0 && <p className="vazio">Nenhuma organização ainda.</p>}
         {organizacoes.map((organizacao) => (
           <section key={organizacao.id} className="cartao flex flex-col gap-4 p-5" aria-labelledby={`org-${organizacao.id}`}>
@@ -83,6 +119,7 @@ export default async function PlataformaPage({ searchParams }: PageProps<"/platf
               {organizacao.operadores === 1 ? "1 pessoa na equipe" : `${organizacao.operadores} pessoas na equipe`} ·{" "}
               {organizacao.contasDoLinkedin === 1 ? "1 conta do LinkedIn" : `${organizacao.contasDoLinkedin} contas do LinkedIn`}
             </p>
+            <ContaDaCasa conta={organizacao.contaDaCasa} />
             <ul className="flex flex-col gap-2">
               {organizacao.modulos.map((situacao) => (
                 <LinhaDoModulo key={situacao.modulo} organizacao={organizacao} situacao={situacao} />
