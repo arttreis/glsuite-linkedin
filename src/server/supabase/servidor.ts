@@ -8,6 +8,7 @@ import { envPublico } from "@/lib/env";
 import { OPCOES_DO_COOKIE } from "@/lib/supabase/cookie";
 import { obterDb } from "@/server/db";
 import { buscarOperadorAtivo, type Operador } from "@/server/db/operador";
+import { COOKIE_DA_MARCA, MarcaTrocadaEmOutraJanela } from "@/server/marcas/marcas";
 import { ModuloNaoContratado } from "@/server/modulos/modulos";
 
 /** Cliente do Supabase ligado aos cookies da requisição. Um por requisição. */
@@ -73,12 +74,28 @@ export async function exigirOperador(): Promise<Operador> {
 }
 
 /**
+ * Ação do servidor (§4.30): a guarda de janela. A marca é do operador, não da
+ * aba; o cookie diz em qual marca esta janela estava. Se ele diverge da marca
+ * do banco, outro dispositivo trocou, e a ação recusa antes de gravar qualquer
+ * coisa. Sem cookie (janela aberta antes das marcas), passa: o seletor grava o
+ * cookie ao montar.
+ */
+export async function exigirOperadorNaAcao(): Promise<Operador> {
+  const operador = await exigirOperador();
+  const daJanela = (await cookies()).get(COOKIE_DA_MARCA)?.value;
+  if (daJanela && daJanela !== operador.marcaId) throw new MarcaTrocadaEmOutraJanela(operador.marcaNome);
+  return operador;
+}
+
+/**
  * Operador no app (§4.1 e §4.14). A organização que só tem o SDR no LinkedIn e
  * não terminou o primeiro acesso vai para `/onboarding`; com outro módulo, ela
- * entra, e só as telas do LinkedIn levam ao primeiro acesso.
+ * entra, e só as telas do LinkedIn levam ao primeiro acesso. Quem não tem
+ * acesso a nenhuma marca vê a tela de sem marca (§4.30).
  */
 export async function exigirOperadorNoApp(): Promise<Operador> {
   const operador = await exigirOperador();
+  if (operador.marcas.length === 0) redirect("/no-brand");
   if (soOPrimeiroAcesso(operador.modulos, operador.primeiroAcessoConcluido)) redirect("/onboarding");
   return operador;
 }
@@ -100,10 +117,11 @@ export async function exigirOperadorComModulo(exige: ExigenciaDeModulo): Promise
 
 /**
  * Ação do servidor de um módulo (§4.14): recusa quando a organização não tem
- * o módulo, mesmo que alguém chame a ação direto, sem a tela.
+ * o módulo, mesmo que alguém chame a ação direto, sem a tela, e quando a
+ * janela ficou para trás de uma troca de marca (`exigirOperadorNaAcao`).
  */
 export async function exigirOperadorComModuloNaAcao(modulo: Modulo): Promise<Operador> {
-  const operador = await exigirOperador();
+  const operador = await exigirOperadorNaAcao();
   if (!operador.modulos.includes(modulo)) throw new ModuloNaoContratado(modulo);
   return operador;
 }

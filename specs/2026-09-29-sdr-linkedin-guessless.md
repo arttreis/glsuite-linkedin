@@ -2437,3 +2437,73 @@ que elas decidiram:
   plano (D18 a data, D19 o ManyChat, D24 a Hotmart, D25 o preço, D26 o aviso
   no Telegram). Segui as sugestões e deixei cada uma aberta no épico: a regra
   de preço (§4.7) e o SDR-103 só existem por causa delas.
+
+## Marcas (Marco F, 16/10/2026)
+
+Regras na §4.30 do épico, decisões D30 a D44. A marca é a fronteira dos dados
+dentro da organização; o SDR-105 é a fundação e os tickets seguintes põem
+`marca_id` nas tabelas deles.
+
+### SDR-105 (#95) · Marcas
+
+- **Migration `20261020100000_marcas`**, aditiva e idempotente, com a guarda de
+  nome do Marco D para `marcas` e `acessos_das_marcas`. Nenhuma policy que já
+  existe muda; `organizacao_do_operador()`, `eh_admin()` e `pode_ver_perfil()`
+  ficam como estão.
+- **Backfill que não devolve acesso tirado.** A marca 1 se cria só para
+  organização sem marca; o acesso e a `marca_atual_id` só se preenchem em
+  organização com uma marca. Rodar a migration de novo depois do SDR-115 não
+  dá a todo mundo acesso a uma marca de que o admin o tirou.
+- **A marca 1 e o operador novo por trigger** (`organizacoes_marca_1` e
+  `operadores_marca_atual`), como o módulo padrão do SDR-69: qualquer caminho
+  que crie organização ou operador segue a regra, e
+  `garantirOperadorDoPrimeiroAcesso` não muda. A marca 1 nasce com
+  `analise_e_sdr_em` igual ao `criado_em` da organização (o "now()" do
+  contrato, no instante em que ela nasce). O operador novo só entra sozinho
+  quando a organização tem uma marca; com mais, quem dá o acesso é o admin
+  (SDR-117).
+- **`preencher_marca()` é `security definer`**, diferente de
+  `preencher_organizacao_unica()`: contar as marcas da organização como o
+  operador contaria só as que ele vê, e uma organização com duas marcas
+  pareceria ter uma. A marca atual só vale quando é da organização da linha.
+- **O grant de update de `marcas` é só de `nome` e `cor`.** Criar (SDR-115),
+  pausar e arquivar (SDR-118) vão pela conexão do sistema.
+- **`marcasDoOperador` roda pela conexão do sistema**, com a mesma conta de
+  `pode_ver_marca`, porque é a base de `buscarOperadorAtivo`, que também roda
+  fora do RLS e corrige a `marca_atual_id` (nula ou sem acesso) para a
+  primeira marca ativa que o operador vê, ou a primeira da lista se não houver
+  ativa. A lista traz ativas e pausadas; arquivada sai do seletor (§4.30). A
+  ordem é por nome, sem diferença de caixa nem de acento (`porNome`).
+- **Operador sem marca.** O contrato pede `marcaId: string`; sem nenhuma marca,
+  `marcaId` e `marcaNome` vêm vazios e a cor `cinza`, e `exigirOperadorNoApp`
+  manda para `/no-brand` antes de alguém usá-los. A tela fica fora do grupo
+  `(painel)`, sem a moldura, com o "Sair".
+- **Guarda de janela.** O `next-action` não é API documentada do Next 16
+  (nada em `node_modules/next/dist/docs`), então a guarda é um
+  `exigirOperadorNaAcao()` novo. Ele entra em `exigirOperadorComModuloNaAcao`,
+  que já é só de ação, e cobre todas as ações que passam por ele. Recusa com
+  `MarcaTrocadaEmOutraJanela` (o mesmo desenho de `ModuloNaoContratado`).
+  Sem cookie (janela aberta antes do deploy), passa, e o seletor grava o
+  cookie ao montar. As ações que chamam `exigirOperador()` direto (Contatos,
+  Segmentos e duas de Configurações) ficam para os tickets que levam as
+  tabelas delas para a marca (SDR-106 em diante), que trocam a chamada por
+  `exigirOperadorNaAcao()`.
+- **A troca não passa pela guarda**: é ela que resolve a janela que ficou
+  para trás. `trocarDeMarcaDoPainel` grava o cookie, e o seletor avisa as
+  outras abas pelo `BroadcastChannel("kakou-marca")` e recarrega a página. A
+  mensagem leva o id da aba, para a própria aba não recarregar duas vezes, e
+  a aba que já mostra a marca nova não recarrega.
+- **O cookie `kakou_marca` não é `httpOnly`**: o seletor lê no navegador para
+  conferir contra a marca da página. Ele guarda só o id da marca, e o banco é
+  quem decide o acesso. `sincronizarMarcaDaJanela` só regrava quando a marca
+  da página ainda é a do banco.
+- **O seletor substitui o `<Marca organizacao>`** na barra lateral e na barra
+  de cima do celular. No celular, a lista é uma folha de baixo, num portal no
+  `body`, porque o `backdrop-blur` da barra prenderia o `fixed` dentro dela.
+  O Esc da lista não fecha o menu do celular que está por baixo.
+- **O selo** usa a paleta das tags; o mapa de cores fica no componente, com o
+  mesmo valor do `globals.css`, para não mexer no CSS global num ticket de
+  fundação.
+- **Evento `marca_trocada`** em `eventos`, com `entidade = 'operador'`, o id do
+  operador e `{ de, para }` (só ids). Trocar para a marca em que já está não
+  grava evento.
