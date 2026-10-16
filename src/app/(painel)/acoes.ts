@@ -1,13 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { travasDaAtivacao } from "@/domain/ativacao";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
+import { COOKIE_DA_MARCA, trocarDeMarca } from "@/server/marcas/marcas";
 import { despausarPerfil, ErroDeAtivacao, pausarPerfil } from "@/server/perfis/pausa";
-import { exigirOperadorComModuloNaAcao } from "@/server/supabase/servidor";
+import { exigirOperador, exigirOperadorComModuloNaAcao } from "@/server/supabase/servidor";
 
 /** Qualquer operador pausa qualquer perfil, sem precisar de reunião (§4.4). */
 export async function pausarPerfilDoPainel(formData: FormData) {
@@ -50,4 +52,41 @@ export async function despausarPerfilDoPainel(formData: FormData) {
     throw erro;
   }
   revalidatePath("/", "layout");
+}
+
+/** O cookie da janela (§4.30): legível no navegador, para o seletor conferir a marca ao montar. */
+async function gravarMarcaDaJanela(marcaId: string) {
+  (await cookies()).set(COOKIE_DA_MARCA, marcaId, {
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 24 * 400,
+  });
+}
+
+/**
+ * Troca de marca pelo seletor (§4.30). Não passa pela guarda de janela: é ela
+ * que resolve a janela que ficou para trás. Quem chama recarrega a página.
+ */
+export async function trocarDeMarcaDoPainel(marcaId: string): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const operador = await exigirOperador();
+  const id = z.uuid().safeParse(marcaId);
+  if (!id.success) return { ok: false, erro: "Você não tem acesso a essa marca." };
+  const resultado = await trocarDeMarca(obterDb(), { operadorId: operador.id, marcaId: id.data, agora: new Date() });
+  if (!resultado.ok) return resultado;
+  await gravarMarcaDaJanela(resultado.marca.id);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/**
+ * O seletor montou numa janela cujo cookie não é a marca da página (outra aba
+ * trocou, ou a janela é de antes das marcas): regrava o cookie com a marca que
+ * a página mostra, se ela ainda é a do banco.
+ */
+export async function sincronizarMarcaDaJanela(marcaId: string): Promise<{ ok: boolean }> {
+  const operador = await exigirOperador();
+  if (!operador.marcaId || operador.marcaId !== marcaId) return { ok: false };
+  await gravarMarcaDaJanela(operador.marcaId);
+  return { ok: true };
 }

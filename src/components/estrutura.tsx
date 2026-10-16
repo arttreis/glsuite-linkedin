@@ -3,14 +3,20 @@
 import { LogOut, Menu, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import type { Modulo } from "@/domain/modulos";
+import type { Marca } from "@/server/marcas/marcas";
 import { Avatar } from "./avatar";
-import { Marca } from "./marca";
 import { Navegacao } from "./navegacao";
+import { GuardaDaJanela, SeletorDeMarca } from "./seletor-de-marca";
 
 export type OperadorDaSessao = {
   nome: string;
   email: string;
   organizacao: string;
+  /** A marca atual e as que o operador pode ver (§4.30). */
+  marca: Marca;
+  marcas: Marca[];
+  /** `marcas.ativo`: desligada, o seletor é só o selo. */
+  trocaDeMarca: boolean;
   /** Os módulos da organização: o menu mostra só o que eles liberam (§4.14). */
   modulos: Modulo[];
   linkedinNoPrimeiroAcesso: boolean;
@@ -22,7 +28,7 @@ function PainelLateral({ operador, aoFechar }: { operador: OperadorDaSessao; aoF
   return (
     <div className="cartao flex h-full flex-col p-3">
       <div className="flex items-center justify-between px-2 pb-5 pt-1">
-        <Marca organizacao={operador.organizacao} />
+        <SeletorDeMarca marca={operador.marca} marcas={operador.marcas} trocaLigada={operador.trocaDeMarca} />
         {aoFechar && (
           <button type="button" className="botao botao-pequeno px-2" aria-label="Fechar menu" onClick={aoFechar} autoFocus>
             <X aria-hidden />
@@ -74,6 +80,7 @@ export function Estrutura({ operador, children }: { operador: OperadorDaSessao; 
 
   return (
     <div className="flex min-h-dvh">
+      <GuardaDaJanela marcaId={operador.marca.id} />
       <aside className="sticky top-0 hidden h-dvh w-[17.5rem] shrink-0 p-3 pr-0 lg:block">
         <PainelLateral operador={operador} />
       </aside>
@@ -95,7 +102,7 @@ export function Estrutura({ operador, children }: { operador: OperadorDaSessao; 
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="sticky top-0 z-30 flex items-center justify-between border-b border-linha bg-fundo/85 px-5 py-3 backdrop-blur lg:hidden">
-          <Marca organizacao={operador.organizacao} />
+          <SeletorDeMarca marca={operador.marca} marcas={operador.marcas} trocaLigada={operador.trocaDeMarca} folha />
           <button
             type="button"
             className="botao botao-pequeno px-2"
