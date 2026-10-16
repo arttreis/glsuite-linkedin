@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
 import { instanteLocal } from "@/domain/calendario";
-import { TIPOS_DE_CANAL } from "@/domain/disparos";
+import { CANAIS_DE_DISPARO, type CanalDeDisparo } from "@/domain/canais";
 import { lerConfiguracao } from "@/server/configuracoes";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
@@ -36,7 +36,7 @@ function voltar(disparoId: string, mensagem: string): never {
 /** O disparo da organização, e o operador com o módulo do canal dele (§4.14). */
 async function disparoDoOperador(valor: FormDataEntryValue | null) {
   const disparoId = z.uuid().parse(valor);
-  const [linha] = await obterDb().query<{ canal_tipo: (typeof TIPOS_DE_CANAL)[number] }>("select canal_tipo from public.disparos where id = $1::uuid", [disparoId]);
+  const [linha] = await obterDb().query<{ canal_tipo: CanalDeDisparo }>("select canal_tipo from public.disparos where id = $1::uuid", [disparoId]);
   if (!linha) redirect(ROTA);
   const operador = await exigirOperadorComModuloNaAcao(linha.canal_tipo);
   const disparo = await comOperador(obterDb(), operador.id, (tx) => obterDisparo(tx, { id: disparoId, organizacaoId: operador.organizacaoId }));
@@ -51,7 +51,7 @@ function rodarAFilaDepois() {
 
 /** Cria ou salva o rascunho e abre a conferência. */
 export async function salvarRascunhoDoPainel(entrada: { id: string | null; canal: string; nome: string; segmentoId: string; conteudo: unknown }): Promise<Resultado<{ id: string }>> {
-  const canal = z.enum(TIPOS_DE_CANAL).parse(entrada.canal);
+  const canal = z.enum(CANAIS_DE_DISPARO).parse(entrada.canal);
   const operador = await exigirOperadorComModuloNaAcao(canal);
   const resultado = await comOperador(obterDb(), operador.id, (tx) =>
     salvarRascunho(tx, {

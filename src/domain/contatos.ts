@@ -6,7 +6,18 @@ import { primeiroNome, semAcentos } from "./texto";
  * importação lê a planilha antes de enviar) e no servidor.
  */
 
-export const ORIGENS_DO_CONTATO = ["linkedin", "importacao", "telegram", "whatsapp"] as const;
+export const ORIGENS_DO_CONTATO = [
+  "linkedin",
+  "importacao",
+  "telegram",
+  "whatsapp",
+  "instagram",
+  "facebook",
+  "grupo_telegram",
+  "grupo_whatsapp",
+  "pagina_de_espera",
+  "checkout",
+] as const;
 export type OrigemDoContato = (typeof ORIGENS_DO_CONTATO)[number];
 
 export const ROTULO_DA_ORIGEM: Record<OrigemDoContato, string> = {
@@ -14,6 +25,12 @@ export const ROTULO_DA_ORIGEM: Record<OrigemDoContato, string> = {
   importacao: "Importação",
   telegram: "Telegram",
   whatsapp: "WhatsApp",
+  instagram: "Instagram",
+  facebook: "Facebook",
+  grupo_telegram: "Grupo do Telegram",
+  grupo_whatsapp: "Grupo do WhatsApp",
+  pagina_de_espera: "Página de espera",
+  checkout: "Checkout",
 };
 
 /** Linhas por importação (§4.15). */

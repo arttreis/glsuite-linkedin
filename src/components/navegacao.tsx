@@ -1,9 +1,9 @@
 "use client";
 
-import { Building2, Kanban, LayoutDashboard, Megaphone, MessagesSquare, Rocket, Send, Settings, Users, type LucideIcon } from "lucide-react";
+import { Building2, CalendarClock, Kanban, LayoutDashboard, Megaphone, MessagesSquare, Rocket, Send, Settings, Users, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { liberado, type ExigenciaDeModulo, type Modulo } from "@/domain/modulos";
+import { liberado, MODULOS_DOS_LANCAMENTOS, type ExigenciaDeModulo, type Modulo } from "@/domain/modulos";
 
 /**
  * As telas do app (§2.2), nesta ordem. `modulo`: só aparece com ele (§4.14).
@@ -15,6 +15,7 @@ type Item = { href: string; rotulo: string; icone: LucideIcon; modulo?: Exigenci
 const ITENS: Item[] = [
   { href: "/", rotulo: "Dashboard", icone: LayoutDashboard },
   { href: "/chats", rotulo: "Chats", icone: MessagesSquare, modulo: "linkedin" },
+  { href: "/launches", rotulo: "Lançamentos", icone: CalendarClock, modulo: MODULOS_DOS_LANCAMENTOS },
   { href: "/pipeline", rotulo: "Pipeline", icone: Kanban, modulo: "linkedin" },
   { href: "/campaigns", rotulo: "Campanhas", icone: Megaphone, modulo: "linkedin" },
   { href: "/contacts", rotulo: "Contatos", icone: Users },

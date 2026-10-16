@@ -1,13 +1,16 @@
-import { ArrowRight, Bot, Rocket } from "lucide-react";
+import { ArrowRight, Bot, CalendarClock, Rocket } from "lucide-react";
 import Link from "next/link";
 import { Aviso } from "@/components/aviso";
 import { lerFiltro } from "@/domain/filtro-de-contatos";
-import { CATALOGO_DE_MODULOS, linkedinNoPrimeiroAcesso, type Modulo } from "@/domain/modulos";
+import { faseDoLancamento, ROTULO_DA_FASE } from "@/domain/lancamentos";
+import { CATALOGO_DE_MODULOS, liberado, linkedinNoPrimeiroAcesso, MODULOS_DOS_LANCAMENTOS, type Modulo } from "@/domain/modulos";
 import { contarContatos } from "@/server/contatos/contatos";
 import { listarDisparos, type DisparoNaLista } from "@/server/disparos/disparos";
 import { BarraDoDisparo, EtiquetaDoDisparo, resumoDoDisparo } from "./broadcasts/situacao";
+import { textoDoProximo } from "./launches/situacao";
 import { obterDb } from "@/server/db";
 import { comOperador } from "@/server/db/operador";
+import { listarLancamentos, type LancamentoNaLista } from "@/server/lancamentos/lancamentos";
 import { lerPeriodo, numerosDoPeriodo } from "@/server/painel/numeros";
 import { precisaDeVoce, type ItemDoPrecisa } from "@/server/painel/precisa";
 import { saudeDosPerfis, type SaudeDoPerfil } from "@/server/painel/saude";
@@ -33,8 +36,12 @@ function fraseDoDia(precisa: ItemDoPrecisa[]) {
   return precisa.length === 1 ? "Uma coisa espera por você." : `${precisa.length} coisas esperando por você.`;
 }
 
-/** O que espera a pessoa; cada item leva ao lugar de resolver. A primeira é a ação principal. */
-function PrecisaDeVoce({ itens }: { itens: ItemDoPrecisa[] }) {
+/**
+ * O que espera a pessoa; cada item leva ao lugar de resolver. A primeira é a
+ * ação principal. Existe com qualquer módulo (§4.9): sem o LinkedIn, os itens
+ * vêm dos tickets dos lançamentos e dos canais.
+ */
+function PrecisaDeVoce({ itens, comLinkedin }: { itens: ItemDoPrecisa[]; comLinkedin: boolean }) {
   return (
     <section className="cartao p-6" aria-labelledby="titulo-precisa">
       <h2 id="titulo-precisa" className="text-[15px] font-semibold">
@@ -42,7 +49,9 @@ function PrecisaDeVoce({ itens }: { itens: ItemDoPrecisa[] }) {
       </h2>
       {itens.length === 0 ? (
         <p className="mt-3 text-sm text-tinta-suave">
-          Nenhuma conversa esperando, nenhuma conta com problema. O SDR segue dentro do teto de cada conta.
+          {comLinkedin
+            ? "Nenhuma conversa esperando, nenhuma conta com problema. O SDR segue dentro do teto de cada conta."
+            : "Nada esperando por você agora."}
         </p>
       ) : (
         <ul className="mt-4 flex flex-col gap-2">
@@ -186,6 +195,41 @@ function DisparosRecentes({ disparos }: { disparos: DisparoNaLista[] }) {
   );
 }
 
+/** Cada lançamento no ar ganha um cartão (§4.9): a fase e a próxima data, com o caminho para o Hoje dele. */
+function LancamentosNoAr({ lancamentos, agora }: { lancamentos: LancamentoNaLista[]; agora: Date }) {
+  return (
+    <section aria-labelledby="titulo-lancamentos">
+      <h2 id="titulo-lancamentos" className="sr-only">
+        Lançamentos no ar
+      </h2>
+      <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {lancamentos.map((lancamento) => {
+          const proximo = textoDoProximo(lancamento.datas, agora);
+          return (
+            <li key={lancamento.id} className="cartao flex flex-col gap-3 p-6">
+              <div className="flex items-start justify-between gap-3">
+                <p className="flex min-w-0 items-center gap-2 text-[15px] font-semibold">
+                  <CalendarClock className="size-4 shrink-0 text-destaque" aria-hidden />
+                  <span className="truncate">{lancamento.nome}</span>
+                </p>
+                <span className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                  <span className="etiqueta etiqueta-ponto etiqueta-ok">{ROTULO_DA_FASE[faseDoLancamento(lancamento.datas, agora)]}</span>
+                  {lancamento.pausadoEm && <span className="etiqueta etiqueta-ponto etiqueta-atencao">Pausado</span>}
+                </span>
+              </div>
+              <p className="text-[13px] tabular-nums text-tinta-suave">{proximo ?? "Todas as datas já passaram."}</p>
+              <Link href={`/launches/${lancamento.id}`} className="botao botao-pequeno mt-auto w-fit">
+                Abrir
+                <ArrowRight aria-hidden />
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 /** Sem o SDR no LinkedIn, o Dashboard mostra o que o plano da organização tem. */
 function OQueOPlanoTem({ modulos, contatos }: { modulos: Modulo[]; contatos: number }) {
   const contratados = CATALOGO_DE_MODULOS.filter((modulo) => modulos.includes(modulo.id));
@@ -240,13 +284,18 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
   const data = agora.toLocaleDateString("pt-BR", { timeZone: FUSO, weekday: "long", day: "numeric", month: "long" });
   const comDisparos = operador.modulos.includes("whatsapp") || operador.modulos.includes("telegram");
   const disparos = comDisparos ? await comOperador(obterDb(), operador.id, (tx) => listarDisparos(tx, operador.organizacaoId, 3)) : [];
+  const lancamentosNoAr = liberado(operador.modulos, MODULOS_DOS_LANCAMENTOS)
+    ? (await comOperador(obterDb(), operador.id, (tx) => listarLancamentos(tx, operador.organizacaoId))).filter((l) => l.status === "no_ar")
+    : [];
+  // Quem acrescentar itens ao Precisa de você (lançamentos, canais) soma aqui.
+  const precisa = linkedin?.precisa ?? [];
 
   return (
     <>
       <header className="cabecalho pt-10 pb-8">
         <p className="text-sm text-tinta-suave first-letter:uppercase">{data}</p>
         <h1 className="titulo-vitrine mt-3 text-[clamp(1.75rem,2.6vw,2.5rem)] text-balance">
-          {saudacao(agora)}, {operador.nome.split(/\s+/)[0]}. {linkedin ? fraseDoDia(linkedin.precisa) : "Tudo o que o seu plano tem está no menu."}
+          {saudacao(agora)}, {operador.nome.split(/\s+/)[0]}. {fraseDoDia(precisa)}
         </h1>
       </header>
       <div className="flex max-w-6xl flex-col gap-6">
@@ -256,18 +305,25 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
           <>
             <ContasDoLinkedin contas={linkedin.contas} />
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-              <PrecisaDeVoce itens={linkedin.precisa} />
+              <PrecisaDeVoce itens={precisa} comLinkedin />
               <ResumoDoSdrNoPainel sdr={linkedin.sdr} contas={linkedin.contas} />
             </div>
+            {lancamentosNoAr.length > 0 && <LancamentosNoAr lancamentos={lancamentosNoAr} agora={agora} />}
             <Numeros numeros={linkedin.numeros} periodo={periodo} />
           </>
         ) : (
-          <OQueOPlanoTem
-            modulos={operador.modulos}
-            contatos={await comOperador(obterDb(), operador.id, (tx) =>
-              contarContatos(tx, { organizacaoId: operador.organizacaoId, filtro: lerFiltro({ situacao: "todos" }) }),
-            )}
-          />
+          <>
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+              <PrecisaDeVoce itens={precisa} comLinkedin={false} />
+              <OQueOPlanoTem
+                modulos={operador.modulos}
+                contatos={await comOperador(obterDb(), operador.id, (tx) =>
+                  contarContatos(tx, { organizacaoId: operador.organizacaoId, filtro: lerFiltro({ situacao: "todos" }) }),
+                )}
+              />
+            </div>
+            {lancamentosNoAr.length > 0 && <LancamentosNoAr lancamentos={lancamentosNoAr} agora={agora} />}
+          </>
         )}
         {comDisparos && <DisparosRecentes disparos={disparos} />}
       </div>

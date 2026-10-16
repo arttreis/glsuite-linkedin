@@ -20,7 +20,7 @@ import { enviadorDoTelegram, enviadorDoWhatsapp, type EnviadorDoCanal } from "@/
 import { criarClienteTelegram, type ClienteTelegram } from "@/server/telegram/cliente";
 import { criarClienteUnipile, type ClienteUnipile } from "@/server/unipile/cliente";
 import { criarClienteWhatsapp, type ClienteWhatsapp } from "@/server/whatsapp/cliente";
-import type { TipoDeCanal } from "@/domain/disparos";
+import type { CanalDeDisparo } from "@/domain/canais";
 
 const envUnipile = lerEnv(
   z.object({
@@ -216,7 +216,7 @@ export function obterClienteTelegram(): ClienteTelegram {
 }
 
 /** Quem manda por cada canal, para a fila dos disparos (§4.18). */
-export function obterEnviadores(): Partial<Record<TipoDeCanal, EnviadorDoCanal>> {
+export function obterEnviadores(): Partial<Record<CanalDeDisparo, EnviadorDoCanal>> {
   return { whatsapp: enviadorDoWhatsapp(obterClienteWhatsapp()), telegram: enviadorDoTelegram(obterClienteTelegram()) };
 }
 

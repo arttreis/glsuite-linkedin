@@ -100,10 +100,11 @@ export async function exigirOperadorComModulo(exige: ExigenciaDeModulo): Promise
 
 /**
  * Ação do servidor de um módulo (§4.14): recusa quando a organização não tem
- * o módulo, mesmo que alguém chame a ação direto, sem a tela.
+ * o módulo (ou nenhum da lista), mesmo que alguém chame a ação direto, sem a
+ * tela.
  */
-export async function exigirOperadorComModuloNaAcao(modulo: Modulo): Promise<Operador> {
+export async function exigirOperadorComModuloNaAcao(exige: ExigenciaDeModulo): Promise<Operador> {
   const operador = await exigirOperador();
-  if (!operador.modulos.includes(modulo)) throw new ModuloNaoContratado(modulo);
+  if (!liberado(operador.modulos, exige)) throw new ModuloNaoContratado(typeof exige === "string" ? exige : exige[0]!);
   return operador;
 }

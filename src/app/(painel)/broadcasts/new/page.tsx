@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Cabecalho } from "@/components/cabecalho";
-import { NOME_DO_CANAL, TIPOS_DE_CANAL, type ConteudoDoTelegram, type ConteudoDoWhatsapp } from "@/domain/disparos";
+import { CANAIS_DE_DISPARO } from "@/domain/canais";
+import { NOME_DO_CANAL, type ConteudoDoTelegram, type ConteudoDoWhatsapp } from "@/domain/disparos";
 import { obterCanal, type DadosDoWhatsapp } from "@/server/canais/canais";
 import { listarSegmentos } from "@/server/contatos/segmentos";
 import { obterDb } from "@/server/db";
@@ -40,7 +41,7 @@ export default async function NovoDisparoPage({ searchParams }: PageProps<"/broa
           <div className="vazio">
             <p>Para disparar, conecte antes o canal da empresa.</p>
             <div className="flex flex-wrap justify-center gap-2">
-              {TIPOS_DE_CANAL.filter((tipo) => operador.modulos.includes(tipo)).map((tipo) => (
+              {CANAIS_DE_DISPARO.filter((tipo) => operador.modulos.includes(tipo)).map((tipo) => (
                 <Link key={tipo} href={`/settings/${tipo}`} className="botao botao-primario">
                   Conectar o {NOME_DO_CANAL[tipo]}
                 </Link>

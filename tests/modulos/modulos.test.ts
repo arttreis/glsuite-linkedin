@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { Modulo } from "@/domain/modulos";
 import { buscarOperadorAtivo, comOperador } from "@/server/db/operador";
 import { alterarModulo, modulosDaOrganizacao, organizacoesNaPlataforma, situacaoDosModulos, usoDoMes } from "@/server/modulos/modulos";
 import { aplicarMigrations, criarBancoDeTeste, type BancoDeTeste } from "../support/banco";
@@ -23,7 +24,7 @@ describe("módulos por organização (SDR-69, §4.14)", () => {
   let banco: BancoDeTeste;
   let guessless: string;
 
-  const mudar = (p: { organizacaoId: string; modulo: "linkedin" | "whatsapp" | "telegram"; ativo: boolean; motivo?: string | null; agora?: Date }) =>
+  const mudar = (p: { organizacaoId: string; modulo: Modulo; ativo: boolean; motivo?: string | null; agora?: Date }) =>
     alterarModulo(banco.db, {
       organizacaoId: p.organizacaoId,
       modulo: p.modulo,
@@ -43,8 +44,8 @@ describe("módulos por organização (SDR-69, §4.14)", () => {
     guessless = await idDaOrganizacaoGuessless(banco.db);
   });
 
-  it("a organização da GuessLess tem os três; organização nova nasce só com o SDR no LinkedIn", async () => {
-    expect(await modulosDaOrganizacao(banco.db, guessless)).toEqual(["linkedin", "whatsapp", "telegram"]);
+  it("a organização da GuessLess tem os seis; organização nova nasce só com o SDR no LinkedIn", async () => {
+    expect(await modulosDaOrganizacao(banco.db, guessless)).toEqual(["linkedin", "whatsapp", "telegram", "instagram", "facebook", "comunidades"]);
     const nova = await criarOrganizacao(banco.db);
     expect(await modulosDaOrganizacao(banco.db, nova)).toEqual(["linkedin"]);
     const situacao = await situacaoDosModulos(banco.db, nova);
@@ -52,6 +53,9 @@ describe("módulos por organização (SDR-69, §4.14)", () => {
       ["linkedin", true],
       ["whatsapp", false],
       ["telegram", false],
+      ["instagram", false],
+      ["facebook", false],
+      ["comunidades", false],
     ]);
   });
 
@@ -73,6 +77,22 @@ describe("módulos por organização (SDR-69, §4.14)", () => {
     expect(await mudar({ organizacaoId: nova, modulo: "whatsapp", ativo: true })).toEqual({ ok: true, mudou: false, contasPausadas: 0 });
     expect(await eventos(nova)).toEqual([
       { tipo: "modulo_ligado", ator: ADMIN_DA_PLATAFORMA, payload: { modulo: "whatsapp", motivo: "contrato de outubro" } },
+    ]);
+  });
+
+  it("a Plataforma liga e desliga os três módulos novos, com o motivo e o evento, como os de antes (SDR-74)", async () => {
+    const nova = await criarOrganizacao(banco.db);
+    for (const modulo of ["instagram", "facebook", "comunidades"] as const) {
+      expect(await mudar({ organizacaoId: nova, modulo, ativo: true })).toEqual({ ok: true, mudou: true, contasPausadas: 0 });
+    }
+    expect(await modulosDaOrganizacao(banco.db, nova)).toEqual(["linkedin", "instagram", "facebook", "comunidades"]);
+    expect(await mudar({ organizacaoId: nova, modulo: "comunidades", ativo: false, motivo: "fim do lançamento" })).toEqual({ ok: true, mudou: true, contasPausadas: 0 });
+    expect(await modulosDaOrganizacao(banco.db, nova)).toEqual(["linkedin", "instagram", "facebook"]);
+    expect((await eventos(nova)).map((e) => [e.tipo, e.payload.modulo])).toEqual([
+      ["modulo_ligado", "instagram"],
+      ["modulo_ligado", "facebook"],
+      ["modulo_ligado", "comunidades"],
+      ["modulo_desligado", "comunidades"],
     ]);
   });
 
@@ -176,7 +196,7 @@ describe("módulos por organização (SDR-69, §4.14)", () => {
     expect(await usoDoMes(banco.db, { organizacaoId: outra, agora: AGORA })).toEqual({ contasDoLinkedin: 0, convites: 0, mensagensDoLinkedin: 0, contatos: 0, mensagensDoWhatsapp: 0, mensagensDoTelegram: 0 });
   });
 
-  it("a Plataforma lista as organizações com admins, equipe, contas e os três módulos de cada uma", async () => {
+  it("a Plataforma lista as organizações com admins, equipe, contas e os seis módulos de cada uma", async () => {
     await criarOperador(banco.db, { papel: "admin", email: "midia@guessless.com.br" });
     await ativarPerfil(banco.db, "arthur", { accountId: "acc-arthur" });
     const nova = await criarOrganizacao(banco.db, { nome: "Acme" });
@@ -184,13 +204,16 @@ describe("módulos por organização (SDR-69, §4.14)", () => {
     const organizacoes = await organizacoesNaPlataforma(banco.db);
     const daGuessless = organizacoes.find((o) => o.id === guessless)!;
     expect(daGuessless).toMatchObject({ admins: ["midia@guessless.com.br"], operadores: 1, contasDoLinkedin: 1 });
-    expect(daGuessless.modulos.map((m) => m.ativo)).toEqual([true, true, true]);
+    expect(daGuessless.modulos.map((m) => m.ativo)).toEqual([true, true, true, true, true, true]);
     const acme = organizacoes.find((o) => o.id === nova)!;
     expect(acme).toMatchObject({ nome: "Acme", admins: [], operadores: 0, contasDoLinkedin: 0, primeiroAcessoEm: null });
     expect(acme.modulos.map((m) => [m.modulo, m.ativo])).toEqual([
       ["linkedin", true],
       ["whatsapp", false],
       ["telegram", false],
+      ["instagram", false],
+      ["facebook", false],
+      ["comunidades", false],
     ]);
     expect(Object.keys(acme.modulos[0]!).sort()).toEqual(["alteradoEm", "alteradoPor", "ativo", "desde", "modulo", "motivo"]);
   });

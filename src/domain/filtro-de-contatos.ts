@@ -149,6 +149,12 @@ const ROTULO_DE_ORIGEM_NO_TEXTO: Record<(typeof ORIGENS_DO_CONTATO)[number], str
   importacao: "importação",
   telegram: "Telegram",
   whatsapp: "WhatsApp",
+  instagram: "Instagram",
+  facebook: "Facebook",
+  grupo_telegram: "grupo do Telegram",
+  grupo_whatsapp: "grupo do WhatsApp",
+  pagina_de_espera: "página de espera",
+  checkout: "checkout",
 };
 
 const juntar = (partes: string[]) => (partes.length <= 1 ? partes.join("") : `${partes.slice(0, -1).join(", ")} e ${partes.at(-1)}`);

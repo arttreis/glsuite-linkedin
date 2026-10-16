@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Aviso } from "@/components/aviso";
+import type { CanalDeDisparo } from "@/domain/canais";
 import {
   CAMPOS_DO_CONTATO,
   idDaVariavel,
@@ -17,11 +18,10 @@ import {
   type CampoDoContato,
   type FonteDaVariavel,
   type TemplateDoWhatsapp,
-  type TipoDeCanal,
 } from "@/domain/disparos";
 import { salvarRascunhoDoPainel } from "./acoes";
 
-export type CanalParaEscolher = { tipo: TipoDeCanal; nome: string; templates: TemplateDoWhatsapp[] };
+export type CanalParaEscolher = { tipo: CanalDeDisparo; nome: string; templates: TemplateDoWhatsapp[] };
 type Segmento = { id: string; nome: string; contatos: number };
 
 /** Para a prévia: um contato de exemplo, para a pessoa ver o texto como chega. */
@@ -50,7 +50,7 @@ export function NovoDisparo({
   rascunho: {
     id: string;
     nome: string;
-    canal: TipoDeCanal;
+    canal: CanalDeDisparo;
     segmentoId: string | null;
     templateId: string | null;
     variaveis: Record<string, FonteDaVariavel>;
@@ -59,7 +59,7 @@ export function NovoDisparo({
   } | null;
 }) {
   const router = useRouter();
-  const [canal, setCanal] = useState<TipoDeCanal>(rascunho?.canal ?? canais[0]!.tipo);
+  const [canal, setCanal] = useState<CanalDeDisparo>(rascunho?.canal ?? canais[0]!.tipo);
   const [nome, setNome] = useState(rascunho?.nome ?? "");
   const [segmentoId, setSegmentoId] = useState(rascunho?.segmentoId ?? segmentos[0]?.id ?? "");
   const aprovados = canais.find((c) => c.tipo === canal)?.templates.filter((t) => t.status === "APPROVED") ?? [];
